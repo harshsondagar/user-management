@@ -23,4 +23,7 @@ export default () => ({
         ttl: parseInt(process.env.THROTTLE_TTL || '60000', 10),
         limit: parseInt(process.env.THROTTLE_LIMIT || '20', 10),
     },
+    cookie: {
+        name: process.env.REFRESH_COOKIE_NAME!
+    }
 });

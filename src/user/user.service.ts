@@ -18,13 +18,19 @@ export class UserService {
         return this.userRepository
             .createQueryBuilder("user")
             .where("user.email = :email", { email: email.toLowerCase() })
-            .addSelect("user.password")
+            .addSelect('user.passwordHash')
             .getOne()
     }
 
     async findByEmail(email: string) {
         return this.userRepository.findOne({
             where: { email: email.toLowerCase() }
+        })
+    }
+
+    async findById(userId: string) {
+        return this.userRepository.findOne({
+            where: { id: userId }
         })
     }
 
@@ -66,7 +72,7 @@ export class UserService {
     }
 
     async resetFailedLogin(userId: string) {
-        await this.userRepository.update({ id: userId }, { failedLoginAttempts: 0, lockedUntil: 0 })
+        await this.userRepository.update({ id: userId }, { failedLoginAttempts: 0, lockedUntil: null })
     }
 }
 

@@ -38,7 +38,7 @@ export class User {
     declare tokenVersion: number
 
     @Column({ type: 'timestamptz', nullable: true })
-    declare lockedUntil: Date
+    declare lockedUntil: Date | null
 
     @Column({ type: 'boolean', default: false })
     declare isAdmin: boolean

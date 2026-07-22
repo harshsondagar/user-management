@@ -24,4 +24,8 @@ export class UserResponseDto {
     @Expose()
     @ApiProperty()
     declare Task: Task[]
+
+    constructor(partial: Partial<UserResponseDto>) {
+        Object.assign(this, partial);
+    }
 }

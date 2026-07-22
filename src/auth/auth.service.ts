@@ -1,9 +1,9 @@
-import { ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
+import { ForbiddenException, Injectable, NotFoundException, UnauthorizedException } from '@nestjs/common';
 import { registerBody } from '../types';
 import { UserService } from '../user/user.service';
 import { User } from '../user/user-entity';
 import { createHash, randomUUID } from 'crypto';
-import argon2 from "argon2"
+import * as argon2 from 'argon2'
 import { JwtService, JwtSignOptions } from '@nestjs/jwt';
 import { ConfigService } from '@nestjs/config';
 import { Repository } from 'typeorm';
@@ -18,6 +18,14 @@ interface Tokens {
 }
 
 
+export const ARGON2_OPTIONS: argon2.HashOptions = {
+    type: argon2.argon2id,
+    memoryCost: 19456,
+    timeCost: 2,
+    parallelism: 1,
+};
+
+
 
 @Injectable()
 export class AuthService {
@@ -28,6 +36,8 @@ export class AuthService {
         , @InjectRepository(RefreshToken) private readonly refreshTokenRepository: Repository<RefreshToken>) { }
 
     async create(data: registerBody) {
+        console.log(data);
+
         return this.userService.create(data)
     }
 
@@ -42,7 +52,7 @@ export class AuthService {
             throw new ForbiddenException('Account temporarily locked due to repeated failed login attempts')
         }
 
-        const hashToVerify = user.passwordHash ?? '$argon2id$v=19$m=19456,t=2,p=1$c29tZXNhbHRzb21lc2FsdA$Y5+8mUzZ8V8sQmVFhqjKqQ8N2ZzZ6f8u2h8v6h1J4m0'
+        const hashToVerify = user.passwordHash
 
         const isValid = await argon2.verify(hashToVerify, password)
 
@@ -52,6 +62,7 @@ export class AuthService {
         }
 
         await this.userService.resetFailedLogin(user.id)
+
         return user
     }
 
@@ -105,6 +116,42 @@ export class AuthService {
 
     private hashToken(token: string): string {
         return createHash('sha256').update(token).digest('hex');
+    }
+
+    async refreshToken(userId: string, rawToken: string, userAgent: string, ipAddress: string) {
+        const tokenHash = this.hashToken(rawToken)
+
+        const stored = await this.refreshTokenRepository.findOne({ where: { tokenHash } })
+
+        if (!stored) {
+            throw new UnauthorizedException("token is missing")
+        }
+
+        if (stored.revoked) {
+            await this.refreshTokenRepository.update(
+                { familyId: stored.familyId },
+                { revoked: true }
+            )
+            throw new ForbiddenException("refresh token reuse detected - all sessions revoked! log in again ")
+        }
+
+        if (stored.expireAt < new Date()) {
+            throw new UnauthorizedException("token is expired")
+        }
+
+        if (stored.userId !== userId) {
+            throw new ForbiddenException("Refresh token does not match user")
+        }
+
+        const user = await this.userService.findById(userId)
+
+        if (!user) {
+            throw new ForbiddenException("user no longer exist")
+        }
+
+        await this.refreshTokenRepository.update({ id: stored.id }, { revoked: true })
+        return this.issueTokenPair(user, stored.familyId, userAgent, ipAddress)
+
     }
 
     private parseDurationMs(duration: string): number {
