@@ -8,6 +8,8 @@ import { ConfigModule, ConfigService } from '@nestjs/config';
 import configuration from './config/configuration';
 import { TaskModule } from './task/task.module';
 import path from 'path';
+import { APP_GUARD } from '@nestjs/core';
+import { maintenanceGuard } from './common/gaurds/maintainence-gaurd';
 
 @Module({
   imports: [ConfigModule.forRoot({
@@ -25,13 +27,15 @@ import path from 'path';
       password: config.get<string>('database.password'),
       database: config.get<string>('database.name'),
       autoLoadEntities: true,
-      entities: [path.join(__dirname, "/**/**/*-entity.{ts,js}")],
+      entities: [path.join(__dirname, "src/**/*-entity.{ts,js}")],
       migrations: [__dirname + '/migration/*{.ts,.js}'],
-      synchronize: true
+      synchronize: false
     }),
   })
     , UserModule, AuthModule, TaskModule],
   controllers: [],
-  providers: [AppService],
+  providers: [AppService, {
+    provide: APP_GUARD, useClass: maintenanceGuard
+  }],
 })
 export class AppModule { }

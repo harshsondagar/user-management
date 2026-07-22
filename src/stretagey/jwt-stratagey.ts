@@ -4,7 +4,6 @@ import { PassportStrategy } from "@nestjs/passport";
 import { UserService } from "../user/user.service";
 import { ExtractJwt, Strategy } from "passport-jwt"
 import { JwtAccessPayload } from "../types";
-import { retry } from "rxjs";
 import { User } from "../user/user-entity";
 
 
@@ -18,11 +17,11 @@ export class JwtStrategy extends PassportStrategy(Strategy, 'jwt') {
             jwtFromRequest: ExtractJwt.fromAuthHeaderAsBearerToken(),
             ignoreExpiration: false,
             secretOrKey: configService.get<string>('jwt.accessSecret')!,
-            algorithms: ['RS256']
         })
     }
 
     async validate(payload: JwtAccessPayload): Promise<User> {
+
         const user = await this.userService.findById(payload.sub)
 
         if (!user) {

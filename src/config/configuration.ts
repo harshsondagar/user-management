@@ -25,5 +25,9 @@ export default () => ({
     },
     cookie: {
         name: process.env.REFRESH_COOKIE_NAME!
+    },
+    admin: {
+        email: process.env.SUPER_ADMIN_EMAIL,
+        password: process.env.SUPER_ADMIN_PASSWORD
     }
 });

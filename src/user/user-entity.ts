@@ -4,7 +4,8 @@ import { Task } from "../task/task-entity";
 
 export enum UserRole {
     USER = 'user',
-    ADMIN = 'admin'
+    ADMIN = 'admin',
+    SUPER_ADMIN = "super_admin"
 }
 
 @Entity('users')

@@ -1,18 +1,16 @@
-import { ConflictException, Injectable } from '@nestjs/common';
+import { ConflictException, ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
 import { Repository } from 'typeorm';
-import { User } from './user-entity';
+import { User, UserRole } from './user-entity';
 import { registerBody } from '../types';
 import { InjectRepository } from '@nestjs/typeorm';
 import { plainToInstance } from 'class-transformer';
 import { RegisterResponseDTO } from '../auth/dto/register-responseDTO';
-import { UUID } from 'typeorm/driver/mongodb/bson.typings.js';
-import { randomUUID } from 'crypto';
+import { UpdateUserDTO } from './dto/UpdateUserDTO';
 
 @Injectable()
 export class UserService {
 
     constructor(@InjectRepository(User) private readonly userRepository: Repository<User>) { }
-
 
     async findByEMailWithPassword(email: string) {
         return this.userRepository
@@ -73,6 +71,35 @@ export class UserService {
 
     async resetFailedLogin(userId: string) {
         await this.userRepository.update({ id: userId }, { failedLoginAttempts: 0, lockedUntil: null })
+    }
+
+    async incrementTokenVersion(userId: string) {
+        await this.userRepository.increment({ id: userId }, 'tokenVersion', 1)
+    }
+
+    async updateUser(id: string, user: UpdateUserDTO) {
+        const update: Partial<User> = {}
+
+        const updateResult = await this.userRepository.update({ id }, user)
+
+        if (updateResult.affected === 0) {
+            throw new NotFoundException(`User with ID ${id} not found`);
+        }
+    }
+
+    async deleteUser(targetUserId: string, performingUser: User) {
+        const targetUser = await this.userRepository.findOneBy({ id: targetUserId });
+
+        if (!targetUser) throw new NotFoundException('User not found');
+
+        if (targetUser.role === UserRole.SUPER_ADMIN) {
+            throw new ForbiddenException('The Main Admin account cannot be deleted.');
+        }
+
+        if (targetUser.role === UserRole.ADMIN && performingUser.role !== UserRole.SUPER_ADMIN) {
+            throw new ForbiddenException('Only the Super Admin can remove administrative accounts.');
+        }
+        return this.userRepository.softDelete(targetUserId);
     }
 }
 

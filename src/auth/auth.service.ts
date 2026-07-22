@@ -113,6 +113,11 @@ export class AuthService {
 
     }
 
+    async removeAllSession(id: string) {
+        await this.refreshTokenRepository.update({ id }, { revoked: true })
+        await this.userService.incrementTokenVersion(id)
+    }
+
 
     private hashToken(token: string): string {
         return createHash('sha256').update(token).digest('hex');
@@ -122,10 +127,12 @@ export class AuthService {
         const tokenHash = this.hashToken(rawToken)
 
         const stored = await this.refreshTokenRepository.findOne({ where: { tokenHash } })
+        console.log(stored);
 
         if (!stored) {
             throw new UnauthorizedException("token is missing")
         }
+
 
         if (stored.revoked) {
             await this.refreshTokenRepository.update(
@@ -154,6 +161,14 @@ export class AuthService {
 
     }
 
+    async logout(userId: string, rawToken: string) {
+        if (rawToken) {
+            const TokenHash = this.hashToken(rawToken)
+            await this.refreshTokenRepository.update({ userId: userId }, { revoked: true })
+            await this.userService.incrementTokenVersion(userId)
+        }
+    }
+
     private parseDurationMs(duration: string): number {
         const match = /^(\d+)([smhd])$/.exec(duration);
         if (!match) return 7 * 24 * 60 * 60 * 1000;
@@ -161,5 +176,12 @@ export class AuthService {
         const unit = match[2];
         const unitMs = { s: 1000, m: 60_000, h: 3_600_000, d: 86_400_000 }[unit]!;
         return value * unitMs;
+    }
+
+
+    async changePassword(id: string, password: string) {
+        const passwordHash = await argon2.hash(password, ARGON2_OPTIONS)
+        await this.refreshTokenRepository.manager.getRepository('users').update({ id }, { passwordHash: passwordHash })
+        await this.removeAllSession(id)
     }
 }

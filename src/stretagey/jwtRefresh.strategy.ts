@@ -12,9 +12,11 @@ export class JwtRefreshStrategy extends PassportStrategy(Strategy, 'jwt-refresh'
     constructor(private readonly configService: ConfigService, private readonly userService: UserService) {
         super({
             jwtFromRequest: ExtractJwt.fromExtractors([
-                (req: Request) =>
+                (req: Request) => (
+                    console.log(req?.cookies[this.configService.get<string>('cookie.name')!]),
+
                     req?.cookies[this.configService.get<string>('cookie.name')!] ?? null
-            ]),
+                )]),
             ignoreExpiration: false,
             secretOrKey: configService.get<string>('jwt.refreshSecret')!,
             passReqToCallback: true,
@@ -24,13 +26,14 @@ export class JwtRefreshStrategy extends PassportStrategy(Strategy, 'jwt-refresh'
 
 
     validate(req: Request, payload: JwtRefreshPayload) {
+        console.log('Config cookie name:',);
         const rawToken = req.cookies?.[this.configService.get<string>('cookie.name')!] ?? null
+        console.log(rawToken);
 
         if (!rawToken) {
             throw new UnauthorizedException('Refresh token missing');
         }
 
         return { ...payload, rawToken }
-
     }
 }

@@ -36,7 +36,7 @@ export class RefreshToken {
     declare ipAddress: string
 
     @CreateDateColumn({ type: 'timestamptz' })
-    declare createdAt: Date
+    declare createdAt?: Date
 
     @UpdateDateColumn({ type: 'timestamptz', nullable: true })
     declare updatedAt: Date
