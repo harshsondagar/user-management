@@ -13,5 +13,5 @@ export const dataSource: DataSource = new DataSource({
     database: process.env.DB_NAME!,
     synchronize: true,
     entities: [path.join(__dirname, '/../**/*-entity.{ts,js}')],
-    migrations: [path.join(__dirname, 'migration/*.{ts,js}')],
+    migrations: ['src/migrations/*.{ts,js}'],
 })

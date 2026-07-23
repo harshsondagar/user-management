@@ -29,6 +29,9 @@ export class RefreshToken {
     @Column({ type: 'timestamptz' })
     declare expireAt: Date
 
+    @Column({ type: Date })
+    declare absoluteExpiry: Date
+
     @Column({ type: "varchar", nullable: true })
     declare userAgent: string
 

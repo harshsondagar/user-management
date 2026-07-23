@@ -9,7 +9,7 @@ import { UpdateUserDTO } from './dto/UpdateUserDTO';
 export class UserController {
     constructor(private readonly userServices: UserService) { }
 
-    @Put()
+    @Put("me")
     async changeUSer(@currentUser() user: User, @Body() body: UpdateUserDTO) {
         await this.userServices.updateUser(user.id, body);
         return new ApiResponseDto({ success: true });

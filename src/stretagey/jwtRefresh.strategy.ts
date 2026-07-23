@@ -13,7 +13,6 @@ export class JwtRefreshStrategy extends PassportStrategy(Strategy, 'jwt-refresh'
         super({
             jwtFromRequest: ExtractJwt.fromExtractors([
                 (req: Request) => (
-                    console.log(req?.cookies[this.configService.get<string>('cookie.name')!]),
 
                     req?.cookies[this.configService.get<string>('cookie.name')!] ?? null
                 )]),
@@ -26,9 +25,9 @@ export class JwtRefreshStrategy extends PassportStrategy(Strategy, 'jwt-refresh'
 
 
     validate(req: Request, payload: JwtRefreshPayload) {
-        console.log('Config cookie name:',);
+
         const rawToken = req.cookies?.[this.configService.get<string>('cookie.name')!] ?? null
-        console.log(rawToken);
+
 
         if (!rawToken) {
             throw new UnauthorizedException('Refresh token missing');

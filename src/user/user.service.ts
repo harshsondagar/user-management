@@ -6,6 +6,17 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { plainToInstance } from 'class-transformer';
 import { RegisterResponseDTO } from '../auth/dto/register-responseDTO';
 import { UpdateUserDTO } from './dto/UpdateUserDTO';
+import * as argon2 from "argon2"
+
+
+
+const ARGON2_OPTIONS: argon2.HashOptions = {
+    type: argon2.argon2id,
+    memoryCost: 19456,
+    timeCost: 2,
+    parallelism: 1,
+};
+
 
 @Injectable()
 export class UserService {
@@ -16,6 +27,14 @@ export class UserService {
         return this.userRepository
             .createQueryBuilder("user")
             .where("user.email = :email", { email: email.toLowerCase() })
+            .addSelect('user.passwordHash')
+            .getOne()
+    }
+
+    async findByIdWithPassword(userId: string) {
+        return this.userRepository
+            .createQueryBuilder("user")
+            .where("user.id = :id", { id: userId })
             .addSelect('user.passwordHash')
             .getOne()
     }
@@ -101,6 +120,17 @@ export class UserService {
         }
         return this.userRepository.softDelete(targetUserId);
     }
+
+    async resetPassword(id: string, newPassword: string) {
+        const passwordHash = await argon2.hash(newPassword, ARGON2_OPTIONS)
+        const res = await this.userRepository.update({ id }, { passwordHash: passwordHash })
+
+        if (!res.affected) {
+            return false
+        }
+        return true
+    }
+
 }
 
 

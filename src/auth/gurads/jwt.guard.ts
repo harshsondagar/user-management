@@ -1,4 +1,4 @@
-import { ExecutionContext, Injectable } from "@nestjs/common";
+import { ExecutionContext, Injectable, UnauthorizedException } from "@nestjs/common";
 import { Reflector } from "@nestjs/core";
 import { AuthGuard } from "@nestjs/passport";
 import { Observable } from "rxjs";
@@ -10,6 +10,16 @@ export class JwtGuard extends AuthGuard('jwt') {
 
     constructor(private readonly reflector: Reflector) {
         super()
+    }
+
+
+    handleRequest(err: Error, user: any, info) {
+        if (err || !user) {
+            throw err || new UnauthorizedException(
+                info?.message ? `Access Denied: ${info.message}` : 'Unauthorized'
+            );
+        }
+        return user;
     }
 
     canActivate(context: ExecutionContext): boolean | Promise<boolean> | Observable<boolean> {

@@ -23,7 +23,6 @@ export class LocalStrategy extends PassportStrategy(Strategy, 'local') {
         }
 
         const isMaintenanceMode = await this.systemService.IsMaintenanceModeActive()
-        console.log(isMaintenanceMode);
 
         if (isMaintenanceMode) {
             if (user.role === UserRole.SUPER_ADMIN) {

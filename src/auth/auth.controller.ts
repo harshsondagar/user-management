@@ -17,6 +17,7 @@ import { LoginDto } from './dto/login-dto';
 import { RefreshGuard } from './gurads/jwt-refresh.guard';
 import { JwtGuard } from "./gurads/jwt.guard";
 import { changePasswordDTO } from "./dto/changePassword-dto";
+import { ResetPasswordDTO } from "./dto/ResetPasswordDTO";
 
 const REFRESH_COOKIE_NAME = process.env.REFRESH_COOKIE_NAME!
 
@@ -47,6 +48,7 @@ export class AuthController {
     @HttpCode(HttpStatus.OK)
     @ApiBody({ type: LoginDto })
     @ApiWrappedResponse(LoginResponse)
+
     async login(@Body() _body: LoginDto, @currentUser() user: User, @Req() req: e.Request, @Res({ passthrough: true }) res: e.Response) {
         const { accessToken, refreshToken, refreshTokenExpiresAt } = await this.authService.login(user, req.get('user-agent'), req.ip)
         this.setRefreshCookie(res, refreshToken, refreshTokenExpiresAt)
@@ -114,13 +116,26 @@ export class AuthController {
     @Patch('password')
     @HttpCode(HttpStatus.OK)
     async changePassword(@currentUser() user: User, @Body() Body: changePasswordDTO) {
-        console.log(user);
-
         await this.authService.changePassword(user.id, Body.password)
         return new ApiResponseDto({ success: true })
     }
 
     @UseGuards(JwtGuard)
+    @Patch('reset-password')
+    @HttpCode(HttpStatus.OK)
+    async resetPassword(@currentUser() user: User, @Body() body: ResetPasswordDTO) {
+        const isPasswordChange = await this.authService.resetPassword(user.id, body)
+
+        if (!isPasswordChange) {
+            throw new InternalServerErrorException("error while changing password")
+        }
+        return new ApiResponseDto({
+            success: true,
+            message: "password changed successfully"
+        })
+
+    }
+
 
 
     private setRefreshCookie(res: e.Response, token: string, expireAt: Date) {
