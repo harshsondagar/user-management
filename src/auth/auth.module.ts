@@ -11,6 +11,7 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import { RefreshToken } from './jwt-entity';
 import { JwtGuard } from './gurads/jwt.guard';
 import { PassportModule } from '@nestjs/passport';
+import { SystemService } from '../user/system.service';
 
 @Module({
   imports: [forwardRef(() => UserModule), UserModule, PassportModule, JwtModule.register({}), TypeOrmModule.forFeature([RefreshToken])],

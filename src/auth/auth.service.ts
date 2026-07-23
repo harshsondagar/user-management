@@ -42,7 +42,9 @@ export class AuthService {
     }
 
     async validateCredentials(email: string, password: string): Promise<User | null> {
+
         const user = await this.userService.findByEMailWithPassword(email)
+
 
         if (!user) {
             throw new NotFoundException("user not exist,register first to login")

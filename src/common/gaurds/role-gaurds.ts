@@ -22,6 +22,8 @@ export class SuperAdminGuard implements CanActivate {
         const request = context.switchToHttp().getRequest<Request>()
 
         const user = request.user as User;
+        console.log(user);
+
 
         if (!user || user.role !== UserRole.SUPER_ADMIN) {
             throw new ForbiddenException("access denied only aphorized user can access this route")

@@ -14,13 +14,15 @@ export class SystemService {
     }
 
     async IsMaintenanceModeActive() {
-        const setting = await this.systemRepository.findOne({ where: { Key: 'maintenance_mode' } })
+
+        const [setting] = await this.systemRepository.find({ where: { Key: 'maintenance_mode' } })
+
 
         if (!setting) {
             return false;
         }
 
-        return setting.value === 'true';
+        return setting.value
     }
 
 }

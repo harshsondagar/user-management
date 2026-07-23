@@ -12,7 +12,6 @@ export class UserController {
     @Put()
     async changeUSer(@currentUser() user: User, @Body() body: UpdateUserDTO) {
         await this.userServices.updateUser(user.id, body);
-
         return new ApiResponseDto({ success: true });
     }
 }

@@ -2,7 +2,9 @@ import { CanActivate, ExecutionContext, Injectable, ServiceUnavailableException 
 import { Reflector } from "@nestjs/core";
 import { Observable } from "rxjs";
 import { SystemService } from "../../user/system.service";
-import { UserRole } from "../../user/user-entity";
+import { User, UserRole } from "../../user/user-entity";
+import { PUBLIC_KEY } from "../decorator/public-decoretor";
+import { Request } from "express";
 
 
 
@@ -12,11 +14,28 @@ export class maintenanceGuard implements CanActivate {
     constructor(private readonly reflector: Reflector, private readonly systemService: SystemService) { }
 
     async canActivate(context: ExecutionContext): Promise<boolean> {
+
         const isMaintenanceMode = await this.systemService.IsMaintenanceModeActive()
 
         if (!isMaintenanceMode) return true
 
-        const { user } = context.switchToHttp().getRequest()
+        const isPublic = this.reflector.getAllAndOverride(PUBLIC_KEY, [context.getHandler(), context.getClass()])
+
+        if (isPublic) {
+            return true
+        }
+
+        const request = context.switchToHttp().getRequest<Request>()
+
+        const url: string = request.url || '';
+        if (url.includes('/auth/login') || url.includes('/auth/register')) {
+            return true;
+        }
+
+
+        const user = request.user as User
+        console.log(user);
+
 
         if (user && user.role === UserRole.SUPER_ADMIN) {
             return true

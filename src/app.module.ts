@@ -10,6 +10,9 @@ import { TaskModule } from './task/task.module';
 import path from 'path';
 import { APP_GUARD } from '@nestjs/core';
 import { maintenanceGuard } from './common/gaurds/maintainence-gaurd';
+import { JwtGuard } from './auth/gurads/jwt.guard';
+
+console.log("----", path.join(__dirname, "src/**/*-entity.{ts,js}"));
 
 @Module({
   imports: [ConfigModule.forRoot({
@@ -27,15 +30,17 @@ import { maintenanceGuard } from './common/gaurds/maintainence-gaurd';
       password: config.get<string>('database.password'),
       database: config.get<string>('database.name'),
       autoLoadEntities: true,
-      entities: [path.join(__dirname, "src/**/*-entity.{ts,js}")],
+      entities: [path.join(__dirname, "/**/*-entity.{ts,js}")],
       migrations: [__dirname + '/migration/*{.ts,.js}'],
-      synchronize: false
+      synchronize: true
     }),
   })
     , UserModule, AuthModule, TaskModule],
   controllers: [],
   providers: [AppService, {
-    provide: APP_GUARD, useClass: maintenanceGuard
-  }],
+    provide: APP_GUARD, useClass: JwtGuard
+  }, {
+      provide: APP_GUARD, useClass: maintenanceGuard
+    }],
 })
 export class AppModule { }
