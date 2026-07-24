@@ -8,9 +8,10 @@ import { System } from './system-entity';
 import { SystemService } from './system.service';
 import { SuperAdminController } from './super-admin.controller';
 import { AuthModule } from '../auth/auth.module';
+import { Followers } from './userfollowers-entity';
 
 @Module({
-  imports: [forwardRef(() => AuthModule), TypeOrmModule.forFeature([User, System]),],
+  imports: [forwardRef(() => AuthModule), TypeOrmModule.forFeature([User, System, Followers]),],
   providers: [UserService, SuperAdminSeed, SystemService],
   controllers: [UserController, SuperAdminController],
   exports: [UserService, SystemService]

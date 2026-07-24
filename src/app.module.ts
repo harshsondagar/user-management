@@ -30,8 +30,8 @@ console.log("----", path.join(__dirname, "src/**/*-entity.{ts,js}"));
       password: config.get<string>('database.password'),
       database: config.get<string>('database.name'),
       autoLoadEntities: true,
-      entities: [path.join(__dirname, "/**/*-entity.{ts,js}")],
-      migrations: [__dirname + '/migration/*{.ts,.js}'],
+      entities: [path.join(__dirname, "../**/*-entity.js")],
+      migrations: [__dirname, '../migration/*{.ts,.js}'],
       synchronize: true
     }),
   })

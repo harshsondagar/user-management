@@ -6,7 +6,6 @@ export enum TaskStatus {
     DONE = "done",
     CANCEL = 'CANCELLED',
 }
-
 @Entity('tasks')
 
 export class Task {

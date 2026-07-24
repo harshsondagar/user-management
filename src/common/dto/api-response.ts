@@ -11,7 +11,7 @@ export class ApiResponseDto<T> {
     declare message: string;
 
     @Expose()
-    data?: T; // typed dynamically per-route via the decorator below
+    data?: T;
 
     constructor(partial: Partial<ApiResponseDto<T>>) {
         Object.assign(this, partial);

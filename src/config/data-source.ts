@@ -2,7 +2,9 @@ import "dotenv/config"
 import path, { dirname } from "path";
 import { DataSource } from "typeorm";
 
-console.log(path.join(__dirname, "/../**/*-entity.{ts,js}"));
+console.log(path.join(__dirname, '/../**/*-entity.{ts,js}'));
+console.log(path.join(__dirname, '/../migration/*.{ts,js}'));
+
 
 export const dataSource: DataSource = new DataSource({
     type: 'postgres',
@@ -11,7 +13,7 @@ export const dataSource: DataSource = new DataSource({
     username: process.env.DB_USERNAME!,
     password: process.env.DB_PASSWORD!,
     database: process.env.DB_NAME!,
-    synchronize: true,
-    entities: [path.join(__dirname, '/../**/*-entity.{ts,js}')],
-    migrations: ['src/migrations/*.{ts,js}'],
+    synchronize: false,
+    entities: [path.join(__dirname, '../**/*-entity.{ts,js}')],
+    migrations: [path.join(__dirname, '../migration/*.{ts,js}')],
 })

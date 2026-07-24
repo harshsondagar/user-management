@@ -1,11 +1,18 @@
-import { Column, CreateDateColumn, Entity, Index, OneToMany, PrimaryGeneratedColumn, UpdateDateColumn } from "typeorm";
+import { Column, CreateDateColumn, DeleteDateColumn, Entity, Index, ManyToMany, OneToMany, PrimaryGeneratedColumn, UpdateDateColumn } from "typeorm";
 import { Task } from "../task/task-entity";
+import { Followers } from "./userfollowers-entity";
 
 
 export enum UserRole {
     USER = 'user',
     ADMIN = 'admin',
     SUPER_ADMIN = "super_admin"
+}
+
+export enum ProfileType {
+    PRIVATE = "private",
+    PUBLIC = "public",
+    FRIENDS_ONLY = "friends_only",
 }
 
 @Entity('users')
@@ -44,14 +51,30 @@ export class User {
     @Column({ type: 'boolean', default: false })
     declare isAdmin: boolean
 
+    @Column({ type: "enum", enum: ProfileType, default: ProfileType.PRIVATE })
+    declare profileVisibility: ProfileType
+
+
+
+    @OneToMany(() => Followers, (follower) => follower.following)
+    declare followers: Followers[]
+
+    @OneToMany(() => Followers, (follower) => follower.followerId)
+    declare following: Followers[]
+
+    @OneToMany(() => Task, (Task) => Task.user)
+    declare tasks: Task[]
+
+
+
     @CreateDateColumn({ type: "timestamptz" })
     declare createdAt: Date
 
     @UpdateDateColumn({ type: "timestamptz", nullable: true })
     declare updatedAt: Date
 
-    @OneToMany(() => Task, (Task) => Task.user)
-    declare tasks: Task[]
+    @DeleteDateColumn()
+    declare deletedAt: Date;
 }
 
 

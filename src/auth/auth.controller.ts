@@ -18,6 +18,7 @@ import { RefreshGuard } from './gurads/jwt-refresh.guard';
 import { JwtGuard } from "./gurads/jwt.guard";
 import { changePasswordDTO } from "./dto/changePassword-dto";
 import { ResetPasswordDTO } from "./dto/ResetPasswordDTO";
+import { Serialize } from "../common/interceptors/serialize-interceptor";
 
 const REFRESH_COOKIE_NAME = process.env.REFRESH_COOKIE_NAME!
 
@@ -33,33 +34,41 @@ export class AuthController {
 
         const passwordHash = await argon2.hash(body.password, ARGON2_OPTIONS)
 
-        const result = await this.authService.create({ ...body, passwordHash })
+        return await this.authService.create({ ...body, passwordHash })
 
-        return new ApiResponseDto({
-            success: true,
-            message: "successfully register",
-            data: result
-        })
+        // return new ApiResponseDto({
+        //     success: true,
+        //     message: "successfully register",
+        //     data: result
+        // })
     }
 
     @Public()
     @Post("login")
+    @Serialize(LoginResponse)
     @UseGuards(LocalAuthGuard)
     @HttpCode(HttpStatus.OK)
     @ApiBody({ type: LoginDto })
-    @ApiWrappedResponse(LoginResponse)
 
-    async login(@Body() _body: LoginDto, @currentUser() user: User, @Req() req: e.Request, @Res({ passthrough: true }) res: e.Response) {
-        const { accessToken, refreshToken, refreshTokenExpiresAt } = await this.authService.login(user, req.get('user-agent'), req.ip)
+    async login(
+        @Body() _body: LoginDto,
+        @currentUser() user: User,
+        @Req() req: e.Request,
+        @Res({ passthrough: true }) res: e.Response
+    ) {
+        const { accessToken, refreshToken, refreshTokenExpiresAt } = await this.authService.login(
+            user,
+            req.get('user-agent'),
+            req.ip
+        )
+
         this.setRefreshCookie(res, refreshToken, refreshTokenExpiresAt)
 
-        return new ApiResponseDto({
-            success: true,
-            message: "successfully register",
-            data: new LoginResponse({
-                id: user.id, firstName: user.firstName, accessToken
-            })
-        })
+        return {
+            id: user.id,
+            firstName: user.firstName,
+            accessToken
+        }
     }
 
     @Public()

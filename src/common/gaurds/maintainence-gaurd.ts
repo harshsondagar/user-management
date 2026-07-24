@@ -32,7 +32,6 @@ export class maintenanceGuard implements CanActivate {
             return true;
         }
 
-
         const user = request.user as User
         console.log(user);
 

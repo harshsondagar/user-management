@@ -1,12 +1,13 @@
 import { ConflictException, ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
 import { Repository } from 'typeorm';
-import { User, UserRole } from './user-entity';
+import { ProfileType, User, UserRole } from './user-entity';
 import { registerBody } from '../types';
 import { InjectRepository } from '@nestjs/typeorm';
 import { plainToInstance } from 'class-transformer';
 import { RegisterResponseDTO } from '../auth/dto/register-responseDTO';
 import { UpdateUserDTO } from './dto/UpdateUserDTO';
 import * as argon2 from "argon2"
+import { Followers, STATUS } from './userfollowers-entity';
 
 
 
@@ -21,7 +22,10 @@ const ARGON2_OPTIONS: argon2.HashOptions = {
 @Injectable()
 export class UserService {
 
-    constructor(@InjectRepository(User) private readonly userRepository: Repository<User>) { }
+    constructor(
+        @InjectRepository(User) private readonly userRepository: Repository<User>,
+        @InjectRepository(Followers) private readonly followerRepository: Repository<Followers>
+    ) { }
 
     async findByEMailWithPassword(email: string) {
         return this.userRepository
@@ -131,6 +135,217 @@ export class UserService {
         return true
     }
 
+    async getUser(user: User) {
+        return this.userRepository.findOne({ where: { id: user.id } })
+    }
+
+    async addFollowRequest(user: User, followingId: string) {
+
+        if (user.id === followingId) {
+            throw new NotFoundException("can't follow yourself")
+        }
+
+        const followingUser = await this.findById(followingId)
+
+        if (!followingUser) {
+            throw new NotFoundException("user does not exist you looking to follow")
+        }
+
+        const pendingTypes = [ProfileType.PRIVATE, ProfileType.FRIENDS_ONLY];
+
+        const status = pendingTypes.includes(followingUser.profileVisibility)
+            ? STATUS.PENDING
+            : STATUS.ACCEPTED;
+
+
+        const row = this.followerRepository.create({
+            followerId: user.id,
+            followingId: followingId,
+            status: status
+        })
+
+        return await this.followerRepository.save(row)
+
+    }
+
+    async acceptFollowRequest(currentUser: User, requesterId: string) {
+
+        const followRow = await this.followerRepository.findOne({
+            where: { followerId: requesterId, followingId: currentUser.id }
+        })
+
+        if (!followRow) {
+            throw new NotFoundException("Follow request not found")
+        }
+
+        if (followRow.status !== STATUS.PENDING) {
+            throw new ConflictException("This request is not pending")
+        }
+
+        followRow.status = STATUS.ACCEPTED
+        return await this.followerRepository.save(followRow)
+    }
+
+    async rejectFollowRequest(currentUser: User, requesterId: string) {
+
+        const followRow = await this.followerRepository.findOne({
+            where: { followerId: requesterId, followingId: currentUser.id }
+        })
+
+        if (!followRow) {
+            throw new NotFoundException("Follow request not found")
+        }
+
+        if (followRow.status !== STATUS.PENDING) {
+            throw new ConflictException("This request is not pending")
+        }
+
+        return await this.followerRepository.remove(followRow)
+        // Alternative: keep the row and set status: STATUS.REJECTED
+        // if you want to remember rejections instead of deleting them.
+    }
+
+    async unfollow(currentUser: User, followingId: string) {
+
+        const followRow = await this.followerRepository.findOne({
+            where: { followerId: currentUser.id, followingId }
+        })
+
+        if (!followRow) {
+            throw new NotFoundException("You are not following this user")
+        }
+
+        return await this.followerRepository.remove(followRow)
+    }
+
+    async removeFollower(currentUser: User, followerId: string) {
+        // currentUser forcibly removes someone who follows them
+
+        const followRow = await this.followerRepository.findOne({
+            where: { followerId, followingId: currentUser.id }
+        })
+
+        if (!followRow) {
+            throw new NotFoundException("This user does not follow you")
+        }
+
+        return await this.followerRepository.remove(followRow)
+    }
+
+    async blockUser(currentUser: User, targetId: string) {
+
+        if (currentUser.id === targetId) {
+            throw new ConflictException("You can't block yourself")
+        }
+
+        // Remove any existing relationship in either direction first
+        await this.followerRepository.delete([
+            { followerId: currentUser.id, followingId: targetId },
+            { followerId: targetId, followingId: currentUser.id }
+        ])
+
+        const row = this.followerRepository.create({
+            followerId: currentUser.id,
+            followingId: targetId,
+            status: STATUS.BLOCK
+        })
+
+        return await this.followerRepository.save(row)
+    }
+
+    async unblockUser(currentUser: User, targetId: string) {
+
+        const row = await this.followerRepository.findOne({
+            where: { followerId: currentUser.id, followingId: targetId, status: STATUS.BLOCK }
+        })
+
+        if (!row) {
+            throw new NotFoundException("This user is not blocked")
+        }
+
+        return await this.followerRepository.remove(row)
+    }
+
+    async getFollowers(userId: string) {
+        // people who follow userId (accepted only)
+        return this.followerRepository.find({
+            where: { followingId: userId, status: STATUS.ACCEPTED }
+        })
+    }
+
+    async getFollowing(userId: string) {
+        return this.followerRepository.find({
+            where: { followerId: userId, status: STATUS.ACCEPTED }
+        })
+    }
+
+    async getPendingRequests(userId: string) {
+        // incoming follow requests waiting for userId's approval
+        return this.followerRepository.find({
+            where: { followingId: userId, status: STATUS.PENDING }
+        })
+    }
+
+    private async getFollowStatus(requesterId: string, targetId: string): Promise<STATUS | null> {
+        const row = await this.followerRepository.findOne({
+            where: { followerId: requesterId, followingId: targetId }
+        })
+        return row ? row.status : null
+    }
+
+    async getUserProfile(requester: User, targetId: string) {
+
+        const targetUser = await this.findById(targetId)
+
+        if (!targetUser) {
+            throw new NotFoundException("User not found")
+        }
+
+        // 1. Requester viewing their own profile → always full access
+        if (requester.id === targetUser.id) {
+            return targetUser
+        }
+
+        // 2. Admins/super-admins → always full access
+        if (requester.role === UserRole.ADMIN || requester.role === UserRole.SUPER_ADMIN) {
+            return targetUser
+        }
+
+        // 3. Check block status either direction — blocked = no access at all
+        const blockedByTarget = await this.getFollowStatus(targetUser.id, requester.id)
+        const blockedTarget = await this.getFollowStatus(requester.id, targetUser.id)
+
+        if (blockedByTarget === STATUS.BLOCK || blockedTarget === STATUS.BLOCK) {
+            throw new ForbiddenException("You cannot view this profile")
+        }
+
+        // 4. Public profiles → anyone (non-blocked) can view
+        if (targetUser.profileVisibility === ProfileType.PUBLIC) {
+            return this.stripPrivateFields(targetUser)
+        }
+
+        // 5. Private / Friends-only → must have an ACCEPTED follow relationship
+        const relationship = await this.getFollowStatus(requester.id, targetUser.id)
+        console.log(relationship);
+
+        if (relationship === STATUS.ACCEPTED) {
+            return this.stripPrivateFields(targetUser)
+        }
+
+        // 6. Not connected → return a locked/minimal view
+        return {
+            id: targetUser.id,
+            firstName: targetUser.firstName,
+            lastName: targetUser.lastName,
+            isPrivate: true,
+            message: "This profile is private"
+        }
+    }
+
+    private stripPrivateFields(user: User) {
+        const { passwordHash, failedLoginAttempts, lockedUntil, tokenVersion, ...safeUser } = user as any
+        return safeUser
+    }
 }
 
 
