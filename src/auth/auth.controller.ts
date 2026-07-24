@@ -145,8 +145,6 @@ export class AuthController {
 
     }
 
-
-
     private setRefreshCookie(res: e.Response, token: string, expireAt: Date) {
         res.cookie(REFRESH_COOKIE_NAME, token, {
             httpOnly: true,
@@ -156,4 +154,5 @@ export class AuthController {
             expires: expireAt,
         })
     }
+
 }

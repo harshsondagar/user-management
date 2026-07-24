@@ -1,5 +1,5 @@
 
-import { Module } from '@nestjs/common';
+import { MiddlewareConsumer, Module, NestModule } from '@nestjs/common';
 import { AppService } from './app.service';
 import { UserModule } from './user/user.module';
 import { AuthModule } from './auth/auth.module';
@@ -8,11 +8,11 @@ import { ConfigModule, ConfigService } from '@nestjs/config';
 import configuration from './config/configuration';
 import { TaskModule } from './task/task.module';
 import path from 'path';
-import { APP_GUARD } from '@nestjs/core';
+import { APP_FILTER, APP_GUARD } from '@nestjs/core';
 import { maintenanceGuard } from './common/gaurds/maintainence-gaurd';
 import { JwtGuard } from './auth/gurads/jwt.guard';
-
-console.log("----", path.join(__dirname, "src/**/*-entity.{ts,js}"));
+import { GlobalExceptionFilter } from './common/filters/global-exception.filter';
+import { RequestIdMiddleware } from './common/middleware/request-id.middleware';
 
 @Module({
   imports: [ConfigModule.forRoot({
@@ -38,9 +38,16 @@ console.log("----", path.join(__dirname, "src/**/*-entity.{ts,js}"));
     , UserModule, AuthModule, TaskModule],
   controllers: [],
   providers: [AppService, {
-    provide: APP_GUARD, useClass: JwtGuard
+    provide: APP_FILTER,
+    useClass: GlobalExceptionFilter
   }, {
+      provide: APP_GUARD, useClass: JwtGuard
+    }, {
       provide: APP_GUARD, useClass: maintenanceGuard
     }],
 })
-export class AppModule { }
+export class AppModule implements NestModule {
+  configure(consumer: MiddlewareConsumer) {
+    consumer.apply(RequestIdMiddleware).forRoutes('*')
+  }
+}
