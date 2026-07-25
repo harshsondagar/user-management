@@ -5,9 +5,10 @@ import cookieParser from "cookie-parser"
 import { ResponseEnvelopeInterceptor } from './common/interceptors/response-envelope.interceptor';
 import { RequestIdMiddleware } from './common/middleware/request-id.middleware';
 import { AppException } from './common/exceptions/app.exception';
+import { NestExpressApplication } from '@nestjs/platform-express';
+import axios from 'axios';
 async function bootstrap() {
-  const app = await NestFactory.create(AppModule);
-
+  const app = await NestFactory.create<NestExpressApplication>(AppModule);
 
   app.useGlobalPipes(new ValidationPipe({
     whitelist: true,
@@ -18,6 +19,8 @@ async function bootstrap() {
       return new AppException('VALIDATION_ERROR', messages.join('; '), HttpStatus.BAD_REQUEST);
     }
   }))
+
+  app.set('trust proxy', 1);
 
   app.use(cookieParser())
 
@@ -35,5 +38,6 @@ async function bootstrap() {
   });
 
   await app.listen(process.env.PORT ?? 3000);
+
 }
 bootstrap();

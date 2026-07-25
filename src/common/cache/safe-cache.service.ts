@@ -11,7 +11,7 @@ export class SafeCacheService {
     constructor(@Inject(CACHE_MANAGER) private readonly cache: Cache) { }
 
     async get<T>(key: string): Promise<T | undefined> {
-        console.log(await this.cache.get<T>('user'));
+        // console.log(await this.cache.get<T>('user'));
 
         try {
             return await this.cache.get<T>(key)

@@ -19,6 +19,8 @@ import { JwtGuard } from "./gurads/jwt.guard";
 import { changePasswordDTO } from "./dto/changePassword-dto";
 import { ResetPasswordDTO } from "./dto/ResetPasswordDTO";
 import { Serialize } from "../common/interceptors/serialize-interceptor";
+import { Throttle } from "@nestjs/throttler";
+import { StrictThrottle } from "../common/decorator/throttle-presets.decorator";
 
 const REFRESH_COOKIE_NAME = process.env.REFRESH_COOKIE_NAME!
 
@@ -27,6 +29,7 @@ export class AuthController {
 
     constructor(private readonly authService: AuthService) { }
 
+    @Throttle({ default: { limit: 5, ttl: 60000 } })
     @Public()
     @Post("register")
     @ApiWrappedResponse(RegisterResponseDTO)
@@ -35,21 +38,15 @@ export class AuthController {
         const passwordHash = await argon2.hash(body.password, ARGON2_OPTIONS)
 
         return await this.authService.create({ ...body, passwordHash })
-
-        // return new ApiResponseDto({
-        //     success: true,
-        //     message: "successfully register",
-        //     data: result
-        // })
     }
 
     @Public()
+    @StrictThrottle()
     @Post("login")
     @Serialize(LoginResponse)
     @UseGuards(LocalAuthGuard)
     @HttpCode(HttpStatus.OK)
     @ApiBody({ type: LoginDto })
-
     async login(
         @Body() _body: LoginDto,
         @currentUser() user: User,
@@ -71,6 +68,7 @@ export class AuthController {
         }
     }
 
+    @StrictThrottle()
     @Public()
     @Post("refresh")
     @UseGuards(RefreshGuard)
@@ -121,6 +119,7 @@ export class AuthController {
     }
 
 
+    @StrictThrottle()
     @UseGuards(JwtGuard)
     @Patch('password')
     @HttpCode(HttpStatus.OK)
@@ -129,6 +128,7 @@ export class AuthController {
         return new ApiResponseDto({ success: true })
     }
 
+    @StrictThrottle()
     @UseGuards(JwtGuard)
     @Patch('reset-password')
     @HttpCode(HttpStatus.OK)

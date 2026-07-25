@@ -3,7 +3,6 @@ import { Logger, Module } from "@nestjs/common"
 import { ConfigModule, ConfigService } from "@nestjs/config";
 import { redisStore } from "cache-manager-redis-yet";
 import { SafeCacheService } from "./safe-cache.service";
-import { logger } from "@sentry/node";
 
 
 @Module({
