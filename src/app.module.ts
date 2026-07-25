@@ -14,13 +14,14 @@ import { JwtGuard } from './auth/gurads/jwt.guard';
 import { GlobalExceptionFilter } from './common/filters/global-exception.filter';
 import { RequestIdMiddleware } from './common/middleware/request-id.middleware';
 import { RedisCacheModule } from './common/cache/redis-cache.module';
+import { HealthModule } from './common/health/health.module';
 
 @Module({
   imports: [ConfigModule.forRoot({
     isGlobal: true,
     envFilePath: '.env',
     load: [configuration]
-  }), RedisCacheModule, TypeOrmModule.forRootAsync({
+  }), HealthModule, RedisCacheModule, TypeOrmModule.forRootAsync({
     imports: [ConfigModule],
     inject: [ConfigService],
     useFactory: (config: ConfigService) => ({
