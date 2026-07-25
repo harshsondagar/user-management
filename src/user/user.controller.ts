@@ -9,6 +9,7 @@ import { STATUS } from './userfollowers-entity';
 import { FollowResponseDto } from './dto/follow-responseDTO';
 import { Serialize } from '../common/interceptors/serialize-interceptor';
 import { ResponseMessage } from '../common/decorator/response-message.decorator';
+import { CacheKey, CacheTTL } from '@nestjs/cache-manager';
 
 @Controller('user')
 export class UserController {
@@ -18,7 +19,7 @@ export class UserController {
     @Get("me")
     @Serialize(UserResponseDto)
     async getUser(@currentUser() user: User) {
-        return this.userServices.getUser(user)
+        return this.userServices.getUser(user.id)
     }
 
     @UseGuards(JwtGuard)
@@ -96,7 +97,6 @@ export class UserController {
     }
 
     // ---- Lists ----
-
     @UseGuards(JwtGuard)
     @Get("me/followers")
     @Serialize(FollowResponseDto)

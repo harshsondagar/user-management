@@ -1,5 +1,6 @@
 {
-  "compilerOptions": {
+  "compilerOptions": {    
+    "types": ["node", "jest"],
     "module": "nodenext",
     "moduleResolution": "nodenext",
     "resolvePackageJsonExports": true,
@@ -22,7 +23,7 @@
     "noFallthroughCasesInSwitch": false,
     "typeRoots": [    
       "./node_modules/@types",
-      "./src/types"
+      "./src/types",
      ]
   }
 }

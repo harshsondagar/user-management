@@ -5,6 +5,7 @@ import { SystemService } from "../../user/system.service";
 import { User, UserRole } from "../../user/user-entity";
 import { PUBLIC_KEY } from "../decorator/public-decoretor";
 import { Request } from "express";
+import { MaintenanceModeException } from "../exceptions/app.exception";
 
 
 
@@ -40,10 +41,6 @@ export class maintenanceGuard implements CanActivate {
             return true
         }
 
-        throw new ServiceUnavailableException({
-            statusCode: 503,
-            message: 'The system is currently undergoing scheduled maintenance. Please check back later.',
-            estimatedDuration: '30-60 minutes'
-        })
+        throw new MaintenanceModeException('30-60 minutes');
     }
 }

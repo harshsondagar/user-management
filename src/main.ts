@@ -8,7 +8,6 @@ import { AppException } from './common/exceptions/app.exception';
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
 
-  // app.use(RequestIdMiddleware)
 
   app.useGlobalPipes(new ValidationPipe({
     whitelist: true,

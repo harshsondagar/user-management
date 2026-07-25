@@ -1,4 +1,4 @@
-import { ConflictException, ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
+import { ConflictException, ForbiddenException, Inject, Injectable, NotFoundException } from '@nestjs/common';
 import { Repository } from 'typeorm';
 import { ProfileType, User, UserRole } from './user-entity';
 import { registerBody } from '../types';
@@ -8,6 +8,9 @@ import { RegisterResponseDTO } from '../auth/dto/register-responseDTO';
 import { UpdateUserDTO } from './dto/UpdateUserDTO';
 import * as argon2 from "argon2"
 import { Followers, STATUS } from './userfollowers-entity';
+import { CACHE_MANAGER } from '@nestjs/cache-manager';
+import type { Cache } from 'cache-manager';
+import { SafeCacheService } from '../common/cache/safe-cache.service';
 
 
 
@@ -24,7 +27,8 @@ export class UserService {
 
     constructor(
         @InjectRepository(User) private readonly userRepository: Repository<User>,
-        @InjectRepository(Followers) private readonly followerRepository: Repository<Followers>
+        @InjectRepository(Followers) private readonly followerRepository: Repository<Followers>,
+        private readonly cache: SafeCacheService
     ) { }
 
     async findByEMailWithPassword(email: string) {
@@ -105,6 +109,10 @@ export class UserService {
 
         const updateResult = await this.userRepository.update({ id }, user)
 
+        const cacheKey = `user:${id}`
+        await this.cache.del(cacheKey)
+
+
         if (updateResult.affected === 0) {
             throw new NotFoundException(`User with ID ${id} not found`);
         }
@@ -122,7 +130,13 @@ export class UserService {
         if (targetUser.role === UserRole.ADMIN && performingUser.role !== UserRole.SUPER_ADMIN) {
             throw new ForbiddenException('Only the Super Admin can remove administrative accounts.');
         }
-        return this.userRepository.softDelete(targetUserId);
+
+        const isDeleted = await this.userRepository.softDelete(targetUserId);
+
+        const cacheKey = `user:${targetUserId}`
+        await this.cache.del(cacheKey)
+
+        return isDeleted
     }
 
     async resetPassword(id: string, newPassword: string) {
@@ -135,8 +149,22 @@ export class UserService {
         return true
     }
 
-    async getUser(user: User) {
-        return this.userRepository.findOne({ where: { id: user.id } })
+    async getUser(id: string) {
+
+        const cacheKey = `user:${id}`
+
+        const cached = await this.cache.get(cacheKey)
+
+        if (cached) {
+
+            return cached
+        }
+
+        const user = await this.userRepository.findOne({ where: { id: id } })
+
+        await this.cache.set(cacheKey, user, 300 * 1000)
+
+        return user
     }
 
     async addFollowRequest(user: User, followingId: string) {
@@ -215,11 +243,18 @@ export class UserService {
             throw new NotFoundException("You are not following this user")
         }
 
-        return await this.followerRepository.remove(followRow)
+        const unfollowUser = await this.followerRepository.remove(followRow)
+
+        const cacheKey = `following:${currentUser.id}`
+
+        await this.cache.del(cacheKey)
+
+        return unfollowUser
     }
 
     async removeFollower(currentUser: User, followerId: string) {
         // currentUser forcibly removes someone who follows them
+
 
         const followRow = await this.followerRepository.findOne({
             where: { followerId, followingId: currentUser.id }
@@ -229,7 +264,11 @@ export class UserService {
             throw new NotFoundException("This user does not follow you")
         }
 
-        return await this.followerRepository.remove(followRow)
+        const cacheKey = `follower:${currentUser.id}`
+        const removedUser = await this.followerRepository.remove(followRow)
+
+        await this.cache.del(cacheKey)
+
     }
 
     async blockUser(currentUser: User, targetId: string) {
@@ -267,23 +306,53 @@ export class UserService {
     }
 
     async getFollowers(userId: string) {
-        // people who follow userId (accepted only)
-        return this.followerRepository.find({
+
+        const cacheKey = `follower:${userId}`
+
+        const cached = await this.cache.get(cacheKey)
+
+        if (cached) return cached
+
+        const followers = await this.followerRepository.find({
             where: { followingId: userId, status: STATUS.ACCEPTED }
         })
+
+        await this.cache.set(cacheKey, followers, 30 * 1000)
+
+        return followers
     }
 
     async getFollowing(userId: string) {
-        return this.followerRepository.find({
+
+        const cacheKey = `following:${userId}`
+
+        const cached = await this.cache.get(cacheKey)
+
+        if (cached) return cached
+
+        const following = await this.followerRepository.find({
             where: { followerId: userId, status: STATUS.ACCEPTED }
         })
+
+        await this.cache.set(cacheKey, following, 30 * 1000)
+        return following
     }
 
     async getPendingRequests(userId: string) {
-        // incoming follow requests waiting for userId's approval
-        return this.followerRepository.find({
+
+        const cacheKey = `followRequest:${userId}`
+
+        const cached = await this.cache.get(cacheKey)
+
+        if (cached) return cached
+
+        const followRequest = await this.followerRepository.find({
             where: { followingId: userId, status: STATUS.PENDING }
         })
+
+        await this.cache.set(cacheKey, followRequest, 30 * 1000)
+
+        return followRequest
     }
 
     private async getFollowStatus(requesterId: string, targetId: string): Promise<STATUS | null> {
@@ -294,6 +363,7 @@ export class UserService {
     }
 
     async getUserProfile(requester: User, targetId: string) {
+
 
         const targetUser = await this.findById(targetId)
 
@@ -326,7 +396,6 @@ export class UserService {
 
         // 5. Private / Friends-only → must have an ACCEPTED follow relationship
         const relationship = await this.getFollowStatus(requester.id, targetUser.id)
-        console.log(relationship);
 
         if (relationship === STATUS.ACCEPTED) {
             return this.stripPrivateFields(targetUser)

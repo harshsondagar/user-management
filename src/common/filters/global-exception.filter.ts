@@ -12,15 +12,13 @@ interface ErrorResponse {
     requestId: string;
     details?: unknown;
 }
-
-
 @Catch()
-
 export class GlobalExceptionFilter implements ExceptionFilter {
 
     private readonly logger = new Logger(GlobalExceptionFilter.name)
 
     catch(exception: unknown, host: ArgumentsHost) {
+
         const ctx = host.switchToHttp()
         const request = ctx.getRequest<Request>()
         const response = ctx.getResponse<Response>()
@@ -43,7 +41,6 @@ export class GlobalExceptionFilter implements ExceptionFilter {
         response.status(status).json(errorResponse)
     }
 
-
     private resolveException(exception: unknown): {
         status: number;
         errorCode: string;
@@ -56,7 +53,9 @@ export class GlobalExceptionFilter implements ExceptionFilter {
             const status = exception.getStatus()
 
             if (typeof res === 'object' && res !== null) {
+
                 const r = res as Record<string, string>
+
                 return {
                     status,
                     errorCode: (r.errorCode as string) ?? this.defaultErrorCode(status),
@@ -109,6 +108,8 @@ export class GlobalExceptionFilter implements ExceptionFilter {
 
     private logException(exception: unknown, errorResponse: ErrorResponse, request: Request): void {
         const isServerError = errorResponse.statusCode >= 500;
+
+
         const logPayload = {
             requestId: errorResponse.requestId,
             method: request.method,

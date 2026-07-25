@@ -34,3 +34,16 @@ export class InsufficientPermissionsException extends AppException {
         );
     }
 }
+
+// src/common/exceptions/app.exception.ts
+
+export class MaintenanceModeException extends AppException {
+    constructor(estimatedDuration?: string) {
+        super(
+            'SERVICE_UNAVAILABLE_MAINTENANCE',
+            'The system is currently undergoing scheduled maintenance. Please check back later.',
+            HttpStatus.SERVICE_UNAVAILABLE,
+            estimatedDuration ? { estimatedDuration } : undefined,
+        );
+    }
+}

@@ -29,5 +29,10 @@ export default () => ({
     admin: {
         email: process.env.SUPER_ADMIN_EMAIL,
         password: process.env.SUPER_ADMIN_PASSWORD
+    },
+    redis: {
+        host: process.env.REDIS_HOST!,
+        port: process.env.REDIS_PORT!,
+        password: process.env.REDIS_PASSWORD!
     }
 });

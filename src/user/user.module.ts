@@ -9,9 +9,10 @@ import { SystemService } from './system.service';
 import { SuperAdminController } from './super-admin.controller';
 import { AuthModule } from '../auth/auth.module';
 import { Followers } from './userfollowers-entity';
+import { RedisCacheModule } from '../common/cache/redis-cache.module';
 
 @Module({
-  imports: [forwardRef(() => AuthModule), TypeOrmModule.forFeature([User, System, Followers]),],
+  imports: [forwardRef(() => AuthModule), RedisCacheModule, TypeOrmModule.forFeature([User, System, Followers])],
   providers: [UserService, SuperAdminSeed, SystemService],
   controllers: [UserController, SuperAdminController],
   exports: [UserService, SystemService]
