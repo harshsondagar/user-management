@@ -21,7 +21,6 @@ export class HealthController {
     @HealthCheck()
     check() {
         try {
-
             return this.health.check([
                 () => this.db.pingCheck('database'),
                 () => this.redis.isHealthy('redis'),
