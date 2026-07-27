@@ -10,14 +10,12 @@ export class SafeCacheService {
 
     constructor(@Inject(CACHE_MANAGER) private readonly cache: Cache) { }
 
-    async get<T>(key: string): Promise<T | undefined> {
-        // console.log(await this.cache.get<T>('user'));
-
+    async get<T>(key: string): Promise<T | null> {
         try {
-            return await this.cache.get<T>(key)
+            return (await this.cache.get<T>(key)) ?? null
         } catch (error) {
             this.logger.warn(`cache GET failed for key "${key}" : ${(error as Error).message} `)
-            return undefined
+            return null
         }
     }
 

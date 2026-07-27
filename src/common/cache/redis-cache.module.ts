@@ -1,30 +1,30 @@
 import { CacheModule } from "@nestjs/cache-manager";
-import { Logger, Module } from "@nestjs/common"
+import { Global, Logger, Module } from "@nestjs/common"
 import { ConfigModule, ConfigService } from "@nestjs/config";
-import { redisStore } from "cache-manager-redis-yet";
 import { SafeCacheService } from "./safe-cache.service";
+import { createKeyv } from "@keyv/redis";
 
 
+@Global()
 @Module({
     imports: [CacheModule.registerAsync({
         isGlobal: true,
         imports: [ConfigModule],
         inject: [ConfigService],
         useFactory: async (config: ConfigService) => {
-            const store = await redisStore({
-                socket: {
-                    host: config.get<string>('redis.host', 'localhost'),
-                    port: config.get<number>('redis.port', 6379)
-                },
-                // password: config.get<string>('redis.password'),
-                ttl: 60 * 1000
-            })
+            const password = config.get<string>('redis.password');
+            const host = config.get<string>('redis.host', 'localhost');
+            const port = config.get<number>('redis.port', 6379);
 
-            store.client?.on('error', (err) => {
-                Logger.error(`Redis client error: ${err.message}`, err.stack, 'RedisCache');
-            })
+            const redisUrl = password ? `redis://${password}@${host}:${port}` : `redis://${host}:${port}`;
 
-            return { store }
+            const keyv = createKeyv(redisUrl);
+
+            keyv.on('error', (err) => {
+                Logger.error(`Redis (Keyv) connection error: ${err.message}`, err.stack, 'RedisCache');
+            });
+
+            return { stores: [keyv], ttl: 60 * 1000 }
         }
     })],
     exports: [CacheModule, SafeCacheService],

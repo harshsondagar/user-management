@@ -4,19 +4,19 @@ import { STATUS } from '../userfollowers-entity';
 
 export class FollowResponseDto {
     @Expose()
-    id: string;
+    declare id: string;
 
     @Expose()
-    followerId: string;
+    declare followerId: string;
 
     @Expose()
-    followingId: string;
+    declare followingId: string;
 
     @Expose()
-    status: STATUS;
+    declare status: STATUS;
 
     @Expose()
-    createdAt: Date;
+    declare createdAt: Date;
 
     constructor(partial: Partial<FollowResponseDto>) {
         Object.assign(this, partial);

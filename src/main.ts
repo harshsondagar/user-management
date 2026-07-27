@@ -6,7 +6,6 @@ import { ResponseEnvelopeInterceptor } from './common/interceptors/response-enve
 import { RequestIdMiddleware } from './common/middleware/request-id.middleware';
 import { AppException } from './common/exceptions/app.exception';
 import { NestExpressApplication } from '@nestjs/platform-express';
-import axios from 'axios';
 async function bootstrap() {
   const app = await NestFactory.create<NestExpressApplication>(AppModule);
 
