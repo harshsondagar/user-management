@@ -5,6 +5,7 @@ import { createTestApp } from '../utils/app-factory.util';
 import { truncateAllTables } from '../utils/db.util';
 import { registerAndVerifyUser } from '../utils/auth-helper.util';
 import {
+
     validRegisterDto,
     validLoginDto,
     wrongPasswordLoginDto,
@@ -19,6 +20,7 @@ describe('Auth - Login (e2e)', () => {
     beforeAll(async () => {
         app = await createTestApp();
         dataSource = app.get(DataSource);
+        await truncateAllTables(dataSource);
     });
 
     afterEach(async () => {

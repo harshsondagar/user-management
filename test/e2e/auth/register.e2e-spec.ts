@@ -4,17 +4,17 @@ import { bindRepositoriesToTransaction, createTestApp } from "../utils/app-facto
 import { INestApplication } from "@nestjs/common"
 import { truncateAllTables } from "../utils/db.util"
 import request from "supertest"
-import { validRegisterDto } from "../../fixtures/users.fixture"
+import { invalidEmailDto, minimalValidRegisterDto, missingEmailDto, validRegisterDto, weakPasswordDto } from "../../fixtures/users.fixture"
 
 describe('AUTH - Register (e2e)', () => {
     let app: INestApplication
     let dataSource: DataSource
-    let queryRunner: QueryRunner
 
     beforeAll(async () => {
-        app = await createTestApp()
-        dataSource = app.get(DataSource)
-    })
+        app = await createTestApp();
+        dataSource = app.get(DataSource);
+        await truncateAllTables(dataSource);
+    });
 
     afterEach(async () => {
         await truncateAllTables(app.get(DataSource))

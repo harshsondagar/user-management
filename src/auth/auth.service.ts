@@ -104,7 +104,7 @@ export class AuthService {
             this.logger.warn(`Welcome email failed for ${user.email}: ${(error as Error).message}`);
         }
 
-        return { message: 'Email verified successfully' };
+        return { message: 'Email verified successfully', success: true };
     }
 
     async resendOtp(dto: ResendOtpDto) {
