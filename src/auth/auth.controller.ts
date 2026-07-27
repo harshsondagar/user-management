@@ -1,8 +1,23 @@
-import "dotenv/config"
-import { Body, Controller, Get, HttpCode, HttpStatus, InternalServerErrorException, Patch, Post, Put, Query, Render, Req, Res, UseGuards } from '@nestjs/common';
+import 'dotenv/config';
+import {
+    Body,
+    Controller,
+    Get,
+    HttpCode,
+    HttpStatus,
+    InternalServerErrorException,
+    Patch,
+    Post,
+    Put,
+    Query,
+    Render,
+    Req,
+    Res,
+    UseGuards,
+} from '@nestjs/common';
 import { ARGON2_OPTIONS, AuthService } from './auth.service';
 import { RegisterDTO } from './dto/register-dto';
-import * as argon2 from 'argon2'
+import * as argon2 from 'argon2';
 import { RegisterResponseDTO } from './dto/register-responseDTO';
 import { ApiWrappedResponse } from '../common/decorator/api-response-wrapper.decorator';
 import { ApiResponseDto } from '../common/dto/api-response';
@@ -15,31 +30,28 @@ import { LoginResponse } from './dto/Login.response.dto';
 import { ApiBody } from '@nestjs/swagger';
 import { LoginDto } from './dto/login-dto';
 import { RefreshGuard } from './gurads/jwt-refresh.guard';
-import { JwtGuard } from "./gurads/jwt.guard";
-import { changePasswordDTO } from "./dto/changePassword-dto";
-import { ResetPasswordDTO } from "./dto/ResetPasswordDTO";
-import { Serialize } from "../common/interceptors/serialize-interceptor";
-import { Throttle } from "@nestjs/throttler";
-import { StrictThrottle } from "../common/decorator/throttle-presets.decorator";
-import { VerifyOtpDto } from "./dto/verify-otp.dto";
-import { ResendOtpDto } from "./dto/resend-otp.dto";
+import { JwtGuard } from './gurads/jwt.guard';
+import { changePasswordDTO } from './dto/changePassword-dto';
+import { ResetPasswordDTO } from './dto/ResetPasswordDTO';
+import { Serialize } from '../common/interceptors/serialize-interceptor';
+import { Throttle } from '@nestjs/throttler';
+import { StrictThrottle } from '../common/decorator/throttle-presets.decorator';
+import { VerifyOtpDto } from './dto/verify-otp.dto';
+import { ResendOtpDto } from './dto/resend-otp.dto';
 
-const REFRESH_COOKIE_NAME = process.env.REFRESH_COOKIE_NAME!
+const REFRESH_COOKIE_NAME = process.env.REFRESH_COOKIE_NAME!;
 
 @Controller('auth')
 export class AuthController {
-
     constructor(private readonly authService: AuthService) { }
 
     @Public()
     @Throttle({ default: { limit: 5, ttl: 60000 } })
-    @Post("register")
+    @Post('register')
     @ApiWrappedResponse(RegisterResponseDTO)
     async register(@Body() body: RegisterDTO) {
-
-        const passwordHash = await argon2.hash(body.password, ARGON2_OPTIONS)
-
-        return await this.authService.create({ ...body, passwordHash })
+        const passwordHash = await argon2.hash(body.password, ARGON2_OPTIONS);
+        return await this.authService.create({ ...body, passwordHash });
     }
 
     @Public()
@@ -60,7 +72,7 @@ export class AuthController {
 
     @Public()
     @StrictThrottle()
-    @Post("login")
+    @Post('login')
     @Serialize(LoginResponse)
     @UseGuards(LocalAuthGuard)
     @HttpCode(HttpStatus.OK)
@@ -69,44 +81,53 @@ export class AuthController {
         @Body() _body: LoginDto,
         @currentUser() user: User,
         @Req() req: e.Request,
-        @Res({ passthrough: true }) res: e.Response
+        @Res({ passthrough: true }) res: e.Response,
     ) {
-        const { accessToken, refreshToken, refreshTokenExpiresAt } = await this.authService.login(
-            user,
-            req.get('user-agent'),
-            req.ip
-        )
+        const { accessToken, refreshToken, refreshTokenExpiresAt } =
+            await this.authService.login(user, req.get('user-agent'), req.ip);
 
-        this.setRefreshCookie(res, refreshToken, refreshTokenExpiresAt)
+        this.setRefreshCookie(res, refreshToken, refreshTokenExpiresAt);
 
         return {
             id: user.id,
             firstName: user.firstName,
-            accessToken
-        }
+            accessToken,
+        };
     }
 
     @StrictThrottle()
     @Public()
-    @Post("refresh")
+    @Post('refresh')
     @UseGuards(RefreshGuard)
     @HttpCode(HttpStatus.OK)
     @ApiWrappedResponse(LoginResponse)
-    async refresh(@Req() req: e.Request & { user: { sub: string, rawToken: string, firstName: string } }, @Res({ passthrough: true }) res: e.Response) {
+    async refresh(
+        @Req()
+        req: e.Request & {
+            user: { sub: string; rawToken: string; firstName: string };
+        },
+        @Res({ passthrough: true }) res: e.Response,
+    ) {
+        const { sub, rawToken, firstName } = req.user;
 
-        const { sub, rawToken, firstName } = req.user
+        const { accessToken, refreshToken, refreshTokenExpiresAt } =
+            await this.authService.refreshToken(
+                sub,
+                rawToken,
+                req.get('user-agent')!,
+                req.ip!,
+            );
 
-        const { accessToken, refreshToken, refreshTokenExpiresAt } = await this.authService.refreshToken(sub, rawToken, req.get('user-agent')!, req.ip!)
-
-        this.setRefreshCookie(res, refreshToken, refreshTokenExpiresAt)
+        this.setRefreshCookie(res, refreshToken, refreshTokenExpiresAt);
 
         return new ApiResponseDto({
             success: true,
-            message: "successfully refresh",
+            message: 'successfully refresh',
             data: new LoginResponse({
-                id: sub, accessToken
-            })
-        })
+                id: sub,
+                accessToken,
+            }),
+        });
     }
 
     @UseGuards(JwtGuard)
@@ -118,49 +139,57 @@ export class AuthController {
         @Res({ passthrough: true }) res: e.Response,
     ) {
         const rawToken = req.cookies?.[REFRESH_COOKIE_NAME];
-
         await this.authService.logout(user.id, rawToken);
-
         res.clearCookie(REFRESH_COOKIE_NAME, { path: '/auth' });
-
         return new ApiResponseDto({ success: true });
     }
 
     @UseGuards(JwtGuard)
     @HttpCode(HttpStatus.OK)
     @Post('logout-all')
-    async logoutAll(@currentUser() user: User, @Req() req: e.Request, @Res({ passthrough: true }) res: e.Response) {
-        await this.authService.removeAllSession(user.id)
+    async logoutAll(
+        @currentUser() user: User,
+        @Req() req: e.Request,
+        @Res({ passthrough: true }) res: e.Response,
+    ) {
+        await this.authService.removeAllSession(user.id);
 
-        res.clearCookie(REFRESH_COOKIE_NAME, { path: "/auth" })
+        res.clearCookie(REFRESH_COOKIE_NAME, { path: '/auth' });
         return new ApiResponseDto({ success: true });
     }
-
 
     @StrictThrottle()
     @UseGuards(JwtGuard)
     @Patch('password')
     @HttpCode(HttpStatus.OK)
-    async changePassword(@currentUser() user: User, @Body() Body: changePasswordDTO) {
-        await this.authService.changePassword(user.id, Body.password)
-        return new ApiResponseDto({ success: true })
+    async changePassword(
+        @currentUser() user: User,
+        @Body() Body: changePasswordDTO,
+    ) {
+        await this.authService.changePassword(user.id, Body.password);
+        return new ApiResponseDto({ success: true });
     }
 
     @StrictThrottle()
     @UseGuards(JwtGuard)
     @Patch('reset-password')
     @HttpCode(HttpStatus.OK)
-    async resetPassword(@currentUser() user: User, @Body() body: ResetPasswordDTO) {
-        const isPasswordChange = await this.authService.resetPassword(user.id, body)
+    async resetPassword(
+        @currentUser() user: User,
+        @Body() body: ResetPasswordDTO,
+    ) {
+        const isPasswordChange = await this.authService.resetPassword(
+            user.id,
+            body,
+        );
 
         if (!isPasswordChange) {
-            throw new InternalServerErrorException("error while changing password")
+            throw new InternalServerErrorException('error while changing password');
         }
         return new ApiResponseDto({
             success: true,
-            message: "password changed successfully"
-        })
-
+            message: 'password changed successfully',
+        });
     }
 
     @Public()
@@ -168,14 +197,11 @@ export class AuthController {
     @Patch('forgot-password')
     @HttpCode(HttpStatus.OK)
     async forgotPassword(@Body() body: { email: string }) {
-
-
-        await this.authService.sendPasswordChangeToken(body.email)
+        await this.authService.sendPasswordChangeToken(body.email);
 
         return {
-            message: 'password reset link sent to your emial'
-        }
-
+            message: 'password reset link sent to your emial',
+        };
     }
 
     @Public()
@@ -188,22 +214,19 @@ export class AuthController {
     @Public()
     @StrictThrottle()
     @Post('change-password')
-    async changePasswords(@Body() body: { newPassword: string, token: string }) {
-        await this.authService.updatePassword(body)
+    async changePasswords(@Body() body: { newPassword: string; token: string }) {
+        await this.authService.updatePassword(body);
 
-        return { success: true, message: 'password change successfully' }
+        return { success: true, message: 'password change successfully' };
     }
-
-
 
     private setRefreshCookie(res: e.Response, token: string, expireAt: Date) {
         res.cookie(REFRESH_COOKIE_NAME, token, {
             httpOnly: true,
-            secure: process.env.NODE_ENV === "production",
-            path: "/auth",
+            secure: process.env.NODE_ENV === 'production',
+            path: '/auth',
             sameSite: false,
             expires: expireAt,
-        })
+        });
     }
-
 }

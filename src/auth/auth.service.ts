@@ -1,4 +1,4 @@
-import { ForbiddenException, HttpStatus, Injectable, NotFoundException, UnauthorizedException } from '@nestjs/common';
+import { ForbiddenException, HttpStatus, Injectable, Logger, NotFoundException, UnauthorizedException } from '@nestjs/common';
 import { registerBody } from '../types';
 import { UserService } from '../user/user.service';
 import { User } from '../user/user-entity';
@@ -34,6 +34,9 @@ const SEVEN_DAYS_IN_MS = 7 * 24 * 60 * 60 * 1000;
 
 @Injectable()
 export class AuthService {
+
+    private readonly logger = new Logger(AuthService.name)
+
     constructor(
         private readonly userService: UserService
         , private readonly jwtService: JwtService
@@ -86,7 +89,6 @@ export class AuthService {
                 HttpStatus.BAD_REQUEST,
             );
         }
-        console.log(result);
 
         const user = await this.userRepository.findOne({ where: { email: dto.email } });
         if (!user) {
@@ -95,7 +97,12 @@ export class AuthService {
 
         user.isEmailVerified = true;
         await this.userRepository.save(user);
-        await this.mailService.sendWelcomeMail(user.email, user.firstName!);
+
+        try {
+            await this.mailService.sendWelcomeMail(user.email, user.firstName!);
+        } catch (error) {
+            this.logger.warn(`Welcome email failed for ${user.email}: ${(error as Error).message}`);
+        }
 
         return { message: 'Email verified successfully' };
     }
