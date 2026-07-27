@@ -2,7 +2,7 @@ import { ForbiddenException, HttpStatus, Injectable, NotFoundException, Unauthor
 import { registerBody } from '../types';
 import { UserService } from '../user/user.service';
 import { User } from '../user/user-entity';
-import { createHash, randomUUID } from 'crypto';
+import { createHash, randomBytes, randomUUID } from 'crypto';
 import { JwtService, JwtSignOptions } from '@nestjs/jwt';
 import { ConfigService } from '@nestjs/config';
 import { Repository } from 'typeorm';
@@ -42,6 +42,7 @@ export class AuthService {
         , private readonly mailService: MailService
         , @InjectRepository(RefreshToken) private readonly refreshTokenRepository: Repository<RefreshToken>
         , @InjectRepository(User) private readonly userRepository: Repository<User>
+        , private readonly mailer: MailService
     ) { }
 
     async create(data: registerBody) {
@@ -237,6 +238,13 @@ export class AuthService {
         await this.removeAllSession(id)
     }
 
+    async updatePassword(data: { newPassword: string, token: string }) {
+
+        const hashPassword = await argon2.hash(data.newPassword, ARGON2_OPTIONS)
+
+        await this.userRepository.update({ resetToken: data.token }, { passwordHash: hashPassword, resetToken: '' })
+    }
+
     async checkPassword(userId: string, password: string): Promise<boolean> {
         const user = await this.userService.findByIdWithPassword(userId)
         console.log(user);
@@ -284,5 +292,19 @@ export class AuthService {
         return true
     }
 
+
+    async sendPasswordChangeToken(email: string) {
+        const user = await this.userService.findByEmail(email)
+
+        if (!user) {
+            throw new NotFoundException("user is not found")
+        }
+
+        const token = this.hashToken(email)
+
+        await this.userRepository.update({ email }, { resetToken: token })
+
+        await this.mailer.sendPasswordChangeMail(user.email, `http://localhost:3000/auth/change-password?token=${token}`)
+    }
 
 }

@@ -40,7 +40,7 @@ import { ScheduleModule } from '@nestjs/schedule';
       autoLoadEntities: true,
       entities: [path.join(__dirname, "../**/*-entity.js")],
       migrations: [__dirname, '../migration/*{.ts,.js}'],
-      synchronize: true
+      synchronize: false
     }),
   })
     , UserModule, AuthModule, TaskModule, MailModule, OtpModule, CronModule],

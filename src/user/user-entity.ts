@@ -54,6 +54,8 @@ export class User {
     @Column({ type: "enum", enum: ProfileType, default: ProfileType.PRIVATE })
     declare profileVisibility: ProfileType
 
+    @Column({ type: 'varchar', nullable: true })
+    declare resetToken?: string | null
 
 
     @OneToMany(() => Followers, (follower) => follower.following)

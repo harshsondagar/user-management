@@ -55,4 +55,17 @@ export class MailService {
         })
     }
 
+    async sendPasswordChangeMail(to: string, resetUrl: string) {
+        await this.mailer.sendMail({
+            to,
+            subject: `change forgot password`,
+            template: 'forgot-password',
+            context: {
+                message: 'click url below to change password',
+                resetUrl
+            },
+        })
+    }
+
+
 }

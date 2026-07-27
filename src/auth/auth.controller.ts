@@ -1,5 +1,5 @@
 import "dotenv/config"
-import { Body, Controller, HttpCode, HttpStatus, InternalServerErrorException, Patch, Post, Put, Req, Res, UseGuards } from '@nestjs/common';
+import { Body, Controller, Get, HttpCode, HttpStatus, InternalServerErrorException, Patch, Post, Put, Query, Render, Req, Res, UseGuards } from '@nestjs/common';
 import { ARGON2_OPTIONS, AuthService } from './auth.service';
 import { RegisterDTO } from './dto/register-dto';
 import * as argon2 from 'argon2'
@@ -162,6 +162,39 @@ export class AuthController {
         })
 
     }
+
+    @Public()
+    @StrictThrottle()
+    @Patch('forgot-password')
+    @HttpCode(HttpStatus.OK)
+    async forgotPassword(@Body() body: { email: string }) {
+
+
+        await this.authService.sendPasswordChangeToken(body.email)
+
+        return {
+            message: 'password reset link sent to your emial'
+        }
+
+    }
+
+    @Public()
+    @StrictThrottle()
+    @Get('change-password')
+    changePasswordPage(@Query('token') token: string, @Res() res: e.Response) {
+        res.render('change-password', { token: token ?? null });
+    }
+
+    @Public()
+    @StrictThrottle()
+    @Post('change-password')
+    async changePasswords(@Body() body: { newPassword: string, token: string }) {
+        await this.authService.updatePassword(body)
+
+        return { success: true, message: 'password change successfully' }
+    }
+
+
 
     private setRefreshCookie(res: e.Response, token: string, expireAt: Date) {
         res.cookie(REFRESH_COOKIE_NAME, token, {
