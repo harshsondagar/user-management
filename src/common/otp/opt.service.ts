@@ -2,8 +2,6 @@ import { CACHE_MANAGER } from "@nestjs/cache-manager";
 import { Inject, Injectable } from "@nestjs/common";
 import crypto from "crypto"
 import { SafeCacheService } from "../cache/safe-cache.service";
-import { emitWarning } from "process";
-
 
 @Injectable()
 export class OtpService {
@@ -43,6 +41,7 @@ export class OtpService {
 
 
         const hashedInput = this.hashOtp(otp);
+
         if (hashedInput !== stored) {
             await this.cache.set(`otp-attempts:${email}`, attempts + 1, this.OTP_TTL_MS);
             return { valid: false, reason: 'INVALID_OTP' };

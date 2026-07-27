@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            line-height: 1.6;
+            color: #333;
+        }
+
+        .container {
+            max-width: 600px;
+            margin: 0 auto;
+            padding: 20px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+        }
+
+        h1 {
+            color: #007bff;
+            border-bottom: 2px solid #007bff;
+            padding-bottom: 10px;
+        }
+
+        ul {
+            padding-left: 20px;
+        }
+
+        li {
+            margin-bottom: 8px;
+        }
+
+        .highlight {
+            font-weight: bold;
+            color: #28a745;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <h1>Weekly Registration Summary</h1>
+        <p>Hello Admin,</p>
+        <p>Here is the list of new users who registered during the past week.</p>
+        <p>Total new signups: <span class="highlight">
+                <%= totalUsers %>
+            </span></p>
+
+        <ul>
+            <% users.forEach(function(user) { %>
+                <li>
+                    <strong>
+                        <%= user.firstName || 'N/A' %>
+                            <%= user.lastName || '' %>
+                    </strong>
+                    (<%= user.email %>) - Registered: <%= user.formattedDate %>
+                </li>
+                <% }); %>
+        </ul>
+    </div>
+</body>
+
+</html>

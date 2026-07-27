@@ -1,4 +1,4 @@
-// dto/follow-response.dto.ts
+
 import { Expose } from 'class-transformer';
 import { STATUS } from '../userfollowers-entity';
 

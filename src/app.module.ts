@@ -19,9 +19,11 @@ import { CustomThrottlerGuard } from './throttler/custom-throttler.guard';
 import { AppThrottleModule } from './throttler/throttler.module';
 import { MailModule } from './mail/mail.module';
 import { OtpModule } from './common/otp/otp.module';
+import { CronModule } from './common/report/cron.module';
+import { ScheduleModule } from '@nestjs/schedule';
 
 @Module({
-  imports: [ConfigModule.forRoot({
+  imports: [ScheduleModule.forRoot(), ConfigModule.forRoot({
     isGlobal: true,
     envFilePath: '.env',
     load: [configuration]
@@ -41,7 +43,7 @@ import { OtpModule } from './common/otp/otp.module';
       synchronize: true
     }),
   })
-    , UserModule, AuthModule, TaskModule, MailModule, OtpModule],
+    , UserModule, AuthModule, TaskModule, MailModule, OtpModule, CronModule],
   controllers: [],
   providers: [AppService, {
     provide: APP_FILTER,
