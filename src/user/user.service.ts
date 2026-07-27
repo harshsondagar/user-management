@@ -1,4 +1,4 @@
-import { ConflictException, ForbiddenException, Inject, Injectable, NotFoundException } from '@nestjs/common';
+import { ConflictException, ForbiddenException, HttpStatus, Inject, Injectable, NotFoundException } from '@nestjs/common';
 import { Repository } from 'typeorm';
 import { ProfileType, User, UserRole } from './user-entity';
 import { registerBody } from '../types';
@@ -11,6 +11,11 @@ import { Followers, STATUS } from './userfollowers-entity';
 import { CACHE_MANAGER } from '@nestjs/cache-manager';
 import type { Cache } from 'cache-manager';
 import { SafeCacheService } from '../common/cache/safe-cache.service';
+import { OtpService } from '../common/otp/opt.service';
+import { MailService } from '../mail/mail.service';
+import { VerifyOtpDto } from '../auth/dto/verify-otp.dto';
+import { AppException, ResourceNotFoundException } from '../common/exceptions/app.exception';
+import { ResendOtpDto } from '../auth/dto/resend-otp.dto';
 
 
 
@@ -28,6 +33,8 @@ export class UserService {
     constructor(
         @InjectRepository(User) private readonly userRepository: Repository<User>,
         @InjectRepository(Followers) private readonly followerRepository: Repository<Followers>,
+        private readonly otpService: OtpService,
+        private readonly mailService: MailService,
         private readonly cache: SafeCacheService
     ) { }
 
@@ -67,7 +74,8 @@ export class UserService {
             throw new ConflictException("A user with this email already exist")
         }
 
-        const data = await this.userRepository.save(
+
+        const user = await this.userRepository.save(
             this.userRepository.create({
                 firstName: body.firstName,
                 lastName: body.lastName,
@@ -76,9 +84,16 @@ export class UserService {
             })
         )
 
-        return plainToInstance(RegisterResponseDTO, data, { excludeExtraneousValues: true })
+
+        const otp = this.otpService.generateOtp();
+        await this.otpService.storeOtp(user.email, otp);
+        await this.mailService.sendOtpEmail(user.email, user.firstName!, otp);
+        console.log(existing);
+
+        return { message: 'Registered. Please verify your email.', email: user.email };
 
     }
+
 
     async registerFailedLogin(user: User) {
 

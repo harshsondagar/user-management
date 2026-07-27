@@ -17,6 +17,8 @@ import { RedisCacheModule } from './common/cache/redis-cache.module';
 import { HealthModule } from './common/health/health.module';
 import { CustomThrottlerGuard } from './throttler/custom-throttler.guard';
 import { AppThrottleModule } from './throttler/throttler.module';
+import { MailModule } from './mail/mail.module';
+import { OtpModule } from './common/otp/otp.module';
 
 @Module({
   imports: [ConfigModule.forRoot({
@@ -39,17 +41,17 @@ import { AppThrottleModule } from './throttler/throttler.module';
       synchronize: true
     }),
   })
-    , UserModule, AuthModule, TaskModule],
+    , UserModule, AuthModule, TaskModule, MailModule, OtpModule],
   controllers: [],
   providers: [AppService, {
     provide: APP_FILTER,
     useClass: GlobalExceptionFilter
   }, {
-      provide: APP_GUARD, useClass: JwtGuard
+      provide: APP_GUARD, useClass: CustomThrottlerGuard
     }, {
       provide: APP_GUARD, useClass: maintenanceGuard
     }, {
-      provide: APP_GUARD, useClass: CustomThrottlerGuard
+      provide: APP_GUARD, useClass: JwtGuard
     },],
 })
 export class AppModule implements NestModule {

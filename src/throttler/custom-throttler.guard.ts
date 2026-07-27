@@ -16,7 +16,6 @@ export class CustomThrottlerGuard extends ThrottlerGuard {
     }
 
     async canActivate(context: ExecutionContext): Promise<boolean> {
-        console.log('>>> THROTTLER GUARD FIRING')
 
         try {
             return await super.canActivate(context);
@@ -27,10 +26,8 @@ export class CustomThrottlerGuard extends ThrottlerGuard {
                 throw error;
             }
 
-            this.logger.warn("erorr")
+            this.logger.warn(error as Error)
             return true;
         }
-
-
     }
 }

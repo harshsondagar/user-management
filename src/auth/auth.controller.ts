@@ -21,6 +21,8 @@ import { ResetPasswordDTO } from "./dto/ResetPasswordDTO";
 import { Serialize } from "../common/interceptors/serialize-interceptor";
 import { Throttle } from "@nestjs/throttler";
 import { StrictThrottle } from "../common/decorator/throttle-presets.decorator";
+import { VerifyOtpDto } from "./dto/verify-otp.dto";
+import { ResendOtpDto } from "./dto/resend-otp.dto";
 
 const REFRESH_COOKIE_NAME = process.env.REFRESH_COOKIE_NAME!
 
@@ -29,8 +31,8 @@ export class AuthController {
 
     constructor(private readonly authService: AuthService) { }
 
-    @Throttle({ default: { limit: 5, ttl: 60000 } })
     @Public()
+    @Throttle({ default: { limit: 5, ttl: 60000 } })
     @Post("register")
     @ApiWrappedResponse(RegisterResponseDTO)
     async register(@Body() body: RegisterDTO) {
@@ -38,6 +40,22 @@ export class AuthController {
         const passwordHash = await argon2.hash(body.password, ARGON2_OPTIONS)
 
         return await this.authService.create({ ...body, passwordHash })
+    }
+
+    @Public()
+    @Throttle({ default: { limit: 5, ttl: 300000 } }) // 5 attempts / 5 min — prevent OTP brute-force
+    @Post('verify-otp')
+    @HttpCode(HttpStatus.OK)
+    verifyOtp(@Body() dto: VerifyOtpDto) {
+        return this.authService.verifyOtp(dto);
+    }
+
+    @Public()
+    @Throttle({ default: { limit: 3, ttl: 300000 } }) // stricter — prevent email-bombing via resend spam
+    @Post('resend-otp')
+    @HttpCode(HttpStatus.OK)
+    resendOtp(@Body() dto: ResendOtpDto) {
+        return this.authService.resendOtp(dto);
     }
 
     @Public()

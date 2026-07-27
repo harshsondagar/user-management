@@ -34,5 +34,12 @@ export default () => ({
         host: process.env.REDIS_HOST!,
         port: process.env.REDIS_PORT!,
         password: process.env.REDIS_PASSWORD!
+    },
+    smtp: {
+        user: process.env.SMTP_USER!,
+        pass: process.env.SMTP_PASS!,
+        mail_from: process.env.MAIL_FROM!,
+        host: process.env.SMTP_HOST!,
+        port: process.env.SMTP_PORT!,
     }
 });

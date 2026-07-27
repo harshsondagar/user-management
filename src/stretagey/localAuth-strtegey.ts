@@ -1,10 +1,11 @@
-import { Injectable, ServiceUnavailableException, UnauthorizedException } from "@nestjs/common";
+import { HttpStatus, Injectable, ServiceUnavailableException, UnauthorizedException } from "@nestjs/common";
 import { PassportStrategy } from "@nestjs/passport";
 import { Strategy } from "passport-local"
 import { AuthService } from "../auth/auth.service";
 import { SystemService } from "../user/system.service";
 import { UserService } from "../user/user.service";
 import { UserRole } from "../user/user-entity";
+import { AppException } from "../common/exceptions/app.exception";
 
 
 @Injectable()
@@ -20,6 +21,14 @@ export class LocalStrategy extends PassportStrategy(Strategy, 'local') {
 
         if (!user || !(await this.authservice.validateCredentials(email, password))) {
             throw new UnauthorizedException("Invalid email or password");
+        }
+
+        if (!user.isEmailVerified) {
+            throw new AppException(
+                'EMAIL_NOT_VERIFIED',
+                'Please verify your email before logging in',
+                HttpStatus.FORBIDDEN,
+            );
         }
 
         const isMaintenanceMode = await this.systemService.IsMaintenanceModeActive()

@@ -1,4 +1,4 @@
-import { ForbiddenException, Injectable, NotFoundException, UnauthorizedException } from '@nestjs/common';
+import { ForbiddenException, HttpStatus, Injectable, NotFoundException, UnauthorizedException } from '@nestjs/common';
 import { registerBody } from '../types';
 import { UserService } from '../user/user.service';
 import { User } from '../user/user-entity';
@@ -10,6 +10,11 @@ import { RefreshToken } from './jwt-entity';
 import { InjectRepository } from '@nestjs/typeorm';
 import { ResetPasswordDTO } from './dto/ResetPasswordDTO';
 import * as argon2 from 'argon2'
+import { VerifyOtpDto } from './dto/verify-otp.dto';
+import { OtpService } from '../common/otp/opt.service';
+import { AppException, ResourceNotFoundException } from '../common/exceptions/app.exception';
+import { MailService } from '../mail/mail.service';
+import { ResendOtpDto } from './dto/resend-otp.dto';
 
 interface Tokens {
     accessToken: string;
@@ -33,9 +38,14 @@ export class AuthService {
         private readonly userService: UserService
         , private readonly jwtService: JwtService
         , private readonly configService: ConfigService
-        , @InjectRepository(RefreshToken) private readonly refreshTokenRepository: Repository<RefreshToken>) { }
+        , private readonly otpService: OtpService
+        , private readonly mailService: MailService
+        , @InjectRepository(RefreshToken) private readonly refreshTokenRepository: Repository<RefreshToken>
+        , @InjectRepository(User) private readonly userRepository: Repository<User>
+    ) { }
 
     async create(data: registerBody) {
+
         return this.userService.create(data)
     }
 
@@ -63,6 +73,47 @@ export class AuthService {
         await this.userService.resetFailedLogin(user.id)
 
         return user
+    }
+
+    async verifyOtp(dto: VerifyOtpDto) {
+        const result = await this.otpService.verifyOtp(dto.email, dto.otp);
+
+        if (!result.valid) {
+            throw new AppException(
+                result.reason ?? 'INVALID_OTP',
+                'Invalid or expired verification code',
+                HttpStatus.BAD_REQUEST,
+            );
+        }
+        console.log(result);
+
+        const user = await this.userRepository.findOne({ where: { email: dto.email } });
+        if (!user) {
+            throw new ResourceNotFoundException('User', dto.email);
+        }
+
+        user.isEmailVerified = true;
+        await this.userRepository.save(user);
+        await this.mailService.sendWelcomeMail(user.email, user.firstName!);
+
+        return { message: 'Email verified successfully' };
+    }
+
+    async resendOtp(dto: ResendOtpDto) {
+        const user = await this.userRepository.findOne({ where: { email: dto.email } });
+        if (!user) {
+            throw new ResourceNotFoundException('User', dto.email);
+        }
+
+        if (user.isEmailVerified) {
+            throw new AppException('ALREADY_VERIFIED', 'Email is already verified', HttpStatus.BAD_REQUEST);
+        }
+
+        const otp = this.otpService.generateOtp();
+        await this.otpService.storeOtp(user.email, otp);
+        await this.mailService.sendOtpEmail(user.email, user.firstName!, otp);
+
+        return { message: 'OTP resent' };
     }
 
     async login(user: User, userAgent?: string, ipAddress?: string) {
