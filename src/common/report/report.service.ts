@@ -4,12 +4,13 @@ import { User, UserRole } from '../../user/user-entity';
 import { MoreThanOrEqual, Repository } from 'typeorm';
 import { Cron, CronExpression } from "@nestjs/schedule"
 import { MailerService } from '@nestjs-modules/mailer';
+import { MailService } from '../../mail/mail.service';
 @Injectable()
 export class ReportCronService {
     private readonly logger = new Logger(ReportCronService.name)
 
     constructor(@InjectRepository(User) private readonly userRepository: Repository<User>,
-        private readonly mailService: MailerService
+        private readonly mailService: MailService
     ) { }
 
     @Cron(CronExpression.EVERY_WEEK)
@@ -43,6 +44,7 @@ export class ReportCronService {
                 }),
             }));
 
+            // find all admin and send mail to every admin
             // const admins = await this.userRepository.find({
             //     where: [
             //         { role: UserRole.ADMIN },
@@ -54,15 +56,7 @@ export class ReportCronService {
 
             const adminEmails = process.env.SUPER_ADMIN_EMAIL!
 
-            await this.mailService.sendMail({
-                to: adminEmails,
-                subject: `Weekly New User Registration Report: ${newUsers.length} New Signups`,
-                template: 'report',
-                context: {
-                    totalUsers: newUsers.length,
-                    users: templateUsers,
-                },
-            })
+            await this.mailService.sendReportMail(adminEmails, newUsers, templateUsers)
 
         } catch (error) {
             this.logger.error('Failed to execute weekly report cron job', (error as Error).stack);
