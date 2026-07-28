@@ -22,5 +22,5 @@ export class ResetPasswordDTO {
     @Matches(/(?=.*[A-Z])/, { message: 'Password must contain an uppercase letter' })
     @Matches(/(?=.*\d)/, { message: 'Password must contain a number' })
     @Matches(/(?=.*[^A-Za-z0-9])/, { message: 'Password must contain a special character' })
-    declare new_password: string
+    declare newPassword: string
 }

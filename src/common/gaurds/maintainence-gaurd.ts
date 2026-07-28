@@ -34,8 +34,6 @@ export class maintenanceGuard implements CanActivate {
         }
 
         const user = request.user as User
-        console.log(user);
-
 
         if (user && user.role === UserRole.SUPER_ADMIN) {
             return true

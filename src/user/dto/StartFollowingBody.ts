@@ -6,6 +6,5 @@ export class StartFollowingBody {
 
     @IsString()
     @IsNotEmpty()
-
     declare followingId: string
 }

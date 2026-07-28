@@ -16,7 +16,6 @@ export class CustomThrottlerGuard extends ThrottlerGuard {
     }
 
     async canActivate(context: ExecutionContext): Promise<boolean> {
-
         try {
             return await super.canActivate(context);
 

@@ -17,7 +17,6 @@ import { createKeyv } from "@keyv/redis";
             const port = config.get<number>('redis.port', 6379);
 
             const redisUrl = `redis://${host}:${port}`;
-            console.log(redisUrl);
 
             const keyv = createKeyv(redisUrl);
 

@@ -2,9 +2,6 @@ import "dotenv/config"
 import path, { dirname } from "path";
 import { DataSource } from "typeorm";
 
-console.log(path.join(__dirname, '/../**/*-entity.{ts,js}'));
-console.log(path.join(__dirname, '/../migration/*.{ts,js}'));
-
 
 export const dataSource: DataSource = new DataSource({
     type: 'postgres',

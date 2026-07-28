@@ -5,8 +5,6 @@ import { ConfigModule, ConfigService } from '@nestjs/config';
 import { join } from 'path';
 import { EjsAdapter } from '@nestjs-modules/mailer/adapters/ejs.adapter';
 
-console.log(join(__dirname, 'template'));
-
 @Module({
     imports: [MailerModule.forRootAsync({
         imports: [ConfigModule],

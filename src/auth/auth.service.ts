@@ -15,6 +15,9 @@ import { OtpService } from '../common/otp/opt.service';
 import { AppException, ResourceNotFoundException } from '../common/exceptions/app.exception';
 import { MailService } from '../mail/mail.service';
 import { ResendOtpDto } from './dto/resend-otp.dto';
+import * as crypto from "crypto"
+import { raw } from 'express';
+import { ChangeForgotPassword } from './dto/change-password-dto';
 
 interface Tokens {
     accessToken: string;
@@ -177,7 +180,6 @@ export class AuthService {
     async removeAllSession(id: string) {
         const res = await this.refreshTokenRepository.update({ id }, { revoked: true })
         await this.userService.incrementTokenVersion(id)
-        console.log("removed from all device....", res);
     }
 
     private hashToken(token: string): string {
@@ -188,7 +190,6 @@ export class AuthService {
         const tokenHash = this.hashToken(rawToken)
 
         const stored = await this.refreshTokenRepository.findOne({ where: { tokenHash } })
-        console.log(stored);
 
         if (!stored) {
             throw new UnauthorizedException("token is missing")
@@ -245,16 +246,34 @@ export class AuthService {
         await this.removeAllSession(id)
     }
 
-    async updatePassword(data: { newPassword: string, token: string }) {
+    async updatePassword(data: ChangeForgotPassword) {
 
-        const hashPassword = await argon2.hash(data.newPassword, ARGON2_OPTIONS)
+        const hashedToken = this.hashToken(data.token);
 
-        await this.userRepository.update({ resetToken: data.token }, { passwordHash: hashPassword, resetToken: '' })
+        const user = await this.userRepository.findOne({ where: { resetToken: hashedToken } });
+
+        if (!user) {
+            throw new AppException('INVALID_RESET_TOKEN', 'Invalid or expired reset token', HttpStatus.BAD_REQUEST);
+        }
+
+        if (!user.resetTokenExpiry || user.resetTokenExpiry < new Date()) {
+            throw new AppException('RESET_TOKEN_EXPIRED', 'This reset link has expired', HttpStatus.BAD_REQUEST);
+        }
+
+        const passwordHash = await argon2.hash(data.newPassword, ARGON2_OPTIONS);
+
+        await this.userRepository.update(
+            { id: user.id },
+            {
+                passwordHash,
+                resetToken: null,
+                resetTokenExpiry: null,
+            },
+        );
     }
 
     async checkPassword(userId: string, password: string): Promise<boolean> {
         const user = await this.userService.findByIdWithPassword(userId)
-        console.log(user);
 
         if (!user) {
             throw new NotFoundException("user not found")
@@ -285,9 +304,8 @@ export class AuthService {
             throw new UnauthorizedException("invalid password")
         }
 
-        console.log("password is changed, removing session from all device....");
 
-        const isPasswordChange = await this.userService.resetPassword(userId, body.new_password)
+        const isPasswordChange = await this.userService.resetPassword(userId, body.password)
 
         if (!isPasswordChange) {
             throw new UnauthorizedException("invalid password")
@@ -307,11 +325,13 @@ export class AuthService {
             throw new NotFoundException("user is not found")
         }
 
-        const token = this.hashToken(email)
+        const rawToken = crypto.randomBytes(32).toString('hex')
+        const hashedToken = await this.hashToken(rawToken)
 
-        await this.userRepository.update({ email }, { resetToken: token })
 
-        await this.mailer.sendPasswordChangeMail(user.email, `http://localhost:3000/auth/change-password?token=${token}`)
+        await this.userRepository.update({ email }, { resetToken: hashedToken, resetTokenExpiry: new Date(Date.now() + 30 * 60 * 1000) })
+
+        await this.mailer.sendPasswordChangeMail(user.email, `http://localhost:3000/auth/change-password?token=${rawToken}`)
     }
 
 }

@@ -57,6 +57,8 @@ export class User {
     @Column({ type: 'varchar', nullable: true })
     declare resetToken?: string | null
 
+    @Column({ type: 'timestamptz', nullable: true })
+    declare resetTokenExpiry?: Date | null
 
     @OneToMany(() => Followers, (follower) => follower.following)
     declare followers: Followers[]
@@ -66,8 +68,6 @@ export class User {
 
     @OneToMany(() => Task, (Task) => Task.user)
     declare tasks: Task[]
-
-
 
     @CreateDateColumn({ type: "timestamptz" })
     declare createdAt: Date

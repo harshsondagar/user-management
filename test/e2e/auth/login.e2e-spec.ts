@@ -31,6 +31,9 @@ describe('Auth - Login (e2e)', () => {
         await app.close();
     });
 
+    afterAll(() => {
+        jest.restoreAllMocks();
+    });
     it('logs in successfully with correct, verified credentials', async () => {
         await registerAndVerifyUser(app, validRegisterDto);
 
@@ -38,6 +41,7 @@ describe('Auth - Login (e2e)', () => {
             .post('/auth/login')
             .send(validLoginDto)
             .expect(200);
+
 
         expect(res.body.success).toBe(true);
         expect(res.body.data).toMatchObject({
@@ -57,7 +61,7 @@ describe('Auth - Login (e2e)', () => {
             .expect(200);
 
         const cookies = res.get('Set-Cookie') ?? [];
-        expect(cookies.some((c) => c.startsWith('refreshToken='))).toBe(true); // adjust cookie name if different
+        expect(cookies.some((c) => c.startsWith('refresh_token='))).toBe(true); // adjust cookie name if different
     });
 
     it('rejects login with wrong password', async () => {
@@ -97,7 +101,7 @@ describe('Auth - Login (e2e)', () => {
             .send(shortPasswordLoginDto)
             .expect(400);
 
-        expect(res.body.errorCode).toBe('VALIDATION_ERROR');
+        expect(res.body.errorCode).toBe('BAD_REQUEST');
     });
 
     it('never returns a 200 with a missing accessToken', async () => {

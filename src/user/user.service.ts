@@ -73,13 +73,11 @@ export class UserService {
         if (existing) {
             throw new ConflictException("A user with this email already exist")
         }
-
-
         const user = await this.userRepository.save(
             this.userRepository.create({
                 firstName: body.firstName,
                 lastName: body.lastName,
-                email: body.email,
+                email: body.email.toLocaleLowerCase(),
                 passwordHash: body.passwordHash
             })
         )
@@ -88,7 +86,6 @@ export class UserService {
         const otp = this.otpService.generateOtp();
         await this.otpService.storeOtp(user.email, otp);
         await this.mailService.sendOtpEmail(user.email, user.firstName!, otp);
-        console.log(existing);
 
         return { message: 'Registered. Please verify your email.', email: user.email };
 

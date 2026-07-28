@@ -1,6 +1,7 @@
 import { INestApplication } from '@nestjs/common';
 import request from 'supertest';
 import { OtpService } from '../../../src/common/otp/opt.service';
+import { DataSource } from 'typeorm';
 
 interface RegisterInput {
     email: string;
@@ -51,4 +52,24 @@ export async function createAuthenticatedUser(
 ): Promise<{ accessToken: string; cookies: string[] }> {
     await registerAndVerifyUser(app, registerDto);
     return loginAndGetToken(app, registerDto.email, registerDto.password);
+}
+
+export async function getPasswordResetToken(
+    dataSource: DataSource,
+    email: string,
+): Promise<{ resetToken: string | null; resetTokenExpiresAt: Date | null }> {
+
+    const result = await dataSource.query(
+        'SELECT "resetToken", "resetTokenExpiry" FROM "users" WHERE email = $1',
+        [email],
+    );
+
+    if (!result[0]) {
+        throw new Error(`No user found with email ${email}`);
+    }
+
+    return {
+        resetToken: result[0].resetToken ?? null,
+        resetTokenExpiresAt: result[0].resetTokenExpiresAt ?? null,
+    };
 }

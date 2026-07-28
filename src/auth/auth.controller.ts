@@ -38,6 +38,8 @@ import { Throttle } from '@nestjs/throttler';
 import { StrictThrottle } from '../common/decorator/throttle-presets.decorator';
 import { VerifyOtpDto } from './dto/verify-otp.dto';
 import { ResendOtpDto } from './dto/resend-otp.dto';
+import { ForgotPasswordDto } from './dto/forgot-passwordDTo';
+import { ChangeForgotPassword } from './dto/change-password-dto';
 
 const REFRESH_COOKIE_NAME = process.env.REFRESH_COOKIE_NAME!;
 
@@ -196,11 +198,11 @@ export class AuthController {
     @StrictThrottle()
     @Patch('forgot-password')
     @HttpCode(HttpStatus.OK)
-    async forgotPassword(@Body() body: { email: string }) {
+    async forgotPassword(@Body() body: ForgotPasswordDto) {
         await this.authService.sendPasswordChangeToken(body.email);
-
         return {
-            message: 'password reset link sent to your emial',
+            success: true,
+            message: 'if that email exists, a reset link has been sent',
         };
     }
 
@@ -214,9 +216,8 @@ export class AuthController {
     @Public()
     @StrictThrottle()
     @Post('change-password')
-    async changePasswords(@Body() body: { newPassword: string; token: string }) {
+    async changePasswords(@Body() body: ChangeForgotPassword) {
         await this.authService.updatePassword(body);
-
         return { success: true, message: 'password change successfully' };
     }
 
