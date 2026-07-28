@@ -58,3 +58,40 @@ export async function createTestApp(): Promise<INestApplication> {
     await app.init();
     return app;
 }
+
+export async function createTestAppWithThrottler(): Promise<INestApplication> {
+
+    const moduleRef = await Test.createTestingModule({
+        imports: [AppModule],
+    })
+        .overrideProvider(MailService)
+        .useValue(mockMailService)
+        .overrideProvider(SuperAdminSeed)
+        .useValue({ onModuleInit: () => Promise.resolve() })
+        .compile();
+
+    const app = moduleRef.createNestApplication<NestExpressApplication>();
+
+    app.useStaticAssets(join(__dirname, '../../../public'));
+    app.setBaseViewsDir(join(__dirname, '../../../views'));
+    app.setViewEngine('ejs');
+
+    app.useGlobalInterceptors(
+        new ResponseEnvelopeInterceptor(app.get(Reflector)),
+    );
+
+    app.useGlobalPipes(
+        new ValidationPipe({
+            whitelist: true,
+            forbidNonWhitelisted: true,
+            transform: true,
+            exceptionFactory: (errors) => {
+                const messages = errors.map((e) => Object.values(e.constraints ?? {}).join(', '));
+                return new AppException('VALIDATION_ERROR', messages.join('; '), HttpStatus.BAD_REQUEST);
+            },
+        }),
+    );
+
+    await app.init();
+    return app;
+}
