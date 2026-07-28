@@ -22,16 +22,11 @@ export class HealthController {
     @Get()
     @HealthCheck()
     check() {
-        try {
-            return this.health.check([
-                () => this.db.pingCheck('database'),
-                () => this.redis.isHealthy('redis'),
-                () => this.memory.checkHeap('memory_heap', 300 * 1024 * 1024),
-                () => this.disk.checkStorage('check_storage', { path: '/', thresholdPercent: 0.9 }),
-            ])
-
-        } catch (err: any) {
-            console.log('RAW DISK CHECK ERROR:', JSON.stringify(err.response ?? err, null, 2));
-        }
+        return this.health.check([
+            () => this.db.pingCheck('database'),
+            () => this.redis.isHealthy('redis'),
+            () => this.memory.checkHeap('memory_heap', 300 * 1024 * 1024),
+            () => this.disk.checkStorage('check_storage', { path: '/', thresholdPercent: 0.9 }),
+        ])
     }
 }
