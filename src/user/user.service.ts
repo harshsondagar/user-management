@@ -180,6 +180,15 @@ export class UserService {
     }
 
     async addFollowRequest(user: User, followingId: string) {
+        const existingBlock = await this.followerRepository.findOne({
+            where: [
+                { followerId: user.id, followingId, status: STATUS.BLOCK },
+                { followerId: followingId, followingId: user.id, status: STATUS.BLOCK },
+            ],
+        });
+        if (existingBlock) {
+            throw new ForbiddenException("Can't follow this user");
+        }
 
         if (user.id === followingId) {
             throw new NotFoundException("can't follow yourself")

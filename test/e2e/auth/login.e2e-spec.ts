@@ -5,7 +5,6 @@ import { createTestApp } from '../utils/app-factory.util';
 import { truncateAllTables } from '../utils/db.util';
 import { registerAndVerifyUser } from '../utils/auth-helper.util';
 import {
-
     validRegisterDto,
     validLoginDto,
     wrongPasswordLoginDto,
@@ -84,7 +83,7 @@ describe('Auth - Login (e2e)', () => {
     });
 
     it('rejects login for an unverified email', async () => {
-        // Register but skip verification step
+
         await request(app.getHttpServer()).post('/auth/register').send(validRegisterDto).expect(201);
 
         const res = await request(app.getHttpServer())

@@ -39,15 +39,12 @@ export class UserController {
         }
     }
 
-    // ---- Follow request lifecycle ----
 
     @UseGuards(JwtGuard)
     @Post(":followingId/follow")
     @Serialize(FollowResponseDto)
     async follow(@currentUser() user: User, @Param('followingId') followingId: string) {
         return this.userServices.addFollowRequest(user, followingId)
-        // Note: the "pending vs followed" dynamic message is lost here since
-        // ResponseMessage is static — see explanation below for how to handle this.
     }
 
     @UseGuards(JwtGuard)

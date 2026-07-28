@@ -2,6 +2,7 @@ import { INestApplication } from '@nestjs/common';
 import request from 'supertest';
 import { OtpService } from '../../../src/common/otp/opt.service';
 import { DataSource } from 'typeorm';
+import { makeRegisterDto } from '../../fixtures/users.fixture';
 
 interface RegisterInput {
     email: string;
@@ -34,7 +35,7 @@ export async function loginAndGetToken(
     app: INestApplication,
     email: string,
     password: string,
-): Promise<{ accessToken: string; cookies: string[] }> {
+): Promise<{ accessToken: string; cookies: string[], id: string }> {
     const res = await request(app.getHttpServer())
         .post('/auth/login')
         .send({ email, password })
@@ -43,13 +44,14 @@ export async function loginAndGetToken(
     return {
         accessToken: res.body.data.accessToken,
         cookies: res.get('Set-Cookie') ?? [],
+        id: res.body.data.id
     };
 }
 
 export async function createAuthenticatedUser(
     app: INestApplication,
     registerDto: RegisterInput,
-): Promise<{ accessToken: string; cookies: string[] }> {
+): Promise<{ accessToken: string; cookies: string[], id: string }> {
     await registerAndVerifyUser(app, registerDto);
     return loginAndGetToken(app, registerDto.email, registerDto.password);
 }
@@ -72,4 +74,14 @@ export async function getPasswordResetToken(
         resetToken: result[0].resetToken ?? null,
         resetTokenExpiresAt: result[0].resetTokenExpiresAt ?? null,
     };
+}
+
+export async function createTwoAuthenticatedUsers(app: INestApplication): Promise<Record<any, any>> {
+    const dtoA = makeRegisterDto();
+    const dtoB = makeRegisterDto();
+
+    const userA = await createAuthenticatedUser(app, dtoA);
+    const userB = await createAuthenticatedUser(app, dtoB);
+
+    return { userA, userB, dtoA, dtoB };
 }

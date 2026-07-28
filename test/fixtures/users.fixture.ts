@@ -32,7 +32,7 @@ export const shortPasswordLoginDto = {
     password: '1234567',
 };
 
-interface RegisterDtoShape {
+export interface RegisterDtoShape {
     email: string;
     firstName: string;
     lastName: string;
