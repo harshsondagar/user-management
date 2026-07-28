@@ -121,7 +121,6 @@ export class GlobalExceptionFilter implements ExceptionFilter {
 
 
         if (isServerError) {
-
             this.logger.error(
                 `${errorResponse.message}`,
                 exception instanceof Error ? exception.stack : String(exception),
@@ -135,6 +134,4 @@ export class GlobalExceptionFilter implements ExceptionFilter {
             this.logger.warn(`${errorResponse.message}`, JSON.stringify(logPayload));
         }
     }
-
-
 }
