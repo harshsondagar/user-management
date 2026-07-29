@@ -12,6 +12,7 @@ import {
     shortPasswordLoginDto,
 } from '../../fixtures/users.fixture';
 
+
 describe('Auth - Login (e2e)', () => {
     let app: INestApplication;
     let dataSource: DataSource;

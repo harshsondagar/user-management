@@ -1,4 +1,4 @@
-// test/utils/app-factory.util.ts
+import "dotenv/config"
 import { Test } from '@nestjs/testing';
 import { INestApplication, ValidationPipe, HttpStatus, CanActivate, ExecutionContext } from '@nestjs/common';
 import { AppModule } from '../../../src/app.module';
@@ -19,6 +19,10 @@ class NoopThrottlerGuard implements CanActivate {
 }
 
 export async function createTestApp(): Promise<INestApplication> {
+
+    const workerId = process.env.JEST_WORKER_ID ?? '1';
+    process.env.DB_NAME = `test_db_${workerId}`;
+    process.env.REDIS_DB = workerId;
 
     jest.spyOn(CustomThrottlerGuard.prototype, 'canActivate').mockResolvedValue(true);
 
@@ -60,6 +64,10 @@ export async function createTestApp(): Promise<INestApplication> {
 }
 
 export async function createTestAppWithThrottler(): Promise<INestApplication> {
+
+    const workerId = process.env.JEST_WORKER_ID ?? '1';
+    process.env.DB_NAME = `test_db_${workerId}`;
+    process.env.REDIS_DB = workerId;
 
     const moduleRef = await Test.createTestingModule({
         imports: [AppModule],

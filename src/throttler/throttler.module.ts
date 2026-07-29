@@ -10,7 +10,18 @@ import Redis from "ioredis";
         imports: [ConfigModule],
         inject: [ConfigService],
         useFactory: (config: ConfigService) => {
-            const redisClient = new Redis();
+
+            const password = config.get<string>('redis.password');
+            const host = config.get<string>('redis.host', 'localhost');
+            const port = config.get<number>('redis.port', 6379);
+            const db = config.get<number>('REDIS_DB', 0);
+
+
+            const redisClient = new Redis({
+                host,
+                port,
+                db,
+            });
 
             redisClient.on('error', (err) => {
                 Logger.error(`Throttler Redis connection error: ${err.message}`, err.stack, 'ThrottlerRedis');

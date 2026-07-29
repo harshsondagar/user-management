@@ -21,6 +21,10 @@ describe('User - Follow Lifecycle (e2e)', () => {
     });
 
     afterAll(async () => {
+        if (dataSource && dataSource.isInitialized) {
+            await dataSource.destroy();
+        }
+
         await app.close();
     });
 
