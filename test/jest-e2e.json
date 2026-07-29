@@ -15,5 +15,8 @@
   },
   "transformIgnorePatterns": [
     "node_modules/(?!\\.pnpm/|uuid)"
+  ],
+  "setupFilesAfterEnv": [
+    "<rootDir>/test/setup-e2e.ts"
   ]
 }

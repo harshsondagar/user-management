@@ -12,6 +12,15 @@ import { ResponseEnvelopeInterceptor } from '../../../src/common/interceptors/re
 import { NestExpressApplication } from '@nestjs/platform-express';
 import { join } from 'path';
 
+jest.mock('@css-inline/css-inline', () => ({
+    inline: (html: string) => html,
+    CSSInliner: class {
+        inline(html: string) {
+            return html;
+        }
+    },
+}));
+
 class NoopThrottlerGuard implements CanActivate {
     canActivate(_context: ExecutionContext): boolean {
         return true;

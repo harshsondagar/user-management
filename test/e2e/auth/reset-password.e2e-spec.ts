@@ -22,13 +22,13 @@ describe('AUTH - Reset password (e2e)', () => {
         await truncateAllTables(dataSource)
     })
 
-    afterAll(async () => {
-        await app.close()
-    })
-
     beforeEach(() => {
         jest.clearAllMocks();
     });
+
+    afterAll(async () => {
+        await app.close()
+    })
 
     it('should change the password with correct current password', async () => {
 

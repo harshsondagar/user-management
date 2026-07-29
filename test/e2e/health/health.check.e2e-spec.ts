@@ -52,6 +52,7 @@ describe('Health - check (e2e)', () => {
                 expect(res.status).toBe(200);
             }
         });
+
         it('returns the correct Terminus response contract keys', async () => {
             const res = await request(app.getHttpServer()).get('/health').expect(200);
 
@@ -61,5 +62,4 @@ describe('Health - check (e2e)', () => {
             expect(res.body.data).toHaveProperty('details');
         });
     })
-
 })

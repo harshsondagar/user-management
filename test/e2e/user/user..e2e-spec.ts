@@ -6,6 +6,8 @@ import request from "supertest"
 import { makeRegisterDto } from "../../fixtures/users.fixture";
 import { createAuthenticatedUser } from "../utils/auth-helper.util";
 
+
+
 describe('User - GET me (e2e)', () => {
 
     let app: INestApplication;
