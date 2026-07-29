@@ -18,6 +18,7 @@
     "test:cov": "jest --coverage",
     "test:debug": "node --inspect-brk -r tsconfig-paths/register -r ts-node/register node_modules/.bin/jest --runInBand",
     "test:e2e": "jest --config ./test/jest-e2e.json --runInBand --forceExit",
+    "test:e2e:throttler": "jest --config ./test/jest-e2e.json --runInBand --forceExit test/e2e/throttler",
     "typeorm": "tsx --tsconfig tsconfig.json ./node_modules/typeorm/cli.js -d src/config/data-source.ts",
     "migration:generate": "npm run typeorm -- migration:generate src/migration/migration",
     "migration:run": "npm run typeorm -- migration:run",
