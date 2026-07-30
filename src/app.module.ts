@@ -1,4 +1,3 @@
-
 import { MiddlewareConsumer, Module, NestModule } from '@nestjs/common';
 import { AppService } from './app.service';
 import { UserModule } from './user/user.module';
@@ -7,7 +6,6 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import configuration from './config/configuration';
 import { TaskModule } from './task/task.module';
-import path from 'path';
 import { APP_FILTER, APP_GUARD } from '@nestjs/core';
 import { maintenanceGuard } from './common/gaurds/maintainence-gaurd';
 import { JwtGuard } from './auth/gurads/jwt.guard';
@@ -21,6 +19,8 @@ import { MailModule } from './mail/mail.module';
 import { OtpModule } from './common/otp/otp.module';
 import { CronModule } from './common/report/cron.module';
 import { ScheduleModule } from '@nestjs/schedule';
+import { DatagovScraperModule } from './datagov-scraper/datagov-scraper.module';
+import { SyncModule } from './sync/sync.module';
 
 @Module({
   imports: [ScheduleModule.forRoot(), ConfigModule.forRoot({
@@ -38,12 +38,15 @@ import { ScheduleModule } from '@nestjs/schedule';
       password: config.get<string>('database.password'),
       database: config.get<string>('database.name'),
       autoLoadEntities: true,
-      entities: [path.join(__dirname, "../**/*-entity.js")],
+      entities: ['src/**/*.entity.ts'],
       migrations: [__dirname, '../migration/*{.ts,.js}'],
       synchronize: false
     }),
-  })
-    , UserModule, AuthModule, TaskModule, MailModule, OtpModule, CronModule],
+  }), UserModule, AuthModule,
+    TaskModule, MailModule,
+    OtpModule, CronModule,
+    DatagovScraperModule,
+    SyncModule],
   controllers: [],
   providers: [AppService, {
     provide: APP_FILTER,
@@ -56,6 +59,7 @@ import { ScheduleModule } from '@nestjs/schedule';
       provide: APP_GUARD, useClass: JwtGuard
     },],
 })
+
 export class AppModule implements NestModule {
   configure(consumer: MiddlewareConsumer) {
     consumer.apply(RequestIdMiddleware).forRoutes('*')

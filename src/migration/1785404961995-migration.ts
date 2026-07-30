@@ -1,7 +1,7 @@
 import { MigrationInterface, QueryRunner } from "typeorm";
 
-export class Migration1785307075786 implements MigrationInterface {
-    name = 'Migration1785307075786'
+export class Migration1785404961995 implements MigrationInterface {
+    name = 'Migration1785404961995'
 
     public async up(queryRunner: QueryRunner): Promise<void> {
         await queryRunner.query(`CREATE TYPE "public"."tasks_iscompleted_enum" AS ENUM('pending', 'done', 'CANCELLED')`);
@@ -15,6 +15,7 @@ export class Migration1785307075786 implements MigrationInterface {
         await queryRunner.query(`CREATE INDEX "IDX_451bb9eb792c3023a164cf14e0" ON "followers" ("followerId") `);
         await queryRunner.query(`CREATE INDEX "IDX_5e34418be6d904b779ca96cf93" ON "followers" ("followingId") `);
         await queryRunner.query(`CREATE TABLE "system" ("Key" character varying NOT NULL, "value" boolean NOT NULL, CONSTRAINT "PK_9b9a30515c6db6ef55797b4c039" PRIMARY KEY ("Key"))`);
+        await queryRunner.query(`CREATE TABLE "Scrap" ("id" uuid NOT NULL DEFAULT uuid_generate_v4(), "firstName" character varying(100), "lastName" character varying(100), "elName" character varying(100), "isActive" boolean NOT NULL, CONSTRAINT "PK_d7d9b2499a9ba85ae18c3ae3ede" PRIMARY KEY ("id"))`);
         await queryRunner.query(`CREATE TABLE "RefreshToken" ("id" uuid NOT NULL DEFAULT uuid_generate_v4(), "tokenHash" character varying NOT NULL, "userId" uuid NOT NULL, "familyId" uuid NOT NULL, "revoked" boolean NOT NULL DEFAULT false, "expireAt" TIMESTAMP WITH TIME ZONE NOT NULL, "absoluteExpiry" TIMESTAMP NOT NULL, "userAgent" character varying, "ipAddress" character varying, "createdAt" TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now(), "updatedAt" TIMESTAMP WITH TIME ZONE DEFAULT now(), CONSTRAINT "PK_e5efef1572bd829464edc903d19" PRIMARY KEY ("id"))`);
         await queryRunner.query(`CREATE INDEX "IDX_f4196ffde5751987510a646820" ON "RefreshToken" ("tokenHash") `);
         await queryRunner.query(`CREATE INDEX "IDX_da7923626f057e69c600bb2063" ON "RefreshToken" ("familyId") `);
@@ -28,6 +29,7 @@ export class Migration1785307075786 implements MigrationInterface {
         await queryRunner.query(`DROP INDEX "public"."IDX_da7923626f057e69c600bb2063"`);
         await queryRunner.query(`DROP INDEX "public"."IDX_f4196ffde5751987510a646820"`);
         await queryRunner.query(`DROP TABLE "RefreshToken"`);
+        await queryRunner.query(`DROP TABLE "Scrap"`);
         await queryRunner.query(`DROP TABLE "system"`);
         await queryRunner.query(`DROP INDEX "public"."IDX_5e34418be6d904b779ca96cf93"`);
         await queryRunner.query(`DROP INDEX "public"."IDX_451bb9eb792c3023a164cf14e0"`);
