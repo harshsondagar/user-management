@@ -1,5 +1,5 @@
-import { ConflictException, ForbiddenException, HttpStatus, Inject, Injectable, NotFoundException } from '@nestjs/common';
-import { Repository } from 'typeorm';
+import { BadRequestException, ConflictException, ForbiddenException, HttpStatus, Inject, Injectable, NotFoundException } from '@nestjs/common';
+import { FindOptionsWhere, Repository } from 'typeorm';
 import { ProfileType, User, UserRole } from './user-entity';
 import { registerBody } from '../types';
 import { InjectRepository } from '@nestjs/typeorm';
@@ -16,6 +16,9 @@ import { MailService } from '../mail/mail.service';
 import { VerifyOtpDto } from '../auth/dto/verify-otp.dto';
 import { AppException, ResourceNotFoundException } from '../common/exceptions/app.exception';
 import { ResendOtpDto } from '../auth/dto/resend-otp.dto';
+import { UserRepository } from './user.repository';
+import e from 'express';
+import { FollowerRepository } from './follower.repository';
 
 
 
@@ -31,66 +34,45 @@ const ARGON2_OPTIONS: argon2.HashOptions = {
 export class UserService {
 
     constructor(
-        @InjectRepository(User) private readonly userRepository: Repository<User>,
-        @InjectRepository(Followers) private readonly followerRepository: Repository<Followers>,
+        private readonly userRepository: UserRepository,
+        private readonly followerRepository: FollowerRepository,
         private readonly otpService: OtpService,
         private readonly mailService: MailService,
         private readonly cache: SafeCacheService
     ) { }
 
     async findByEMailWithPassword(email: string) {
-        return this.userRepository
-            .createQueryBuilder("user")
-            .where("user.email = :email", { email: email.toLowerCase() })
-            .addSelect('user.passwordHash')
-            .getOne()
+        return this.userRepository.findByEmailWithPassword(email)
     }
 
     async findByIdWithPassword(userId: string) {
-        return this.userRepository
-            .createQueryBuilder("user")
-            .where("user.id = :id", { id: userId })
-            .addSelect('user.passwordHash')
-            .getOne()
+        return this.userRepository.findByIdWithPassword(userId)
     }
 
     async findByEmail(email: string) {
-        return this.userRepository.findOne({
-            where: { email: email.toLowerCase() }
-        })
+        return this.userRepository.findByEmail(email)
     }
 
     async findById(userId: string) {
-        return this.userRepository.findOne({
-            where: { id: userId }
-        })
+        return this.userRepository.findById(userId)
     }
 
     async create(body: registerBody) {
 
-        const existing = await this.userRepository.findOne({ where: { email: body.email.toLowerCase() } })
+        const existing = await this.findByEmail(body.email)
 
         if (existing) {
             throw new ConflictException("A user with this email already exist")
         }
-        const user = await this.userRepository.save(
-            this.userRepository.create({
-                firstName: body.firstName,
-                lastName: body.lastName,
-                email: body.email.toLocaleLowerCase(),
-                passwordHash: body.passwordHash
-            })
-        )
 
+        const user = await this.userRepository.create(body)
 
         const otp = this.otpService.generateOtp();
         await this.otpService.storeOtp(user.email, otp);
         await this.mailService.sendOtpEmail(user.email, user.firstName!, otp);
 
         return { message: 'Registered. Please verify your email.', email: user.email };
-
     }
-
 
     async registerFailedLogin(user: User) {
 
@@ -104,28 +86,28 @@ export class UserService {
             update.lockedUntil = new Date(Date.now() + LOCK_MIN * 60 * 1000)
         }
 
-        await this.userRepository.save(user)
+        await this.userRepository.update(user.id, user)
 
     }
 
     async resetFailedLogin(userId: string) {
-        await this.userRepository.update({ id: userId }, { failedLoginAttempts: 0, lockedUntil: null })
+        await this.userRepository.update(userId, { failedLoginAttempts: 0, lockedUntil: null })
     }
 
     async incrementTokenVersion(userId: string) {
-        await this.userRepository.increment({ id: userId }, 'tokenVersion', 1)
+        await this.userRepository.incrementTokenVersion(userId)
     }
 
     async updateUser(id: string, user: UpdateUserDTO) {
         const update: Partial<User> = {}
 
-        const updateResult = await this.userRepository.update({ id }, user)
+        const updateResult = await this.userRepository.update(id, user)
 
         const cacheKey = `user:${id}`
         await this.cache.del(cacheKey)
 
 
-        if (updateResult.affected === 0) {
+        if (!updateResult) {
             throw new NotFoundException(`User with ID ${id} not found`);
         }
     }
@@ -143,7 +125,7 @@ export class UserService {
             throw new ForbiddenException('Only the Super Admin can remove administrative accounts.');
         }
 
-        const isDeleted = await this.userRepository.softDelete(targetUserId);
+        const isDeleted = await this.userRepository.softDeleteUser(targetUserId);
 
         const cacheKey = `user:${targetUserId}`
         await this.cache.del(cacheKey)
@@ -151,14 +133,15 @@ export class UserService {
         return isDeleted
     }
 
-    async resetPassword(id: string, newPassword: string) {
-        const passwordHash = await argon2.hash(newPassword, ARGON2_OPTIONS)
-        const res = await this.userRepository.update({ id }, { passwordHash: passwordHash })
+    async resetPassword(id: string, newPassword: string): Promise<boolean> {
+        const passwordHash = await argon2.hash(newPassword, ARGON2_OPTIONS);
 
-        if (!res.affected) {
-            return false
-        }
-        return true
+        await this.userRepository.updateBy(
+            { id } as FindOptionsWhere<User>,
+            { passwordHash },
+        );
+
+        return true;
     }
 
     async getUser(id: string) {
@@ -180,48 +163,50 @@ export class UserService {
     }
 
     async addFollowRequest(user: User, followingId: string) {
-        const existingBlock = await this.followerRepository.findOne({
-            where: [
-                { followerId: user.id, followingId, status: STATUS.BLOCK },
-                { followerId: followingId, followingId: user.id, status: STATUS.BLOCK },
-            ],
-        });
-        if (existingBlock) {
-            throw new ForbiddenException("Can't follow this user");
+
+        if (user.id === followingId) {
+            throw new BadRequestException("can't follow yourself");
         }
 
         if (user.id === followingId) {
-            throw new NotFoundException("can't follow yourself")
+            throw new BadRequestException("can't follow yourself");
         }
 
-        const followingUser = await this.findById(followingId)
+        const block = await this.followerRepository.findBlockBetween(user.id, followingId);
 
+        if (block) {
+            throw new ForbiddenException("Can't follow this user");
+        }
+
+        const existing = await this.followerRepository.findRelationship(user.id, followingId);
+
+        if (existing) {
+            if (existing.status === STATUS.BLOCK) {
+                throw new ForbiddenException("Can't follow this user");
+            }
+            throw new ConflictException("Follow request already exists or you're already following this user");
+        }
+
+        const followingUser = await this.findById(followingId);
         if (!followingUser) {
-            throw new NotFoundException("user does not exist you looking to follow")
+            throw new NotFoundException("user does not exist you looking to follow");
         }
 
         const pendingTypes = [ProfileType.PRIVATE, ProfileType.FRIENDS_ONLY];
-
         const status = pendingTypes.includes(followingUser.profileVisibility)
             ? STATUS.PENDING
             : STATUS.ACCEPTED;
 
-
-        const row = this.followerRepository.create({
+        return this.followerRepository.createFollowRelationship({
             followerId: user.id,
-            followingId: followingId,
-            status: status
-        })
-
-        return await this.followerRepository.save(row)
-
+            followingId,
+            status,
+        });
     }
 
     async acceptFollowRequest(currentUser: User, requesterId: string) {
 
-        const followRow = await this.followerRepository.findOne({
-            where: { followerId: requesterId, followingId: currentUser.id }
-        })
+        const followRow = await this.followerRepository.findRelationship(requesterId, currentUser.id)
 
         if (!followRow) {
             throw new NotFoundException("Follow request not found")
@@ -237,9 +222,7 @@ export class UserService {
 
     async rejectFollowRequest(currentUser: User, requesterId: string) {
 
-        const followRow = await this.followerRepository.findOne({
-            where: { followerId: requesterId, followingId: currentUser.id }
-        })
+        const followRow = await this.followerRepository.findRelationship(requesterId, currentUser.id);
 
         if (!followRow) {
             throw new NotFoundException("Follow request not found")
@@ -256,9 +239,7 @@ export class UserService {
 
     async unfollow(currentUser: User, followingId: string) {
 
-        const followRow = await this.followerRepository.findOne({
-            where: { followerId: currentUser.id, followingId }
-        })
+        const followRow = await this.followerRepository.findRelationship(currentUser.id, followingId);
 
         if (!followRow) {
             throw new NotFoundException("You are not following this user")
@@ -274,21 +255,17 @@ export class UserService {
     }
 
     async removeFollower(currentUser: User, followerId: string) {
-        // currentUser forcibly removes someone who follows them
 
-
-        const followRow = await this.followerRepository.findOne({
-            where: { followerId, followingId: currentUser.id }
-        })
+        const followRow = await this.followerRepository.findRelationship(followerId, currentUser.id);
 
         if (!followRow) {
             throw new NotFoundException("This user does not follow you")
         }
 
-        const cacheKey = `follower:${currentUser.id}`
         const removedUser = await this.followerRepository.remove(followRow)
+        await this.cache.del(`follower:${currentUser.id}`)
 
-        await this.cache.del(cacheKey)
+        return removedUser
 
     }
 
@@ -298,32 +275,26 @@ export class UserService {
             throw new ConflictException("You can't block yourself")
         }
 
-        // Remove any existing relationship in either direction first
-        await this.followerRepository.delete([
-            { followerId: currentUser.id, followingId: targetId },
-            { followerId: targetId, followingId: currentUser.id }
-        ])
+        await this.followerRepository.removeBothDirections(currentUser.id, targetId)
 
-        const row = this.followerRepository.create({
+        return this.followerRepository.createFollowRelationship({
             followerId: currentUser.id,
             followingId: targetId,
             status: STATUS.BLOCK
         })
-
-        return await this.followerRepository.save(row)
     }
 
     async unblockUser(currentUser: User, targetId: string) {
 
-        const row = await this.followerRepository.findOne({
-            where: { followerId: currentUser.id, followingId: targetId, status: STATUS.BLOCK }
-        })
+        const row = await this.followerRepository.findRelationshipWithStatus(
+            currentUser.id, targetId, STATUS.BLOCK
+        );
 
         if (!row) {
             throw new NotFoundException("This user is not blocked")
         }
 
-        return await this.followerRepository.remove(row)
+        return this.followerRepository.removeRelationship(row)
     }
 
     async getFollowers(userId: string) {
@@ -334,9 +305,7 @@ export class UserService {
 
         if (cached) return cached
 
-        const followers = await this.followerRepository.find({
-            where: { followingId: userId, status: STATUS.ACCEPTED }
-        })
+        const followers = await this.followerRepository.getFollowers(userId)
 
         await this.cache.set(cacheKey, followers, 30 * 1000)
 
@@ -344,42 +313,27 @@ export class UserService {
     }
 
     async getFollowing(userId: string) {
-
         const cacheKey = `following:${userId}`
-
         const cached = await this.cache.get(cacheKey)
-
         if (cached) return cached
 
-        const following = await this.followerRepository.find({
-            where: { followerId: userId, status: STATUS.ACCEPTED }
-        })
-
+        const following = await this.followerRepository.getFollowing(userId)
         await this.cache.set(cacheKey, following, 30 * 1000)
         return following
     }
 
     async getPendingRequests(userId: string) {
-
         const cacheKey = `followRequest:${userId}`
-
         const cached = await this.cache.get(cacheKey)
-
         if (cached) return cached
 
-        const followRequest = await this.followerRepository.find({
-            where: { followingId: userId, status: STATUS.PENDING }
-        })
-
+        const followRequest = await this.followerRepository.getPendingRequests(userId)
         await this.cache.set(cacheKey, followRequest, 30 * 1000)
-
         return followRequest
     }
 
     private async getFollowStatus(requesterId: string, targetId: string): Promise<STATUS | null> {
-        const row = await this.followerRepository.findOne({
-            where: { followerId: requesterId, followingId: targetId }
-        })
+        const row = await this.followerRepository.findRelationship(requesterId, targetId)
         return row ? row.status : null
     }
 
@@ -437,5 +391,3 @@ export class UserService {
         return safeUser
     }
 }
-
-

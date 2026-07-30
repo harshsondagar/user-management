@@ -12,10 +12,12 @@ import { Followers } from './userfollowers-entity';
 import { RedisCacheModule } from '../common/cache/redis-cache.module';
 import { OtpModule } from '../common/otp/otp.module';
 import { MailModule } from '../mail/mail.module';
+import { UserRepository } from './user.repository';
+import { FollowerRepository } from './follower.repository';
 
 @Module({
   imports: [forwardRef(() => AuthModule), MailModule, OtpModule, RedisCacheModule, TypeOrmModule.forFeature([User, System, Followers])],
-  providers: [UserService, SuperAdminSeed, SystemService],
+  providers: [UserService, SuperAdminSeed, SystemService, UserRepository, FollowerRepository],
   controllers: [UserController, SuperAdminController],
   exports: [UserService, SystemService, TypeOrmModule]
 })

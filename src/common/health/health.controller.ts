@@ -22,10 +22,15 @@ export class HealthController {
     @Get()
     @HealthCheck()
     check() {
+        const heapThreshold = process.env.NODE_ENV === 'test'
+            ? 600 * 1024 * 1024  // more headroom for parallel test workers
+            : 300 * 1024 * 1024;
+
         return this.health.check([
             () => this.db.pingCheck('database'),
             () => this.redis.isHealthy('redis'),
-            () => this.memory.checkHeap('memory_heap', 300 * 1024 * 1024),
+
+            () => this.memory.checkHeap('memory_heap', heapThreshold),
             () => this.disk.checkStorage('check_storage', { path: '/', thresholdPercent: 0.9 }),
         ])
     }
