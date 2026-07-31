@@ -44,6 +44,10 @@ export default () => ({
     },
     dataGovIn: {
         apiKey: process.env.DATA_GOV_IN_API_KEY,
-        baseUrl: process.env.DATA_GOV_IN_BASE_URL || 'https://api.data.gov.in',
+        resourceApiBaseUrl: process.env.DATA_GOV_IN_RESOURCE_API_URL || 'https://api.data.gov.in',
+        portalBackendUrl: process.env.DATA_GOV_IN_PORTAL_BACKEND_URL || 'https://www.data.gov.in/backend/dmspublic/v1',
     },
+    mongodb: {
+        uri: process.env.MONGO_URI!
+    }
 });

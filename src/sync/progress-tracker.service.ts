@@ -2,15 +2,12 @@ import { Injectable, Logger } from '@nestjs/common';
 import * as fs from 'fs/promises';
 import * as path from 'path';
 
-
-
 export interface ProgressState {
     lastOffset: number;
-    processedUuids: string[];
-    failedUuids: { uuid: string; error: string }[];
+    processedNids: number[];
+    failedNids: { nid: number; error: string }[];
     updatedAt: string;
 }
-
 @Injectable()
 
 export class ProgressTrackerService {
@@ -22,13 +19,24 @@ export class ProgressTrackerService {
             const raw = await fs.readFile(this.filePath, 'utf-8');
             return JSON.parse(raw);
         } catch {
-            return { lastOffset: 0, processedUuids: [], failedUuids: [], updatedAt: new Date().toISOString() };
+            return { lastOffset: 0, processedNids: [], failedNids: [], updatedAt: new Date().toISOString() };
         }
     }
 
     async save(state: ProgressState) {
         state.updatedAt = new Date().toISOString();
         await fs.writeFile(this.filePath, JSON.stringify(state, null, 2));
+    }
+
+    async reset() {
+        const fresh: ProgressState = {
+            lastOffset: 0,
+            processedNids: [],
+            failedNids: [],
+            updatedAt: new Date().toISOString(),
+        };
+        await this.save(fresh);
+        return fresh;
     }
 
 }

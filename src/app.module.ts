@@ -1,3 +1,4 @@
+import "dotenv/config"
 import { MiddlewareConsumer, Module, NestModule } from '@nestjs/common';
 import { AppService } from './app.service';
 import { UserModule } from './user/user.module';
@@ -19,15 +20,16 @@ import { MailModule } from './mail/mail.module';
 import { OtpModule } from './common/otp/otp.module';
 import { CronModule } from './common/report/cron.module';
 import { ScheduleModule } from '@nestjs/schedule';
-import { DatagovScraperModule } from './datagov-scraper/datagov-scraper.module';
 import { SyncModule } from './sync/sync.module';
+import { DatagovModule } from './datagov/fetch data/ datagov.module';
+import { MongooseModule } from '@nestjs/mongoose';
 
 @Module({
   imports: [ScheduleModule.forRoot(), ConfigModule.forRoot({
     isGlobal: true,
     envFilePath: '.env',
     load: [configuration]
-  }), AppThrottleModule, HealthModule, RedisCacheModule, TypeOrmModule.forRootAsync({
+  }), AppThrottleModule, HealthModule, RedisCacheModule, MongooseModule.forRoot(process.env.MONGO_URI!), TypeOrmModule.forRootAsync({
     imports: [ConfigModule],
     inject: [ConfigService],
     useFactory: (config: ConfigService) => ({
@@ -45,7 +47,7 @@ import { SyncModule } from './sync/sync.module';
   }), UserModule, AuthModule,
     TaskModule, MailModule,
     OtpModule, CronModule,
-    DatagovScraperModule,
+    DatagovModule,
     SyncModule],
   controllers: [],
   providers: [AppService, {
