@@ -47,6 +47,7 @@ describe('AUTH - Reset password (e2e)', () => {
         })
     })
 
+
     it('rejects when current password is wrong', async () => {
         const registerDto = makeRegisterDto()
         const { accessToken } = await createAuthenticatedUser(app, registerDto)

@@ -180,14 +180,11 @@ export class AuthController {
         @currentUser() user: User,
         @Body() body: ResetPasswordDTO,
     ) {
-        const isPasswordChange = await this.authService.resetPassword(
+        await this.authService.resetPassword(
             user.id,
             body,
         );
 
-        if (!isPasswordChange) {
-            throw new InternalServerErrorException('error while changing password');
-        }
         return new ApiResponseDto({
             success: true,
             message: 'password changed successfully',
