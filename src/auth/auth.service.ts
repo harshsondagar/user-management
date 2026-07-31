@@ -18,6 +18,8 @@ import { ResendOtpDto } from './dto/resend-otp.dto';
 import * as crypto from "crypto"
 import { raw } from 'express';
 import { ChangeForgotPassword } from './dto/change-password-dto';
+import { UserRepository } from '../user/user.repository';
+import { RefreshTokenRepository } from './refreshTokenRepository';
 
 interface Tokens {
     accessToken: string;
@@ -46,13 +48,12 @@ export class AuthService {
         , private readonly configService: ConfigService
         , private readonly otpService: OtpService
         , private readonly mailService: MailService
-        , @InjectRepository(RefreshToken) private readonly refreshTokenRepository: Repository<RefreshToken>
-        , @InjectRepository(User) private readonly userRepository: Repository<User>
+        , private readonly refreshTokenRepository: RefreshTokenRepository
+        , private readonly userRepository: UserRepository
         , private readonly mailer: MailService
     ) { }
 
     async create(data: registerBody) {
-
         return this.userService.create(data)
     }
 
@@ -132,7 +133,6 @@ export class AuthService {
         return this.issueTokenPair(user, familyId, userAgent, ipAddress)
     }
 
-
     async issueTokenPair(user: User, familyId: string, userAgent?: string, ipAddress?: string, existingAbsoluteExpiry?: Date): Promise<Tokens> {
         const accessToken = await this.jwtService.signAsync({
             sub: user.id,
@@ -161,24 +161,22 @@ export class AuthService {
 
         const expireAt = new Date(Date.now() + this.parseDurationMs(refreshExpiresIn!))
 
-        await this.refreshTokenRepository.save(
-            this.refreshTokenRepository.create({
-                tokenHash: this.hashToken(refreshToken),
-                userId: user.id,
-                familyId,
-                absoluteExpiry,
-                expireAt: expireAt,
-                userAgent,
-                ipAddress,
-            }),
-        );
+        await this.refreshTokenRepository.createRefreshToken({
+            tokenHash: this.hashToken(refreshToken),
+            userId: user.id,
+            familyId,
+            absoluteExpiry,
+            expireAt: expireAt,
+            userAgent,
+            ipAddress,
+        })
 
         return { accessToken, refreshToken, refreshTokenExpiresAt: expireAt };
 
     }
 
     async removeAllSession(id: string) {
-        const res = await this.refreshTokenRepository.update({ id }, { revoked: true })
+        const res = await this.refreshTokenRepository.update(id, { revoked: true })
         await this.userService.incrementTokenVersion(id)
     }
 
@@ -197,7 +195,7 @@ export class AuthService {
 
         if (stored.revoked) {
             await this.refreshTokenRepository.update(
-                { familyId: stored.familyId },
+                stored.familyId,
                 { revoked: true }
             )
 
@@ -218,7 +216,7 @@ export class AuthService {
             throw new ForbiddenException("user no longer exist")
         }
 
-        await this.refreshTokenRepository.update({ id: stored.id }, { revoked: true })
+        await this.refreshTokenRepository.update(stored.id, { revoked: true })
         return this.issueTokenPair(user, stored.familyId, userAgent, ipAddress, stored.absoluteExpiry)
 
     }
@@ -226,7 +224,7 @@ export class AuthService {
     async logout(userId: string, rawToken: string) {
         if (rawToken) {
             const TokenHash = this.hashToken(rawToken)
-            await this.refreshTokenRepository.update({ userId: userId }, { revoked: true })
+            await this.refreshTokenRepository.update(userId, { revoked: true })
             await this.userService.incrementTokenVersion(userId)
         }
     }
@@ -242,7 +240,7 @@ export class AuthService {
 
     async changePassword(id: string, password: string) {
         const passwordHash = await argon2.hash(password, ARGON2_OPTIONS)
-        await this.refreshTokenRepository.manager.getRepository('users').update({ id }, { passwordHash: passwordHash })
+        await this.userRepository.clearResetTokenAndSetPassword(id, passwordHash)
         await this.removeAllSession(id)
     }
 
@@ -263,7 +261,7 @@ export class AuthService {
         const passwordHash = await argon2.hash(data.newPassword, ARGON2_OPTIONS);
 
         await this.userRepository.update(
-            { id: user.id },
+            user.id,
             {
                 passwordHash,
                 resetToken: null,
@@ -298,23 +296,18 @@ export class AuthService {
 
     async resetPassword(userId: string, body: ResetPasswordDTO) {
 
+
         const isValidPassword = await this.checkPassword(userId, body.password)
 
         if (!isValidPassword) {
             throw new UnauthorizedException("invalid password")
         }
 
+        await this.userService.resetPassword(userId, body.password)
 
-        const isPasswordChange = await this.userService.resetPassword(userId, body.password)
+        await this.refreshTokenRepository.update(userId, { revoked: true })
 
-        if (!isPasswordChange) {
-            throw new UnauthorizedException("invalid password")
-        }
-
-        await this.refreshTokenRepository.update({ userId }, { revoked: true })
         await this.userService.incrementTokenVersion(userId)
-
-        return true
     }
 
 
@@ -329,7 +322,7 @@ export class AuthService {
         const hashedToken = await this.hashToken(rawToken)
 
 
-        await this.userRepository.update({ email }, { resetToken: hashedToken, resetTokenExpiry: new Date(Date.now() + 30 * 60 * 1000) })
+        await this.userRepository.updateBy({ email }, { resetToken: hashedToken, resetTokenExpiry: new Date(Date.now() + 30 * 60 * 1000) })
 
         await this.mailer.sendPasswordChangeMail(user.email, `http://localhost:3000/auth/change-password?token=${rawToken}`)
     }

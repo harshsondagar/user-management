@@ -13,10 +13,12 @@ import { JwtGuard } from './gurads/jwt.guard';
 import { PassportModule } from '@nestjs/passport';
 import { OtpModule } from '../common/otp/otp.module';
 import { MailModule } from '../mail/mail.module';
+import { RefreshTokenRepository } from './refreshTokenRepository';
+import { UserRepository } from '../user/user.repository';
 
 @Module({
   imports: [forwardRef(() => UserModule), PassportModule, MailModule, OtpModule, JwtModule.register({}), TypeOrmModule.forFeature([RefreshToken])],
-  providers: [AuthService, LocalStrategy, JwtStrategy, JwtRefreshStrategy,
+  providers: [AuthService, LocalStrategy, JwtStrategy, JwtRefreshStrategy, RefreshTokenRepository, UserRepository,
     {
       provide: APP_GUARD, useClass: JwtGuard
     },

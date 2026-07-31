@@ -41,5 +41,13 @@ export default () => ({
         mail_from: process.env.MAIL_FROM!,
         host: process.env.SMTP_HOST!,
         port: process.env.SMTP_PORT!,
+    },
+    dataGovIn: {
+        apiKey: process.env.DATA_GOV_IN_API_KEY,
+        resourceApiBaseUrl: process.env.DATA_GOV_IN_RESOURCE_API_URL || 'https://api.data.gov.in',
+        portalBackendUrl: process.env.DATA_GOV_IN_PORTAL_BACKEND_URL || 'https://www.data.gov.in/backend/dmspublic/v1',
+    },
+    mongodb: {
+        uri: process.env.MONGO_URI!
     }
 });
