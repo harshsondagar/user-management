@@ -23,6 +23,7 @@ import { ScheduleModule } from '@nestjs/schedule';
 import { SyncModule } from './sync/sync.module';
 import { DatagovModule } from './datagov/fetch data/ datagov.module';
 import { MongooseModule } from '@nestjs/mongoose';
+import { RolesGuard } from "./common/gaurds/roles.guard";
 
 @Module({
   imports: [ScheduleModule.forRoot(), ConfigModule.forRoot({
@@ -59,6 +60,8 @@ import { MongooseModule } from '@nestjs/mongoose';
       provide: APP_GUARD, useClass: maintenanceGuard
     }, {
       provide: APP_GUARD, useClass: JwtGuard
+    }, {
+      provide: APP_GUARD, useClass: RolesGuard
     },],
 })
 

@@ -4,9 +4,6 @@ import { ConfigService } from "@nestjs/config";
 import { AxiosError } from "axios";
 import { firstValueFrom } from "rxjs";
 
-
-
-
 export interface FetchResourceParams {
     resourceId: string;
     limit?: number;
@@ -32,6 +29,7 @@ export class DatagovResourceService {
     }
 
     async lookupResourceIds(nid: string | number): Promise<string[]> {
+
         const { data } = await firstValueFrom(
             this.http.get(`${this.portalUrl}/resources`, {
                 params: {
@@ -85,6 +83,7 @@ export class DatagovResourceService {
             const res = await firstValueFrom(
                 this.http.get(`${this.resourceApiBaseUrl}/resource/${resourceId}`, { params: query })
             )
+
             return res.data
         } catch (err) {
             const axiosErr = err as AxiosError;

@@ -39,6 +39,9 @@ export class Dataset extends Document {
 
     @Prop()
     declare fetchedAt: Date;
+
 }
 
 export const DatasetSchema = SchemaFactory.createForClass(Dataset)
+
+DatasetSchema.index({ title: 'text', keywords: 'text', sector: 'text', ministry: 'text' });

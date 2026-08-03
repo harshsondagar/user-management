@@ -7,9 +7,10 @@ import { SyncController } from './sync.controller';
 import { MongooseModule } from '@nestjs/mongoose';
 import { DatasetSchema } from '../schemas/dataset.schema';
 import { Dataset } from '../schemas/dataset.schema';
+import { ScrapeQuotaService } from './scrape-quota.service';
 @Module({
     imports: [DatagovModule, MongooseModule.forFeature([{ name: Dataset.name, schema: DatasetSchema }])],
-    providers: [FullSyncService, ProgressTrackerService],
+    providers: [FullSyncService, ProgressTrackerService, ScrapeQuotaService],
     controllers: [SyncController],
 })
 export class SyncModule { }
