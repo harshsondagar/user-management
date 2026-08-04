@@ -89,7 +89,7 @@ export class DatagovResourceService {
             const axiosErr = err as AxiosError;
 
             if (axiosErr.response?.status === 429 && retries > 0) {
-                const waitMs = 10000; // 10s — be generous, this API's limits seem tight
+                const waitMs = 60 * 2 * 1000; // 10s — be generous, this API's limits seem tight
                 this.logger.warn(`Rate limited on ${resourceId}, waiting ${waitMs / 1000}s, ${retries} retries left`);
                 await this.sleep(waitMs);
                 return this.fetchResource(params, retries - 1);

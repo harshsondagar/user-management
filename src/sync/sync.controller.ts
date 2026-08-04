@@ -1,27 +1,27 @@
 // sync.controller.ts
-import { Controller, HttpException, HttpStatus, Post, Query, UseGuards } from '@nestjs/common';
+import { Controller, HttpException, HttpStatus, Inject, Post, Query, UseGuards } from '@nestjs/common';
 import { FullSyncService } from './full-sync.service';
-import { ProgressTrackerService } from './progress-tracker.service';
 import { Public } from '../common/decorator/public-decoretor';
 import { currentUser } from '../common/decorator/currentUser-decorator';
 import { User, UserRole } from '../user/user-entity';
 import { Roles } from '../common/decorator/roles.decorator';
 import { ScrapeQuotaService } from './scrape-quota.service';
 import { JwtGuard } from '../auth/gurads/jwt.guard';
+import { ScrapeProducer } from '../scrap-module/scrape.producer';
 
 
 @Controller('sync')
 export class SyncController {
     constructor(
-        private readonly fullSyncService: FullSyncService,
-        private readonly progress: ProgressTrackerService,
+        @Inject(FullSyncService) private readonly fullSyncService: FullSyncService,
         private readonly scrapeQuota: ScrapeQuotaService,
+        private readonly scrapeProducer: ScrapeProducer
     ) { }
 
     @UseGuards(JwtGuard)
     @Roles(UserRole.SUPER_ADMIN, UserRole.ADMIN, UserRole.USER)
     @Post('run')
-    async run(@currentUser() user: User, @Query('q') q = '') {
+    async run(@currentUser() user: User, @Query('q') q: string) {
         const isAdmin = user.role === UserRole.ADMIN || user.role === UserRole.SUPER_ADMIN;
 
         if (!isAdmin) {
@@ -34,14 +34,10 @@ export class SyncController {
             }
         }
 
-        this.fullSyncService.runFullSync(user.role, q).catch((err) => console.error('Sync failed:', err));
-        return { message: isAdmin ? 'Full sync started.' : `Sync started for "${q}".` };
+        const job = await this.scrapeProducer.triggerScrape(q, user.id)
+
+        return { jobId: job.id, status: 'queued' };
     }
 
-    @UseGuards(JwtGuard)
-    @Post('reset')
-    @Roles(UserRole.ADMIN)
-    async reset() {
-        return this.progress.reset();
-    }
+
 }

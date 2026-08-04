@@ -1,15 +1,11 @@
 import { HttpException, HttpStatus, Injectable, Logger } from '@nestjs/common';
-import { ProgressTrackerService } from './progress-tracker.service';
 import { CatalogEntry, DatagovCatalogService } from '../datagov/  datagov-catalog.service';
 import { DatagovResourceService } from '../datagov/datagov-resource.service';
-import * as fs from 'fs/promises';
 import * as path from 'path';
 import { InjectModel } from '@nestjs/mongoose';
 import { Dataset } from '../schemas/dataset.schema';
 import { Model } from 'mongoose';
-import { log } from 'console';
-import { UserRole } from '../user/user-entity';
-import { ReadConcern } from 'typeorm';
+import { Job } from 'bullmq';
 
 @Injectable()
 export class FullSyncService {
@@ -20,65 +16,58 @@ export class FullSyncService {
     constructor(
         private readonly catalog: DatagovCatalogService,
         private readonly resource: DatagovResourceService,
-        private readonly progress: ProgressTrackerService,
         @InjectModel(Dataset.name) private readonly datasetModel: Model<Dataset>,
     ) { }
 
 
-    async runFullSync(requestingRole: UserRole, query = '', pageSize = 100, maxEntries?: number) {
-        const isAdmin = requestingRole === UserRole.ADMIN || requestingRole === UserRole.SUPER_ADMIN;
+    async runFullSync(query = '', job: Job, maxEntries = 100) {
 
-        if (!isAdmin && !query.trim()) {
-            throw new HttpException(
-                'Please provide a dataset name to search (e.g. ?q=Vahan). Regular users cannot sync the full catalog.',
-                HttpStatus.BAD_REQUEST,
-            );
-        }
-
-        const recordLimit = isAdmin ? 100 : 30;
-
-        const entryCap = isAdmin ? 50 : 1
-
-        const state = await this.progress.load();
         let processedThisRun = 0;
+        let nids = 0
 
-        this.logger.log(`Starting sync. Already processed: ${state.processedNids.length}`);
+
+        this.logger.log(`Starting sync. Already processed: ${nids === 0 ? null : nids}`);
 
         for await (const entry of this.catalog.iterateAll(query)) {
-            if (state.processedNids.includes(entry.nid)) continue;
-            if (entryCap && processedThisRun >= entryCap) {
+
+
+            // if (state.processedNids.includes(entry.nid)) continue;
+            nids++
+
+            if (maxEntries && processedThisRun >= maxEntries) {
                 this.logger.log(`Reached cap of ${maxEntries}, stopping.`);
                 break;
             }
 
-            await this.processEntry(entry, state, recordLimit);
+            await this.processEntry(entry);
             processedThisRun++;
 
-            if (processedThisRun % 25 === 0) {
-                await this.progress.save(state); // checkpoint periodically, not every single entry
-                this.logger.log(
-                    `Checkpoint: ${state.processedNids.length} processed, ${state.failedNids.length} failed`,
-                );
+
+            if (job) {
+                await job.updateProgress({
+                    processed: processedThisRun,
+                    succeeded: nids,
+                    failed: 0,
+                });
             }
+
         }
 
-        await this.progress.save(state);
         this.logger.log(
-            `Sync complete. Processed: ${state.processedNids.length}, Failed: ${state.failedNids.length}`,
+            `Sync complete. Processed: ${nids},`,
         );
-        return state;
     }
 
-    private async processEntry(entry: CatalogEntry, state: Awaited<ReturnType<ProgressTrackerService['load']>>, recordLimit: number) {
+    private async processEntry(entry: CatalogEntry) {
         try {
 
             if (!entry.resourceId) {
                 this.logger.log(`○ No resourceId: ${entry.title}`);
-                state.processedNids.push(entry.nid);
                 return;
             }
+            console.log(entry.resourceId);
 
-            const resourceData = await this.resource.fetchResource({ resourceId: entry.resourceId, limit: recordLimit });
+            const resourceData = await this.resource.fetchResource({ resourceId: entry.resourceId });
             const records = resourceData.records ?? [];
 
             if (records.length > 0) {
@@ -88,16 +77,22 @@ export class FullSyncService {
                 this.logger.log(`○ 0 records: ${entry.title} [${entry.resourceId}]`);
             }
 
-            state.processedNids.push(entry.nid);
         } catch (err: any) {
             this.logger.warn(`✗ Failed ${entry.nid} (${entry.title}): ${err.message}`);
-            state.failedNids.push({ nid: entry.nid, error: err.message });
         } finally {
             await this.sleep(300);
         }
     }
 
     private async persist(entry: any, resourceId: string, records: any[]) {
+
+
+        const existingResource = await this.datasetModel.findOne({ resourceId: entry.resourceId })
+
+        if (existingResource) {
+            console.log(existingResource.resourceId);
+            this.logger.warn("already process resourceid", entry.resourceId)
+        }
 
         await this.datasetModel.updateOne(
             { resourceId },

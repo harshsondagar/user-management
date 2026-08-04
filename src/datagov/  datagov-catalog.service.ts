@@ -59,6 +59,8 @@ export class DatagovCatalogService {
         const rows = data?.data?.rows ?? [];
 
 
+
+
         if (typeof data?.total !== 'number') {
             throw new Error(`Catalog search returned invalid total at offset ${offset}`);
         }
@@ -72,6 +74,7 @@ export class DatagovCatalogService {
     async *iterateAll(query = '', pageSize = 100): AsyncGenerator<CatalogEntry> {
         let offset = 0
         let total = Infinity
+
 
         while (offset < total) {
             const page = await this.search(query, offset, pageSize)
