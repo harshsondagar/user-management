@@ -18,12 +18,12 @@ export class ScrapeProcessor extends WorkerHost {
 
     async process(job: Job, token?: string): Promise<any> {
         const { query, userId } = job.data
-        console.log(userId, query);
-
-
         const res = await this.fullSyncService.runFullSync(query, job)
 
-        return { itemsScraped: 10, }
+        return {
+            ...res,                              // succeededThisRun, failedThisRun, totalSucceeded, totalFailed (from earlier)
+            finishedAt: new Date().toISOString(),
+        };
     }
 
     @OnWorkerEvent('active')

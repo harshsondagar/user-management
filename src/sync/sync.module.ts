@@ -11,15 +11,21 @@ import { ScrapeProducer } from '../scrap-module/scrape.producer';
 import { BullModule } from '@nestjs/bullmq';
 import { BullBoardModule } from '@bull-board/nestjs';
 import { BullMQAdapter } from "@bull-board/api/bullMQAdapter"
+import { SyncSkip, SyncSkipSchema } from '../schemas/sync.schema';
+import { SyncFailure, SyncFailureSchema } from '../schemas/sync-failer.schema';
 
 
 @Module({
     imports: [DatagovModule, BullModule.registerQueue({
         name: 'scrape-gov-data',
     }), BullBoardModule.forFeature({
-        name: 'scrape-gov-data', // same name — this is what actually makes it show up on the dashboard
+        name: 'scrape-gov-data',
         adapter: BullMQAdapter,
-    }), MongooseModule.forFeature([{ name: Dataset.name, schema: DatasetSchema }])],
+    }), MongooseModule.forFeature([
+        { name: Dataset.name, schema: DatasetSchema },
+        { name: SyncSkip.name, schema: SyncSkipSchema },
+        { name: SyncFailure.name, schema: SyncFailureSchema },
+    ])],
     providers: [FullSyncService, ScrapeQuotaService, ScrapeProducer],
     controllers: [SyncController],
     exports: [FullSyncService]
