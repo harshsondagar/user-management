@@ -1,16 +1,15 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { User, UserRole } from '../../user/user-entity';
+import { User } from '../../user/user-entity';
 import { MoreThanOrEqual, Repository } from 'typeorm';
 import { Cron, CronExpression } from "@nestjs/schedule"
-import { MailerService } from '@nestjs-modules/mailer';
-import { MailService } from '../../mail/mail.service';
+import { MailProducer } from '../../mail/mail-producer';
 @Injectable()
 export class ReportCronService {
     private readonly logger = new Logger(ReportCronService.name)
 
     constructor(@InjectRepository(User) private readonly userRepository: Repository<User>,
-        private readonly mailService: MailService
+        private readonly mailProducer: MailProducer
     ) { }
 
     @Cron(CronExpression.EVERY_WEEK)
@@ -56,7 +55,7 @@ export class ReportCronService {
 
             const adminEmails = process.env.SUPER_ADMIN_EMAIL!
 
-            await this.mailService.sendReportMail(adminEmails, newUsers, templateUsers)
+            await this.mailProducer.addWeeklyAdminReportMailJob(adminEmails, newUsers.length, templateUsers)
 
         } catch (error) {
             this.logger.error('Failed to execute weekly report cron job', (error as Error).stack);

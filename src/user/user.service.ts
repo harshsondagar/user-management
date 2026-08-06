@@ -1,24 +1,15 @@
-import { BadRequestException, ConflictException, ForbiddenException, HttpStatus, Inject, Injectable, NotFoundException } from '@nestjs/common';
+import { BadRequestException, ConflictException, ForbiddenException, HttpException, HttpStatus, Inject, Injectable, NotFoundException } from '@nestjs/common';
 import { FindOptionsWhere, Repository } from 'typeorm';
 import { ProfileType, User, UserRole } from './user-entity';
 import { registerBody } from '../types';
-import { InjectRepository } from '@nestjs/typeorm';
-import { plainToInstance } from 'class-transformer';
-import { RegisterResponseDTO } from '../auth/dto/register-responseDTO';
 import { UpdateUserDTO } from './dto/UpdateUserDTO';
 import * as argon2 from "argon2"
-import { Followers, STATUS } from './userfollowers-entity';
-import { CACHE_MANAGER } from '@nestjs/cache-manager';
-import type { Cache } from 'cache-manager';
+import { STATUS } from './userfollowers-entity';
 import { SafeCacheService } from '../common/cache/safe-cache.service';
 import { OtpService } from '../common/otp/opt.service';
-import { MailService } from '../mail/mail.service';
-import { VerifyOtpDto } from '../auth/dto/verify-otp.dto';
-import { AppException, ResourceNotFoundException } from '../common/exceptions/app.exception';
-import { ResendOtpDto } from '../auth/dto/resend-otp.dto';
 import { UserRepository } from './user.repository';
-import e from 'express';
 import { FollowerRepository } from './follower.repository';
+import { MailProducer } from '../mail/mail-producer';
 
 
 
@@ -37,8 +28,9 @@ export class UserService {
         private readonly userRepository: UserRepository,
         private readonly followerRepository: FollowerRepository,
         private readonly otpService: OtpService,
-        private readonly mailService: MailService,
-        private readonly cache: SafeCacheService
+        private readonly MailProducer: MailProducer,
+        private readonly cache: SafeCacheService,
+        private readonly mailProducer: MailProducer
     ) { }
 
     async findByEMailWithPassword(email: string) {
@@ -58,18 +50,21 @@ export class UserService {
     }
 
     async create(body: registerBody) {
+        const existing = await this.userRepository.findOne({ where: { email: body.email } });
 
-        const existing = await this.findByEmail(body.email)
-
-        if (existing) {
-            throw new ConflictException("A user with this email already exist")
+        if (existing && existing.isEmailVerified) {
+            throw new ConflictException('An account with this email already exists.');
+        }
+        if (existing && !existing.isEmailVerified) {
+            await this.resendOtp(body.email);
+            return { message: 'Registered. Please verify your email.', email: body.email };
         }
 
-        const user = await this.userRepository.create(body)
+        const user = await this.userRepository.create(body);
 
         const otp = this.otpService.generateOtp();
         await this.otpService.storeOtp(user.email, otp);
-        await this.mailService.sendOtpEmail(user.email, user.firstName!, otp);
+        await this.mailProducer.addVerificationMailJob(user.email, user.firstName!, otp);
 
         return { message: 'Registered. Please verify your email.', email: user.email };
     }
@@ -384,6 +379,50 @@ export class UserService {
             isPrivate: true,
             message: "This profile is private"
         }
+    }
+
+    async resendOtp(email: string): Promise<{ message: string }> {
+        const genericResponse = { message: 'If an account exists, a new verification code has been sent.' };
+
+        const user = await this.userRepository.findOne({ where: { email } });
+
+        if (!user || user.isEmailVerified) {
+            return genericResponse;
+        }
+
+        const cooldownKey = `otp-resend-cooldown:${email}`;
+        const dailyKey = `otp-resend-daily:${email}:${new Date().toISOString().slice(0, 10)}`;
+
+        const [onCooldown, dailyCount] = await Promise.all([
+            this.cache.get(cooldownKey),
+            this.cache.get<number>(dailyKey),
+        ]);
+
+        if (onCooldown) {
+            throw new HttpException('Please wait before requesting another code.', HttpStatus.TOO_MANY_REQUESTS);
+        }
+        if ((dailyCount ?? 0) >= 5) {
+            throw new HttpException('Too many resend attempts today. Try again tomorrow.', HttpStatus.TOO_MANY_REQUESTS);
+        }
+
+        const newOtp = this.otpService.generateOtp();
+        await this.otpService.storeOtp(email, newOtp);
+
+        await Promise.all([
+            this.cache.set(cooldownKey, true, 60000),
+            this.cache.set(dailyKey, (dailyCount ?? 0) + 1, this.secondsUntilMidnight() * 1000),
+        ]);
+
+        await this.mailProducer.addVerificationMailJob(email, user.firstName!, newOtp);
+
+        return genericResponse;
+    }
+
+    private secondsUntilMidnight(): number {
+        const now = new Date();
+        const midnight = new Date(now);
+        midnight.setHours(24, 0, 0, 0);
+        return Math.floor((midnight.getTime() - now.getTime()) / 1000);
     }
 
     private stripPrivateFields(user: User) {

@@ -20,6 +20,7 @@ import { raw } from 'express';
 import { ChangeForgotPassword } from './dto/change-password-dto';
 import { UserRepository } from '../user/user.repository';
 import { RefreshTokenRepository } from './refreshTokenRepository';
+import { MailProducer } from '../mail/mail-producer';
 
 interface Tokens {
     accessToken: string;
@@ -50,7 +51,7 @@ export class AuthService {
         , private readonly mailService: MailService
         , private readonly refreshTokenRepository: RefreshTokenRepository
         , private readonly userRepository: UserRepository
-        , private readonly mailer: MailService
+        , private readonly mailProducer: MailProducer
     ) { }
 
     async create(data: registerBody) {
@@ -103,7 +104,7 @@ export class AuthService {
         await this.userRepository.save(user);
 
         try {
-            await this.mailService.sendWelcomeMail(user.email, user.firstName!);
+            await this.mailProducer.addWelcomeMailJob(user.email, user.firstName!);
         } catch (error) {
             this.logger.warn(`Welcome email failed for ${user.email}: ${(error as Error).message}`);
         }
@@ -313,6 +314,8 @@ export class AuthService {
     }
 
 
+
+
     async sendPasswordChangeToken(email: string) {
         const user = await this.userService.findByEmail(email)
 
@@ -326,7 +329,7 @@ export class AuthService {
 
         await this.userRepository.updateBy({ email }, { resetToken: hashedToken, resetTokenExpiry: new Date(Date.now() + 30 * 60 * 1000) })
 
-        await this.mailer.sendPasswordChangeMail(user.email, `http://localhost:3000/auth/change-password?token=${rawToken}`)
+        await this.mailProducer.addForgotPasswordMailJob(user.email, `http://localhost:3000/auth/change-password?token=${rawToken}`)
     }
 
 }

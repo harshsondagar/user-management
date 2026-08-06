@@ -10,11 +10,10 @@ export class MailService {
 
     async sendOtpEmail(to: string, name: string, otp: string) {
         try {
-
             await this.mailer.sendMail({
                 to,
                 subject: 'Verify your email',
-                template: 'verify-otp',
+                template: 'send-email-verification-mail',
                 context: { name, otp, expiresInMinutes: 10 },
             })
 
@@ -29,7 +28,7 @@ export class MailService {
             await this.mailer.sendMail({
                 to,
                 subject: 'welcome abroad',
-                template: 'welcome',
+                template: 'send-welcome-mail',
                 context: { name },
             })
 
@@ -39,32 +38,42 @@ export class MailService {
         }
     }
 
-    async sendReportMail(to: string, newUsers: User, templateUsers: {
-        firstName: string | undefined;
-        email: string;
-        formattedDate: string;
-    }[]) {
-        await this.mailer.sendMail({
-            to,
-            subject: `Weekly New User Registration Report: ${newUsers.length} New Signups`,
-            template: 'report',
-            context: {
-                totalUsers: newUsers.length,
-                users: templateUsers,
-            },
-        })
+    async sendReportMail(to: string, newUsersCount: number, reportData: { firstName?: string; email: string; formattedDate: string }[]) {
+        try {
+
+            await this.mailer.sendMail({
+                to,
+                subject: `Weekly New User Registration Report: ${newUsersCount} New Signups`,
+                template: 'send-weekly-admin-report-mail',
+                context: {
+                    totalUsers: newUsersCount,
+                    users: reportData,
+                },
+            });
+
+        } catch (error) {
+            this.logger.warn(`Failed to send Report email to ${to}: ${(error as Error).message}`)
+            throw error;
+        }
     }
 
     async sendPasswordChangeMail(to: string, resetUrl: string) {
-        await this.mailer.sendMail({
-            to,
-            subject: `change forgot password`,
-            template: 'forgot-password',
-            context: {
-                message: 'click url below to change password',
-                resetUrl
-            },
-        })
+        try {
+
+            await this.mailer.sendMail({
+                to,
+                subject: `change forgot password`,
+                template: 'send-password-change-otp-mail',
+                context: {
+                    message: 'click url below to change password',
+                    resetUrl
+                },
+            })
+
+        } catch (error) {
+            this.logger.warn(`Failed to send PasswordChange email to ${to}: ${(error as Error).message}`)
+            throw error;
+        }
     }
 
 

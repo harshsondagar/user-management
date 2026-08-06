@@ -14,10 +14,15 @@ import { OtpModule } from '../common/otp/otp.module';
 import { MailModule } from '../mail/mail.module';
 import { UserRepository } from './user.repository';
 import { FollowerRepository } from './follower.repository';
+import { BullModule } from '@nestjs/bullmq';
+import { MailProducer } from '../mail/mail-producer';
 
 @Module({
-  imports: [forwardRef(() => AuthModule), MailModule, OtpModule, RedisCacheModule, TypeOrmModule.forFeature([User, System, Followers])],
-  providers: [UserService, SuperAdminSeed, SystemService, UserRepository, FollowerRepository],
+  imports: [forwardRef(() => AuthModule), MailModule, OtpModule, RedisCacheModule, TypeOrmModule.forFeature([User, System, Followers])
+    , BullModule.registerQueue({
+      name: "send-mail"
+    })],
+  providers: [UserService, SuperAdminSeed, SystemService, UserRepository, FollowerRepository, MailProducer],
   controllers: [UserController, SuperAdminController],
   exports: [UserService, SystemService, TypeOrmModule]
 })

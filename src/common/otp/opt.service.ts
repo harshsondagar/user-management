@@ -1,14 +1,14 @@
 import { CACHE_MANAGER } from "@nestjs/cache-manager";
 import { Inject, Injectable } from "@nestjs/common";
 import crypto from "crypto"
-import { SafeCacheService } from "../cache/safe-cache.service";
+import type { Cache } from "cache-manager";
 
 @Injectable()
 export class OtpService {
     private readonly OTP_TTL_MS = 10 * 60 * 1000; // 10 minutes
     private readonly MAX_ATTEMPTS = 5;
 
-    constructor(@Inject(CACHE_MANAGER) private readonly cache: SafeCacheService) { }
+    constructor(@Inject(CACHE_MANAGER) private readonly cache: Cache) { }
 
     private hashOtp(otp: string) {
         return crypto.createHash('sha256').update(otp).digest('hex')
@@ -22,7 +22,7 @@ export class OtpService {
         const hashed = this.hashOtp(otp)
 
         await this.cache.set(`otp:${email}`, hashed, this.OTP_TTL_MS)
-        await this.cache.set(`otp-attempts:${email}`, 0, this.MAX_ATTEMPTS)
+        await this.cache.set(`otp-attempts:${email}`, 0, this.OTP_TTL_MS)
     }
 
     async verifyOtp(email: string, otp: string): Promise<{ valid: boolean, reason?: string }> {

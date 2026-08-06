@@ -4,6 +4,11 @@ import { MailerModule } from '@nestjs-modules/mailer';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { join } from 'path';
 import { EjsAdapter } from '@nestjs-modules/mailer/adapters/ejs.adapter';
+import { MailProducer } from './mail-producer';
+import { BullModule } from '@nestjs/bullmq';
+import { MailProcessor } from './mail-processor';
+import { BullBoardModule } from '@bull-board/nestjs';
+import { BullMQAdapter } from '@bull-board/api/bullMQAdapter';
 
 @Module({
     imports: [MailerModule.forRootAsync({
@@ -27,8 +32,13 @@ import { EjsAdapter } from '@nestjs-modules/mailer/adapters/ejs.adapter';
                 options: { strict: false },
             }
         })
-    })],
-    providers: [MailService],
+    }), BullModule.registerQueue({
+        name: 'send-mail'
+    }), BullBoardModule.forFeature({
+        name: 'send-mail',       // ← must match exactly
+        adapter: BullMQAdapter,
+    }),],
+    providers: [MailService, MailProducer, MailProcessor],
     exports: [MailService]
 })
 export class MailModule { }
