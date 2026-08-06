@@ -56,9 +56,9 @@ export class SyncController {
             jobId: job.id,
             state,
             query: job.data.query,
-            progress: job.progress ?? null,       // whatever you set via job.updateProgress()
-            result: job.returnvalue ?? null,        // final summary, once completed
-            failedReason: job.failedReason ?? null, // error message, if failed
+            progress: job.progress ?? null,
+            result: job.returnvalue ?? null,
+            failedReason: job.failedReason ?? null,
             attemptsMade: job.attemptsMade,
             createdAt: new Date(job.timestamp).toISOString(),
             processedOn: job.processedOn ? new Date(job.processedOn).toISOString() : null,
@@ -66,7 +66,6 @@ export class SyncController {
         };
     }
 
-    // ← useful companion: "what's currently running" without needing a specific jobId
     @Get('status')
     async getCurrentStatus() {
         const [active, waiting] = await Promise.all([

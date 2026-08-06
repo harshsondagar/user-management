@@ -12,7 +12,9 @@ import { BullModule } from '@nestjs/bullmq';
 import { BullBoardModule } from '@bull-board/nestjs';
 import { BullMQAdapter } from "@bull-board/api/bullMQAdapter"
 import { SyncSkip, SyncSkipSchema } from '../schemas/sync.schema';
-import { SyncFailure, SyncFailureSchema } from '../schemas/sync-failer.schema';
+import { DlqService } from '../dlq/dlq.service';
+import { TypeOrmModule } from '@nestjs/typeorm';
+import { DeadLetterEntry } from '../dlq/entity/dead-letter-entry-entity';
 
 
 @Module({
@@ -24,9 +26,8 @@ import { SyncFailure, SyncFailureSchema } from '../schemas/sync-failer.schema';
     }), MongooseModule.forFeature([
         { name: Dataset.name, schema: DatasetSchema },
         { name: SyncSkip.name, schema: SyncSkipSchema },
-        { name: SyncFailure.name, schema: SyncFailureSchema },
-    ])],
-    providers: [FullSyncService, ScrapeQuotaService, ScrapeProducer],
+    ]), TypeOrmModule.forFeature([DeadLetterEntry])],
+    providers: [FullSyncService, ScrapeQuotaService, ScrapeProducer, DlqService],
     controllers: [SyncController],
     exports: [FullSyncService]
 })

@@ -4,9 +4,13 @@ import { FullSyncService } from '../sync/full-sync.service';
 import { ScrapeProcessor } from './scrape.processor';
 import { ScrapeProducer } from './scrape.producer';
 import { SyncModule } from '../sync/sync.module';
+import { DlqService } from '../dlq/dlq.service';
+import { TypeOrmModule } from '@nestjs/typeorm';
+import { DeadLetterEntry } from '../dlq/entity/dead-letter-entry-entity';
 
 @Module({
     imports: [
+        TypeOrmModule.forFeature([DeadLetterEntry]),
         BullModule.registerQueue({
             name: 'scrape-gov-data'
         }),
@@ -15,6 +19,7 @@ import { SyncModule } from '../sync/sync.module';
     providers: [
         ScrapeProcessor,
         ScrapeProducer,
+        DlqService
     ],
 
 })

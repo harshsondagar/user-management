@@ -29,6 +29,7 @@ import { BullModule } from "@nestjs/bullmq";
 import { redisConnection } from "./common/cache/redis-connection";
 import { BullBoardModule } from "@bull-board/nestjs"
 import { ExpressAdapter } from "@bull-board/express";
+import { DlqModule } from './dlq/dlq.module';
 @Module({
   imports: [ScheduleModule.forRoot(), ConfigModule.forRoot({
     isGlobal: true,
@@ -62,7 +63,8 @@ import { ExpressAdapter } from "@bull-board/express";
     OtpModule, CronModule,
     DatagovModule,
     SyncModule,
-    ScrapModuleModule],
+    ScrapModuleModule,
+    DlqModule],
   controllers: [],
   providers: [AppService, {
     provide: APP_FILTER,

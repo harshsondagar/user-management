@@ -7,7 +7,8 @@ import { Dataset } from '../schemas/dataset.schema';
 import { Model } from 'mongoose';
 import { Job } from 'bullmq';
 import { SyncSkip } from '../schemas/sync.schema';
-import { SyncFailure } from '../schemas/sync-failer.schema';
+import { DlqService } from '../dlq/dlq.service';
+import { FailureScope } from '../dlq/entity/dead-letter-entry-entity';
 
 @Injectable()
 export class FullSyncService {
@@ -19,11 +20,15 @@ export class FullSyncService {
         private readonly resource: DatagovResourceService,
         @InjectModel(Dataset.name) private readonly datasetModel: Model<Dataset>,
         @InjectModel(SyncSkip.name) private readonly syncSkipModel: Model<SyncSkip>,
-        @InjectModel(SyncFailure.name) private readonly syncFailureModel: Model<SyncFailure>
+        private readonly dlqService: DlqService
     ) { }
 
 
     async runFullSync(query = '', job: Job, maxEntries = 100) {
+
+        if (query === 'CRASH_TEST') {
+            throw new Error('Deliberate job-level crash for DLQ testing');
+        }
 
         let processedThisRun = 0;
         let succeededThisRun = 0
@@ -46,7 +51,7 @@ export class FullSyncService {
                     break;
                 }
 
-                const succeeded = await this.processEntry(entry);
+                const succeeded = await this.processEntry(entry, query);
                 processedThisRun++;
 
                 succeeded ? succeededThisRun++ : failedThisRun++;
@@ -76,7 +81,7 @@ export class FullSyncService {
         return { succeededThisRun, failedThisRun, totalSucceeded: finalSucceeded, totalSkipped: finalSkipped, totalFailed: finalFailed };
     }
 
-    private async processEntry(entry: CatalogEntry): Promise<boolean> {
+    private async processEntry(entry: CatalogEntry, query: string): Promise<boolean> {
         try {
 
             if (!entry.resourceId || typeof entry.resourceId !== 'string' || entry.resourceId.trim() === '') {
@@ -99,14 +104,14 @@ export class FullSyncService {
 
         } catch (err: any) {
             this.logger.warn(`✗ Failed ${entry.nid} (${entry.title}): ${err.message}`);
-            await this.syncSkipModel.updateOne(
-                { nid: entry.nid },
-                {
-                    $set: { title: entry.title, errorMessage: err.message },
-                    $inc: { attemptCount: 1 },
-                },
-                { upsert: true },
-            );
+            await this.dlqService.recordResourceFailure({
+                resourceId: entry.resourceId,
+                nid: entry.nid,
+                title: entry.title,
+                query,
+                errorMessage: err.message,
+                rawContext: entry as any,
+            });
             return false;
         } finally {
             await this.sleep(300);
@@ -145,20 +150,10 @@ export class FullSyncService {
         return this.syncSkipModel.countDocuments();
     }
 
-    private async markFailed(nid: number, title: string, errorMessage: string) {
-        await this.syncFailureModel.updateOne(
-            { nid },
-            {
-                $set: { title, errorMessage },
-                $inc: { attemptCount: 1 },
-            },
-            { upsert: true },
-        );
+    private async totalFailed(): Promise<number> {
+        return this.dlqService.countByScope(FailureScope.RESOURCE);
     }
 
-    private async totalFailed(): Promise<number> {
-        return this.syncFailureModel.countDocuments();
-    }
     private async isAlreadyProcessed(nid: number): Promise<boolean> {
         const [inData, inSkip] = await Promise.all([
             this.datasetModel.exists({ nid }),

@@ -84,6 +84,11 @@ export class DatagovResourceService {
                 this.http.get(`${this.resourceApiBaseUrl}/resource/${resourceId}`, { params: query })
             )
 
+            if (res.data?.status === 'error') {
+                throw new Error(`data.gov.in API error: ${res.data.message} (resourceId: ${resourceId})`);
+            }
+
+
             return res.data
         } catch (err) {
             const axiosErr = err as AxiosError;
