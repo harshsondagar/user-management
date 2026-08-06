@@ -2,14 +2,33 @@
 import { Module } from '@nestjs/common';
 import { DatagovModule } from '../datagov/fetch data/ datagov.module';
 import { FullSyncService } from './full-sync.service';
-import { ProgressTrackerService } from './progress-tracker.service';
 import { SyncController } from './sync.controller';
 import { MongooseModule } from '@nestjs/mongoose';
 import { DatasetSchema } from '../schemas/dataset.schema';
 import { Dataset } from '../schemas/dataset.schema';
+import { ScrapeQuotaService } from './scrape-quota.service';
+import { ScrapeProducer } from '../scrap-module/scrape.producer';
+import { BullModule } from '@nestjs/bullmq';
+import { BullBoardModule } from '@bull-board/nestjs';
+import { BullMQAdapter } from "@bull-board/api/bullMQAdapter"
+import { SyncSkip, SyncSkipSchema } from '../schemas/sync.schema';
+import { DlqService } from '../dlq/dlq.service';
+import { TypeOrmModule } from '@nestjs/typeorm';
+import { DeadLetterEntry } from '../dlq/entity/dead-letter-entry-entity';
+
+
 @Module({
-    imports: [DatagovModule, MongooseModule.forFeature([{ name: Dataset.name, schema: DatasetSchema }])],
-    providers: [FullSyncService, ProgressTrackerService],
+    imports: [DatagovModule, BullModule.registerQueue({
+        name: 'scrape-gov-data',
+    }), BullBoardModule.forFeature({
+        name: 'scrape-gov-data',
+        adapter: BullMQAdapter,
+    }), MongooseModule.forFeature([
+        { name: Dataset.name, schema: DatasetSchema },
+        { name: SyncSkip.name, schema: SyncSkipSchema },
+    ]), TypeOrmModule.forFeature([DeadLetterEntry])],
+    providers: [FullSyncService, ScrapeQuotaService, ScrapeProducer, DlqService],
     controllers: [SyncController],
+    exports: [FullSyncService]
 })
 export class SyncModule { }

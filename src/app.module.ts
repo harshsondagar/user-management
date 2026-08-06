@@ -23,32 +23,48 @@ import { ScheduleModule } from '@nestjs/schedule';
 import { SyncModule } from './sync/sync.module';
 import { DatagovModule } from './datagov/fetch data/ datagov.module';
 import { MongooseModule } from '@nestjs/mongoose';
-
+import { RolesGuard } from "./common/gaurds/roles.guard";
+import { ScrapModuleModule } from './scrap-module/scrap-module.module';
+import { BullModule } from "@nestjs/bullmq";
+import { redisConnection } from "./common/cache/redis-connection";
+import { BullBoardModule } from "@bull-board/nestjs"
+import { ExpressAdapter } from "@bull-board/express";
+import { DlqModule } from './dlq/dlq.module';
 @Module({
   imports: [ScheduleModule.forRoot(), ConfigModule.forRoot({
     isGlobal: true,
     envFilePath: '.env',
     load: [configuration]
-  }), AppThrottleModule, HealthModule, RedisCacheModule, MongooseModule.forRoot(process.env.MONGO_URI!), TypeOrmModule.forRootAsync({
-    imports: [ConfigModule],
-    inject: [ConfigService],
-    useFactory: (config: ConfigService) => ({
-      type: 'postgres',
-      host: config.get<string>('database.host'),
-      port: config.get<number>('database.port'),
-      username: config.get<string>('database.username'),
-      password: config.get<string>('database.password'),
-      database: config.get<string>('database.name'),
-      autoLoadEntities: true,
-      entities: ['src/**/*.entity.ts'],
-      migrations: [__dirname, '../migration/*{.ts,.js}'],
-      synchronize: false
-    }),
-  }), UserModule, AuthModule,
+  }),
+  BullModule.forRoot({
+    connection: redisConnection
+  }),
+  BullBoardModule.forRoot({
+    route: '/admin/queues',
+    adapter: ExpressAdapter,
+  }),
+    AppThrottleModule, HealthModule, RedisCacheModule, MongooseModule.forRoot(process.env.MONGO_URI!), TypeOrmModule.forRootAsync({
+      imports: [ConfigModule],
+      inject: [ConfigService],
+      useFactory: (config: ConfigService) => ({
+        type: 'postgres',
+        host: config.get<string>('database.host'),
+        port: config.get<number>('database.port'),
+        username: config.get<string>('database.username'),
+        password: config.get<string>('database.password'),
+        database: config.get<string>('database.name'),
+        autoLoadEntities: true,
+        entities: ['src/**/*.entity.ts'],
+        migrations: [__dirname, '../migration/*{.ts,.js}'],
+        synchronize: false
+      }),
+    }), UserModule, AuthModule,
     TaskModule, MailModule,
     OtpModule, CronModule,
     DatagovModule,
-    SyncModule],
+    SyncModule,
+    ScrapModuleModule,
+    DlqModule],
   controllers: [],
   providers: [AppService, {
     provide: APP_FILTER,
@@ -59,6 +75,8 @@ import { MongooseModule } from '@nestjs/mongoose';
       provide: APP_GUARD, useClass: maintenanceGuard
     }, {
       provide: APP_GUARD, useClass: JwtGuard
+    }, {
+      provide: APP_GUARD, useClass: RolesGuard
     },],
 })
 

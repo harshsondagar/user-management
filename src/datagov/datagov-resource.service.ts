@@ -4,9 +4,6 @@ import { ConfigService } from "@nestjs/config";
 import { AxiosError } from "axios";
 import { firstValueFrom } from "rxjs";
 
-
-
-
 export interface FetchResourceParams {
     resourceId: string;
     limit?: number;
@@ -32,6 +29,7 @@ export class DatagovResourceService {
     }
 
     async lookupResourceIds(nid: string | number): Promise<string[]> {
+
         const { data } = await firstValueFrom(
             this.http.get(`${this.portalUrl}/resources`, {
                 params: {
@@ -85,12 +83,18 @@ export class DatagovResourceService {
             const res = await firstValueFrom(
                 this.http.get(`${this.resourceApiBaseUrl}/resource/${resourceId}`, { params: query })
             )
+
+            if (res.data?.status === 'error') {
+                throw new Error(`data.gov.in API error: ${res.data.message} (resourceId: ${resourceId})`);
+            }
+
+
             return res.data
         } catch (err) {
             const axiosErr = err as AxiosError;
 
             if (axiosErr.response?.status === 429 && retries > 0) {
-                const waitMs = 10000; // 10s — be generous, this API's limits seem tight
+                const waitMs = 60 * 2 * 1000; // 10s — be generous, this API's limits seem tight
                 this.logger.warn(`Rate limited on ${resourceId}, waiting ${waitMs / 1000}s, ${retries} retries left`);
                 await this.sleep(waitMs);
                 return this.fetchResource(params, retries - 1);

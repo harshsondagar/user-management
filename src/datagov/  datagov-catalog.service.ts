@@ -8,6 +8,7 @@ export interface CatalogEntry {
     nid: number;
     catalogUuid: string;
     title: string;
+    resourceId: string;
     url: string;
     description?: string;
     ministry?: string;
@@ -40,22 +41,25 @@ export class DatagovCatalogService {
 
     async search(query: string, offset = 0, limit = 8, sector?: string) {
 
-
         const { data } = await firstValueFrom(
-            this.http.get(`${this.baseUrl}/catalogs`, {
+            this.http.get(`${this.baseUrl}/search`, {
                 params: {
+                    query,
                     offset,
                     limit,
-                    'sort[published_date]': 'desc',
-                    search_api_fulltext: query,
-                    'filters[field_sector:name]': sector,
+                    'notfilters[domain]': 'smartcities.data.gov.in',
+                    'filters[type]': 'resources',
+                    'filters[domain_visibility]': 4,
+                    'sort[_score]': 'desc',
+                    ...(sector && { 'filters[field_sector:name]': sector }),
                 },
                 headers: this.headers(),
             })
         )
-
-
         const rows = data?.data?.rows ?? [];
+
+
+
 
         if (typeof data?.total !== 'number') {
             throw new Error(`Catalog search returned invalid total at offset ${offset}`);
@@ -71,6 +75,7 @@ export class DatagovCatalogService {
         let offset = 0
         let total = Infinity
 
+
         while (offset < total) {
             const page = await this.search(query, offset, pageSize)
             total = page.total
@@ -84,21 +89,28 @@ export class DatagovCatalogService {
 
     private mapRow(row: any): CatalogEntry {
         const first = (field: any) => (Array.isArray(field) ? field[0] : field);
+        const stripHtml = (s: string) => s?.replace(/<[^>]+>/g, '');
+
+        const sectorTags = row.sector ?? [];
+        const titleWords = stripHtml(first(row.title))
+            ?.toLowerCase()
+            .split(/[\s,]+/)
+            .filter((w: string) => w.length > 3) ?? [];
 
         return {
             nid: Number(first(row.nid)),
+            resourceId: first(row.uuid),
             catalogUuid: first(row.uuid),
-            title: first(row.title),
-            url: `${this.portalUrl}${first(row.node_alias)
-                }`,
-            description: first(row['body:value']),
-            ministry: first(row['field_ministry_department:name']),
-            sector: first(row['field_sector:name']),
-            jurisdiction: first(row['field_asset_jurisdiction:name']),
-            govtType: first(row.govt_type),
-            publishedDate: row.published_date ? new Date(first(row.published_date) * 1000) : undefined,
-            keywords: row.keywords ?? [],
-            isWebservice: first(row.is_webservice) === 1,
+            title: stripHtml(first(row.title)),
+            url: first(row.datafile) ?? `${this.portalUrl}${first(row.node_alias)}`,
+            description: undefined, // /search rows don't include a description field
+            ministry: first(row.catalog_resource_ministry),
+            sector: first(row.sector),
+            jurisdiction: undefined, // not present in /search rows
+            govtType: undefined,     // not present in /search rows
+            publishedDate: row.created ? new Date(first(row.created) * 1000) : undefined,
+            keywords: Array.from(new Set([...sectorTags, ...titleWords])),
+            isWebservice: first(row.is_api_available) === '1',
         };
     }
 
@@ -110,58 +122,6 @@ export class DatagovCatalogService {
     }
 
 
-
-    // async lookupResourceIds(nid: string | number): Promise<string[]> {
-    //     const url = `https://www.data.gov.in/backend/dmspublic/v1/resources`
-
-    //     const { data } = await firstValueFrom(
-    //         this.http.get(url, {
-    //             params: {
-    //                 _format: 'json',
-    //                 'filters[catalog_reference]': nid,
-    //                 offset: 0,
-    //                 limit: 8,
-    //                 'sort[changed]': 'desc',
-    //                 'filters[domain_visibility]': 4,
-    //             },
-    //             headers: {
-    //                 'User-Agent': 'Mozilla/5.0 (compatible; MyDataApp/1.0)',
-    //                 Accept: 'application/json',
-    //             },
-    //         }),
-    //     );
-
-    //     this.logger.debug(`Raw web-services response: ${JSON.stringify(data, null, 2)}`);
-
-    //     const rows = data?.data?.rows ?? [];
-    //     this.logger.debug(`Rows found: ${rows.length}`);
-    //     const ids: string[] = [];
-    //     for (const row of rows) {
-    //         const raw = Array.isArray(row.uuid) ? row.uuid[0] : row.uuid;
-    //         if (!raw) continue;
-    //         const clean = raw.includes('~') ? raw.split('~')[1] : raw; // strip "200~" prefix
-    //         ids.push(clean);
-    //     }
-
-    //     return Array.from(new Set(ids));
-    // }
-
-    // private defaultHeaders() {
-    //     return {
-    //         'User-Agent':
-    //             'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36',
-    //         Accept:
-    //             'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
-    //         'Accept-Language': 'en-US,en;q=0.9',
-    //         'Accept-Encoding': 'gzip, deflate, br',
-    //         Referer: 'https://data.gov.in/',
-    //         Connection: 'keep-alive',
-    //     };
-    // }
-
-    // private sleep(ms: number) {
-    //     return new Promise((resolve) => setTimeout(resolve, ms));
-    // }
 }
 
 

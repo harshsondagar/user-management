@@ -7,7 +7,7 @@ export class Dataset extends Document {
     @Prop({ required: true, index: true })
     declare nid: number
 
-    @Prop({ required: true, unique: true, index: true })
+    @Prop({ required: true, index: true })
     declare resourceId: string
 
     @Prop({ required: true })
@@ -39,6 +39,13 @@ export class Dataset extends Document {
 
     @Prop()
     declare fetchedAt: Date;
+
 }
 
 export const DatasetSchema = SchemaFactory.createForClass(Dataset)
+
+DatasetSchema.index(
+    { resourceId: 1 },
+    { unique: true, partialFilterExpression: { resourceId: { $type: 'string' } } },
+);
+DatasetSchema.index({ title: 'text', keywords: 'text', sector: 'text', ministry: 'text' });
