@@ -6,10 +6,14 @@ import { Public } from '../common/decorator/public-decoretor';
 import { DeadLetterEntry, DlqStatus, FailureScope } from './entity/dead-letter-entry-entity';
 import { currentUser } from '../common/decorator/currentUser-decorator';
 import type { User } from '@sentry/node';
+import { MailFailureService } from './mail-failure.service';
 
 @Controller('dlq')
 export class DlqController {
-    constructor(private readonly dlqService: DlqService) { }
+    constructor(
+        private readonly dlqService: DlqService,
+        private readonly mailFailureService: MailFailureService
+    ) { }
 
     @Get('entries')
     @Roles(UserRole.ADMIN)
@@ -68,6 +72,26 @@ export class DlqController {
             results.push(entry);
         }
         return { message: `Seeded ${count} fake DLQ entries`, entries: results };
+    }
+
+    @Get('mail-failures')
+    @Roles(UserRole.ADMIN)
+    async getMailFailures(
+        @Query('jobName') jobName?: string,
+        @Query('page') page = '1',
+        @Query('pageSize') pageSize = '20',
+    ) {
+        return this.mailFailureService.findAll({
+            jobName,
+            page: Number(page),
+            pageSize: Math.min(Number(pageSize), 100),
+        });
+    }
+
+    @Get('mail-failures/stats')
+    @Roles(UserRole.ADMIN)
+    async getMailFailureStats() {
+        return this.mailFailureService.getStats();
     }
 
 }

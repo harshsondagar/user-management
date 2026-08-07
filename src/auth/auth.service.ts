@@ -1,26 +1,23 @@
-import { ForbiddenException, HttpStatus, Injectable, Logger, NotFoundException, UnauthorizedException } from '@nestjs/common';
+import { ForbiddenException, HttpException, HttpStatus, Inject, Injectable, Logger, NotFoundException, UnauthorizedException } from '@nestjs/common';
 import { registerBody } from '../types';
 import { UserService } from '../user/user.service';
 import { User } from '../user/user-entity';
 import { createHash, randomBytes, randomUUID } from 'crypto';
 import { JwtService, JwtSignOptions } from '@nestjs/jwt';
 import { ConfigService } from '@nestjs/config';
-import { Repository } from 'typeorm';
-import { RefreshToken } from './jwt-entity';
-import { InjectRepository } from '@nestjs/typeorm';
 import { ResetPasswordDTO } from './dto/ResetPasswordDTO';
 import * as argon2 from 'argon2'
 import { VerifyOtpDto } from './dto/verify-otp.dto';
 import { OtpService } from '../common/otp/opt.service';
 import { AppException, ResourceNotFoundException } from '../common/exceptions/app.exception';
-import { MailService } from '../mail/mail.service';
 import { ResendOtpDto } from './dto/resend-otp.dto';
 import * as crypto from "crypto"
-import { raw } from 'express';
 import { ChangeForgotPassword } from './dto/change-password-dto';
 import { UserRepository } from '../user/user.repository';
 import { RefreshTokenRepository } from './refreshTokenRepository';
 import { MailProducer } from '../mail/mail-producer';
+import { CACHE_MANAGER } from '@nestjs/cache-manager';
+import type { Cache } from 'cache-manager';
 
 interface Tokens {
     accessToken: string;
@@ -48,7 +45,7 @@ export class AuthService {
         , private readonly jwtService: JwtService
         , private readonly configService: ConfigService
         , private readonly otpService: OtpService
-        , private readonly mailService: MailService
+        , @Inject(CACHE_MANAGER) private readonly cache: Cache
         , private readonly refreshTokenRepository: RefreshTokenRepository
         , private readonly userRepository: UserRepository
         , private readonly mailProducer: MailProducer
@@ -124,7 +121,7 @@ export class AuthService {
 
         const otp = this.otpService.generateOtp();
         await this.otpService.storeOtp(user.email, otp);
-        await this.mailService.sendOtpEmail(user.email, user.firstName!, otp);
+        await this.mailProducer.addVerificationMailJob(user.email, user.firstName!, otp);
 
         return { message: 'OTP resent' };
     }
@@ -260,7 +257,7 @@ export class AuthService {
         if (!user.resetTokenExpiry || user.resetTokenExpiry < new Date()) {
             throw new AppException('RESET_TOKEN_EXPIRED', 'This reset link has expired', HttpStatus.BAD_REQUEST);
         }
-
+        await this.removeAllSession(user.id)
         const passwordHash = await argon2.hash(data.newPassword, ARGON2_OPTIONS);
 
         await this.userRepository.update(
@@ -271,6 +268,9 @@ export class AuthService {
                 resetTokenExpiry: null,
             },
         );
+
+        await this.removeAllSession(user.id)
+
     }
 
     async checkPassword(userId: string, password: string): Promise<boolean> {
@@ -313,23 +313,58 @@ export class AuthService {
         await this.userService.incrementTokenVersion(userId)
     }
 
+    async sendPasswordChangeToken(email: string): Promise<{ message: string }> {
+        const genericResponse = { message: 'If an account exists, a password reset link has been sent.' };
 
-
-
-    async sendPasswordChangeToken(email: string) {
-        const user = await this.userService.findByEmail(email)
-
+        const user = await this.userService.findByEmail(email);
         if (!user) {
-            throw new NotFoundException("user is not found")
+            return genericResponse;
         }
 
-        const rawToken = crypto.randomBytes(32).toString('hex')
-        const hashedToken = await this.hashToken(rawToken)
+        const cooldownKey = `pwd-reset-cooldown:${email}`;
+        const dailyKey = `pwd-reset-daily:${email}:${new Date().toISOString().slice(0, 10)}`;
+
+        const [onCooldown, dailyCount] = await Promise.all([
+            this.cache.get(cooldownKey),
+            this.cache.get<number>(dailyKey),
+        ]);
+
+        if (onCooldown) {
+            throw new HttpException('Please wait before requesting another reset link.', HttpStatus.TOO_MANY_REQUESTS);
+        }
+        if ((dailyCount ?? 0) >= 5) {
+            throw new HttpException('Too many reset attempts today. Try again tomorrow.', HttpStatus.TOO_MANY_REQUESTS);
+        }
+
+        const rawToken = crypto.randomBytes(32).toString('hex');
+        const hashedToken = await this.hashToken(rawToken);
+
+        await this.userRepository.updateBy(
+            { email },
+            { resetToken: hashedToken, resetTokenExpiry: new Date(Date.now() + 30 * 60 * 1000) },
+        );
+
+        await Promise.all([
+            this.cache.set(cooldownKey, true, 60_000),
+            this.cache.set(dailyKey, (dailyCount ?? 0) + 1, this.secondsUntilMidnight() * 1000),
+        ]);
+
+        const API_URL = this.configService.get<string>('api.url')
+
+        await this.mailProducer.addForgotPasswordMailJob(
+            user.email,
+            `${API_URL}/auth/change-password?token=${rawToken}`,
+        );
+
+        return genericResponse;
+    }
 
 
-        await this.userRepository.updateBy({ email }, { resetToken: hashedToken, resetTokenExpiry: new Date(Date.now() + 30 * 60 * 1000) })
-
-        await this.mailProducer.addForgotPasswordMailJob(user.email, `http://localhost:3000/auth/change-password?token=${rawToken}`)
+    private secondsUntilMidnight(): number {
+        const now = new Date();
+        const midnight = new Date(now);
+        midnight.setHours(24, 0, 0, 0);
+        return Math.floor((midnight.getTime() - now.getTime()) / 1000);
     }
 
 }

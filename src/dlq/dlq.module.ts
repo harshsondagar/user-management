@@ -8,14 +8,16 @@ import { MongooseModule } from '@nestjs/mongoose';
 import { DatagovModule } from '../datagov/fetch data/ datagov.module';
 import { DlqRetrySweepService } from './dlq-retry-sweep.service';
 import { DlqController } from './dlq.controller';
+import { MailFailureService } from './mail-failure.service';
+import { MailFailure } from './entity/mail-failure-entity';
 
 @Module({
     imports: [
-        TypeOrmModule.forFeature([DeadLetterEntry]),
+        TypeOrmModule.forFeature([DeadLetterEntry, MailFailure]),
         MongooseModule.forFeature([{ name: Dataset.name, schema: DatasetSchema }]),
         DatagovModule,
     ],
-    providers: [DlqService, DlqRetrySweepService],
+    providers: [DlqService, DlqRetrySweepService, MailFailureService],
     exports: [DlqService],
     controllers: [DlqController],
 

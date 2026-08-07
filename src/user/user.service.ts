@@ -55,6 +55,8 @@ export class UserService {
         if (existing && existing.isEmailVerified) {
             throw new ConflictException('An account with this email already exists.');
         }
+
+
         if (existing && !existing.isEmailVerified) {
             await this.resendOtp(body.email);
             return { message: 'Registered. Please verify your email.', email: body.email };

@@ -3,6 +3,7 @@ import { Logger } from "@nestjs/common";
 import { Job } from "bullmq";
 import { MailService } from "./mail.service";
 import { MailJobName } from "./mail-producer";
+import { MailFailureService } from "../dlq/mail-failure.service";
 
 
 @Processor('send-mail', {
@@ -14,7 +15,9 @@ import { MailJobName } from "./mail-producer";
 export class MailProcessor extends WorkerHost {
     private readonly logger = new Logger(MailProcessor.name)
 
-    constructor(private readonly mailService: MailService) {
+    constructor(
+        private readonly mailService: MailService,
+        private readonly mailFailureService: MailFailureService) {
         super()
     }
 
@@ -58,7 +61,21 @@ export class MailProcessor extends WorkerHost {
     }
 
     @OnWorkerEvent('failed')
-    onFailed(job: Job, error: Error) {
+    async onFailed(job: Job, error: Error) {
         this.logger.error(`Mail job ${job.id} (${job.name}) failed: ${error.message}`);
+
+        const isFinalAttempt = job.attemptsMade >= (job.opts.attempts ?? 1);
+        if (!isFinalAttempt) {
+            return;
+        }
+
+        await this.mailFailureService.record({
+            jobName: job.name,
+            recipientEmail: job.data.email,
+            bullJobId: String(job.id),
+            errorMessage: error.message,
+            attemptsMade: job.attemptsMade,
+            jobData: job.data,
+        });
     }
 }

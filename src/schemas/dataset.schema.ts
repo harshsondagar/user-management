@@ -7,7 +7,7 @@ export class Dataset extends Document {
     @Prop({ required: true, index: true })
     declare nid: number
 
-    @Prop({ required: true, index: true })
+    @Prop({ required: true })
     declare resourceId: string
 
     @Prop({ required: true })

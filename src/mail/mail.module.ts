@@ -9,6 +9,9 @@ import { BullModule } from '@nestjs/bullmq';
 import { MailProcessor } from './mail-processor';
 import { BullBoardModule } from '@bull-board/nestjs';
 import { BullMQAdapter } from '@bull-board/api/bullMQAdapter';
+import { TypeOrmModule } from '@nestjs/typeorm';
+import { MailFailure } from '../dlq/entity/mail-failure-entity';
+import { MailFailureService } from '../dlq/mail-failure.service';
 
 @Module({
     imports: [MailerModule.forRootAsync({
@@ -32,13 +35,14 @@ import { BullMQAdapter } from '@bull-board/api/bullMQAdapter';
                 options: { strict: false },
             }
         })
-    }), BullModule.registerQueue({
+    }),
+    BullModule.registerQueue({
         name: 'send-mail'
     }), BullBoardModule.forFeature({
-        name: 'send-mail',       // ← must match exactly
+        name: 'send-mail',
         adapter: BullMQAdapter,
-    }),],
-    providers: [MailService, MailProducer, MailProcessor],
+    }), TypeOrmModule.forFeature([MailFailure])],
+    providers: [MailService, MailProducer, MailProcessor, MailFailureService],
     exports: [MailService]
 })
 export class MailModule { }
