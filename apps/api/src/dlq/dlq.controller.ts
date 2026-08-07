@@ -6,6 +6,7 @@ import { DeadLetterEntry, DlqStatus, FailureScope } from '@app/shared';
 import { currentUser } from '../common/decorator/currentUser-decorator';
 import type { User } from '@sentry/node';
 import { MailFailureService } from './mail-failure.service';
+import { DlqService } from './dlq.service';
 
 @Controller('dlq')
 export class DlqController {

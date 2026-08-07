@@ -2,7 +2,7 @@
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { DeadLetterEntry } from '@app/shared';
-import { DlqService } from '../../../queue-service/src/dlq/dlq.service';
+import { DlqService } from './dlq.service';
 import { Dataset, DatasetSchema } from "@app/shared";
 import { MongooseModule } from '@nestjs/mongoose';
 import { DatagovModule } from '../datagov/fetch data/ datagov.module';
