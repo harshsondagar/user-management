@@ -43,21 +43,20 @@
         <h1>Weekly Registration Summary</h1>
         <p>Hello Admin,</p>
         <p>Here is the list of new users who registered during the past week.</p>
-        <p>Total new signups: <span class="highlight">
-                <%= totalUsers %>
-            </span></p>
+        <p>Total new signups: <span class="highlight"><%= totalUsers %></span></p>
 
-        <ul>
-            <% users.forEach(function(user) { %>
-                <li>
-                    <strong>
-                        <%= user.firstName || 'N/A' %>
-                            <%= user.lastName || '' %>
-                    </strong>
-                    (<%= user.email %>) - Registered: <%= user.formattedDate %>
-                </li>
+        <% if (users.length === 0) { %>
+            <p>No new signups this week.</p>
+        <% } else { %>
+            <ul>
+                <% users.forEach(function(user) { %>
+                    <li>
+                        <strong><%= user.firstName || 'N/A' %></strong>
+                        (<%= user.email %>) — Registered: <%= user.formattedDate %>
+                    </li>
                 <% }); %>
-        </ul>
+            </ul>
+        <% } %>
     </div>
 </body>
 

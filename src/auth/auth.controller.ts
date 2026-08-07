@@ -65,7 +65,7 @@ export class AuthController {
     }
 
     @Public()
-    @Throttle({ default: { limit: 3, ttl: 300000 } }) // stricter — prevent email-bombing via resend spam
+    @StrictThrottle()
     @Post('resend-otp')
     @HttpCode(HttpStatus.OK)
     resendOtp(@Body() dto: ResendOtpDto) {
@@ -211,12 +211,19 @@ export class AuthController {
     }
 
     @Public()
+    @Post('resend-password-token')
+    async resendPasswordToken(@Body('email') email: string) {
+        return this.authService.sendPasswordChangeToken(email); // same underlying method — same rate limits apply
+    }
+
+    @Public()
     @StrictThrottle()
     @Post('change-password')
     async changePasswords(@Body() body: ChangeForgotPassword) {
         await this.authService.updatePassword(body);
         return { success: true, message: 'password change successfully' };
     }
+
 
     private setRefreshCookie(res: e.Response, token: string, expireAt: Date) {
         res.cookie(REFRESH_COOKIE_NAME, token, {

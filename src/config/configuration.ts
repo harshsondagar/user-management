@@ -49,5 +49,8 @@ export default () => ({
     },
     mongodb: {
         uri: process.env.MONGO_URI!
+    },
+    api: {
+        url: process.env.API_URL || 'http://localhost:3000'
     }
 });
