@@ -1,11 +1,44 @@
 {
   "$schema": "https://json.schemastore.org/nest-cli",
   "collection": "@nestjs/schematics",
-  "sourceRoot": "src",
+  "sourceRoot": "apps/task/src",
   "compilerOptions": {
     "assets": [
       "mail/template/**/*"
     ],
-    "deleteOutDir": true
+    "deleteOutDir": true,
+    "webpack": true,
+    "tsConfigPath": "apps/task/tsconfig.app.json"
+  },
+  "monorepo": true,
+  "root": "apps/task",
+  "projects": {
+    "queue-service": {
+      "type": "application",
+      "root": "apps/queue-service",
+      "entryFile": "main",
+      "sourceRoot": "apps/queue-service/src",
+      "compilerOptions": {
+        "tsConfigPath": "apps/queue-service/tsconfig.app.json"
+      }
+    },
+    "second-service": {
+      "type": "application",
+      "root": "apps/second-service",
+      "entryFile": "main",
+      "sourceRoot": "apps/second-service/src",
+      "compilerOptions": {
+        "tsConfigPath": "apps/second-service/tsconfig.app.json"
+      }
+    },
+    "task": {
+      "type": "application",
+      "root": "apps/task",
+      "entryFile": "main",
+      "sourceRoot": "apps/task/src",
+      "compilerOptions": {
+        "tsConfigPath": "apps/task/tsconfig.app.json"
+      }
+    }
   }
 }
