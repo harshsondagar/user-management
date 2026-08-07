@@ -1,19 +1,16 @@
 import { BullModule } from "@nestjs/bullmq";
 import { Module } from "@nestjs/common";
-import { ConfigModule, ConfigService } from "@nestjs/config";
-
+import { ConfigModule } from "@nestjs/config";
+import { redisConnection } from "@app/shared"
 
 @Module({
     imports: [
         ConfigModule.forRoot({ isGlobal: true }),
-        BullModule.forRootAsync({
-            useFactory: (config: ConfigService) => ({
-                connection: {
-                    host: config.get('REDIS_HOST', 'localhost'),
-                    port: config.get<number>('REDIS_PORT', 6379),
-                },
-            }),
-            inject: [ConfigService],
+        BullModule.forRoot({
+            connection: {
+                host: process.env.REDIS_HOST,
+                port: parseInt(process.env.REDIS_PORT!)
+            }
         }),
         BullModule.registerQueue(
             { name: 'send-email' },

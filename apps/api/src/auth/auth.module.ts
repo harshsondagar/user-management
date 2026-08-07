@@ -1,0 +1,32 @@
+import { forwardRef, Module } from '@nestjs/common';
+import { AuthService } from './auth.service';
+import { AuthController } from './auth.controller';
+import { UserModule } from '../user/user.module';
+import { JwtModule } from "@nestjs/jwt"
+import { LocalStrategy } from '../stretagey/localAuth-strtegey';
+import { JwtRefreshStrategy } from '../stretagey/jwtRefresh.strategy';
+import { JwtStrategy } from '../stretagey/jwt-stratagey';
+import { APP_GUARD } from '@nestjs/core';
+import { TypeOrmModule } from '@nestjs/typeorm';
+import { JwtGuard } from './gurads/jwt.guard';
+import { PassportModule } from '@nestjs/passport';
+import { OtpModule } from '../common/otp/otp.module';
+import { MailModule } from '../mail/mail.module';
+import { RefreshTokenRepository } from './refreshTokenRepository';
+import { UserRepository } from '../user/user.repository';
+import { BullModule } from '@nestjs/bullmq';
+import { MailProducer } from '../mail/mail-producer';
+import { RefreshToken } from '@app/shared';
+
+@Module({
+  imports: [forwardRef(() => UserModule), PassportModule, MailModule, OtpModule, JwtModule.register({}), TypeOrmModule.forFeature([RefreshToken]), BullModule.registerQueue({
+    name: "send-mail"
+  })],
+  providers: [AuthService, LocalStrategy, JwtStrategy, JwtRefreshStrategy, RefreshTokenRepository, UserRepository, MailProducer,
+    {
+      provide: APP_GUARD, useClass: JwtGuard
+    },
+  ],
+  controllers: [AuthController], exports: [AuthService],
+})
+export class AuthModule { }
