@@ -61,9 +61,6 @@ export class DatagovCatalogService {
         )
         const rows = data?.data?.rows ?? [];
 
-
-
-
         if (typeof data?.total !== 'number') {
             throw new Error(`Catalog search returned invalid total at offset ${offset}`);
         }
