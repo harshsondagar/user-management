@@ -7,6 +7,7 @@ import { Model } from "mongoose";
 import { Cron, CronExpression } from "@nestjs/schedule";
 
 
+console.log("running");
 
 @Injectable()
 export class DlqRetrySweepService {
@@ -18,7 +19,7 @@ export class DlqRetrySweepService {
         @InjectModel(Dataset.name) private readonly datasetModel: Model<Dataset>,
     ) { }
 
-    @Cron(CronExpression.EVERY_30_SECONDS)
+    @Cron(CronExpression.EVERY_10_SECONDS)
     async sweep() {
 
         const pending = await this.dlqService.getPendingRetries()

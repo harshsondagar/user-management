@@ -8,13 +8,16 @@ import { DlqModule } from "./dlq/dlq.module";
 import { DatagovModule } from "./data-gov/datagov.module";
 import { MongooseModule } from "@nestjs/mongoose";
 import configuration from "./config/configuration";
+import { ScheduleModule } from "@nestjs/schedule";
 
 @Module({
     imports: [
         ConfigModule.forRoot({
-            isGlobal: true, // makes ConfigService available everywhere without re-importing
-            load: [configuration], // 👈 Loads your custom object
+            isGlobal: true,
+            load: [configuration],
         }),
+        ScheduleModule.forRoot()
+        ,
         TypeOrmModule.forRootAsync({
             imports: [ConfigModule],
             inject: [ConfigService],
