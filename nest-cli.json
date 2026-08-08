@@ -4,7 +4,11 @@
   "sourceRoot": "apps/api/src",
   "compilerOptions": {
     "assets": [
-      "mail/template/**/*"
+      "mail/template/**/*",
+      {
+        "include": "../../views/**/*",
+        "outDir": "dist/apps/api"
+      }
     ],
     "deleteOutDir": true,
     "webpack": true,

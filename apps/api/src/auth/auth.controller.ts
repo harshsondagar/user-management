@@ -122,14 +122,12 @@ export class AuthController {
 
         this.setRefreshCookie(res, refreshToken, refreshTokenExpiresAt);
 
-        return new ApiResponseDto({
-            success: true,
+        return {
             message: 'successfully refresh',
-            data: new LoginResponse({
-                id: sub,
-                accessToken,
-            }),
-        });
+            id: sub,
+            accessToken,
+        }
+
     }
 
     @UseGuards(JwtGuard)

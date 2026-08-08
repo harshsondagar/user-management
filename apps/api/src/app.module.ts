@@ -26,12 +26,9 @@ import { MongooseModule } from '@nestjs/mongoose';
 import { RolesGuard } from "./common/gaurds/roles.guard";
 import { ScrapModuleModule } from './scrap-module/scrap-module.module';
 import { BullModule } from "@nestjs/bullmq";
-import { redisConnection } from "@app/shared"
 import { BullBoardModule } from "@bull-board/nestjs"
 import { ExpressAdapter } from "@bull-board/express";
 import { DlqModule } from './dlq/dlq.module';
-
-console.log(redisConnection);
 
 @Module({
   imports: [ScheduleModule.forRoot(), ConfigModule.forRoot({
@@ -61,8 +58,9 @@ console.log(redisConnection);
         database: config.get<string>('database.name'),
         autoLoadEntities: true,
         entities: ['src/**/*.entity.ts'],
-        migrations: [__dirname, '../migration/*{.ts,.js}'],
-        synchronize: false
+        synchronize: false,
+        retryAttempts: 10,
+        retryDelay: 3000
       }),
     }), UserModule, AuthModule,
     TaskModule, MailModule,
