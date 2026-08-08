@@ -5,9 +5,13 @@ import { DeadLetterEntry, Dataset, DatasetSchema } from '@app/shared';
 import { DlqService } from './dlq.service';
 import { DlqRetrySweepService } from './dlq-retry-sweep.service';
 import { DatagovModule } from '../data-gov/datagov.module'; // sweep needs DatagovResourceService
+import { BullModule } from '@nestjs/bullmq';
+import { HttpModule } from '@nestjs/axios';
 
 @Module({
-    imports: [
+    imports: [HttpModule, BullModule.registerQueue({
+        name: 'scrape-gov-data',
+    }),
         TypeOrmModule.forFeature([DeadLetterEntry]),
         MongooseModule.forFeature([{ name: Dataset.name, schema: DatasetSchema }]),
         DatagovModule,

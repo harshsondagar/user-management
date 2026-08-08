@@ -21,6 +21,7 @@ export class ScrapeProcessor extends WorkerHost {
     }
 
     async process(job: Job, token?: string): Promise<any> {
+
         const { query, userId } = job.data
         const res = await this.fullSyncService.runFullSync(query, job)
 

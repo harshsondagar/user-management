@@ -36,9 +36,13 @@ export class DatagovCatalogService {
         private readonly config: ConfigService
     ) {
         this.baseUrl = this.config.get<string>('dataGovIn.portalBackendUrl')!;
+        console.log(this.baseUrl);
+
     }
 
     async search(query: string, offset = 0, limit = 8, sector?: string) {
+
+        console.log(this.baseUrl);
 
         const { data } = await firstValueFrom(
             this.http.get(`${this.baseUrl}/search`, {
