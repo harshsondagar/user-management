@@ -2,8 +2,8 @@ import { OnWorkerEvent, Processor, WorkerHost } from "@nestjs/bullmq";
 import { Logger } from "@nestjs/common";
 import { Job } from "bullmq";
 import { MailService } from "../mail/mail.service";
-import { MailJobName } from "../../../api/src/mail/mail-producer";
-import { MailFailureService } from "../../../api/src/dlq/mail-failure.service";
+import { MailJobName } from '@app/shared'
+import { MailFailureService } from "../mail/mail-failure.service";
 
 
 @Processor('send-mail', {
@@ -23,7 +23,6 @@ export class MailProcessor extends WorkerHost {
 
     async process(job: Job<any, any, MailJobName>): Promise<any> {
         switch (job.name) {
-
             case MailJobName.VERIFY_EMAIL:
                 return this.sendVerificationMail(job)
             case MailJobName.WELCOME:

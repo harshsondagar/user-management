@@ -1,6 +1,6 @@
 
 import { Expose } from 'class-transformer';
-import { STATUS } from '@app/shared';
+import { STATUS } from '../entity/userfollowers-entity';
 
 export class FollowResponseDto {
     @Expose()

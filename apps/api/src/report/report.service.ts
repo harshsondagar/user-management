@@ -1,19 +1,19 @@
-import { Injectable, Logger } from '@nestjs/common';
-import { InjectRepository } from '@nestjs/typeorm';
-import { User } from '@app/shared';
-import { MoreThanOrEqual, Repository } from 'typeorm';
+import { Inject, Injectable, Logger } from "@nestjs/common";
 import { Cron, CronExpression } from "@nestjs/schedule";
-import { MailJobName, MailProducer } from '../../../api/src/mail/mail-producer';
-import { MailFailureService } from '../../../api/src/dlq/mail-failure.service';
+import { InjectRepository } from "@nestjs/typeorm";
+import { MoreThanOrEqual, Repository } from "typeorm";
+import { User } from "../user/entity/user-entity";
+import { MailProducer } from "../mail/mail-producer";
+
 
 @Injectable()
-export class ReportCronService {
-    private readonly logger = new Logger(ReportCronService.name);
+export class ReportService {
+    private readonly logger = new Logger(ReportService.name);
 
     constructor(
         @InjectRepository(User) private readonly userRepository: Repository<User>,
-        private readonly mailProducer: MailProducer,
-        private readonly mailFailureService: MailFailureService,
+        private readonly mailProducer: MailProducer
+
     ) { }
 
     @Cron(CronExpression.EVERY_WEEK)
@@ -23,26 +23,6 @@ export class ReportCronService {
             await this.generateAndQueueReport();
         } catch (error) {
             this.logger.error('Failed to execute weekly report cron job', (error as Error).stack);
-        }
-    }
-
-    @Cron(CronExpression.EVERY_DAY_AT_9AM)
-    async checkLastReportSucceeded() {
-        const lastWeekStart = new Date();
-        lastWeekStart.setDate(lastWeekStart.getDate() - 7);
-
-        const failed = await this.mailFailureService.findRecentByJobName(
-            MailJobName.WEEKLY_ADMIN_REPORT,
-            lastWeekStart,
-        );
-
-        if (failed.length > 0) {
-            this.logger.warn(`Weekly report failed ${failed.length} time(s) last cycle — retrying`);
-            try {
-                await this.generateAndQueueReport();
-            } catch (error) {
-                this.logger.error('Failed to retry weekly report', (error as Error).stack);
-            }
         }
     }
 

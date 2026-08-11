@@ -1,6 +1,4 @@
-import { User as UserEntity } from '@app/shared';
-
-
+import { User as UserEntity } from "../user/entity/user-entity"
 declare global {
     namespace Express {
         interface Request {

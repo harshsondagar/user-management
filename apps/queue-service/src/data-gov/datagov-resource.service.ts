@@ -80,6 +80,8 @@ export class DatagovResourceService {
         }
 
         try {
+
+
             const res = await firstValueFrom(
                 this.http.get(`${this.resourceApiBaseUrl}/resource/${resourceId}`, { params: query })
             )

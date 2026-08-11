@@ -1,15 +1,13 @@
 import { Body, Controller, Delete, Get, InternalServerErrorException, Param, Post, Put, UseGuards } from '@nestjs/common';
 import { UserService } from './user.service';
 import { currentUser } from '../common/decorator/currentUser-decorator';
-import { User } from '@app/shared';
+import { User } from './entity/user-entity';
 import { UpdateUserDTO } from './dto/UpdateUserDTO';
 import { JwtGuard } from '../auth/gurads/jwt.guard';
 import { UserResponseDto } from '../auth/dto/user-response-dto';
-import { STATUS } from '@app/shared';
 import { FollowResponseDto } from './dto/follow-responseDTO';
 import { Serialize } from '../common/interceptors/serialize-interceptor';
 import { ResponseMessage } from '../common/decorator/response-message.decorator';
-import { CacheKey, CacheTTL } from '@nestjs/cache-manager';
 
 @Controller('user')
 export class UserController {

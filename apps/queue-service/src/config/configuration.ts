@@ -1,4 +1,8 @@
 import 'dotenv/config';
+console.log('--- ENV DIAGNOSTIC START ---');
+console.log('ALL KEYS:', Object.keys(process.env).filter(k => k.includes('SECRET') || k.includes('REDIS')));
+console.log('--- ENV DIAGNOSTIC END ---');
+
 
 export default () => ({
     nodeEnv: process.env.NODE_ENV || 'development',
@@ -8,23 +12,7 @@ export default () => ({
         port: parseInt(process.env.DB_PORT || '5432', 10),
         username: process.env.DB_USERNAME!,
         password: process.env.DB_PASSWORD!,
-        name: process.env.DB_NAME,
-    },
-    jwt: {
-        accessSecret: process.env.JWT_ACCESS_SECRET,
-        accessExpiresIn: process.env.JWT_ACCESS_EXPIRES_IN || '15m',
-        refreshSecret: process.env.JWT_REFRESH_SECRET,
-        refreshExpiresIn: process.env.JWT_REFRESH_EXPIRES_IN || '7d',
-    },
-    cors: {
-        origin: process.env.CORS_ORIGIN?.split(',') || 'http://localhost:5173',
-    },
-    throttle: {
-        ttl: parseInt(process.env.THROTTLE_TTL || '60000', 10),
-        limit: parseInt(process.env.THROTTLE_LIMIT || '20', 10),
-    },
-    cookie: {
-        name: process.env.REFRESH_COOKIE_NAME!
+        name: process.env.DB_NAME!,
     },
     admin: {
         email: process.env.SUPER_ADMIN_EMAIL,
@@ -52,5 +40,8 @@ export default () => ({
     },
     api: {
         url: process.env.API_URL || 'http://localhost:3000'
-    }
+    },
+    internal: {
+        secret: process.env.INTERNAL_SERVICE_SECRET!,
+    },
 });

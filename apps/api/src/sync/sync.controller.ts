@@ -1,7 +1,7 @@
 // sync.controller.ts
-import { Controller, Get, HttpException, HttpStatus, Inject, NotFoundException, Param, Post, Query, UseGuards } from '@nestjs/common';
+import { Controller, Get, HttpException, HttpStatus, NotFoundException, Param, Post, Query, UseGuards } from '@nestjs/common';
 import { currentUser } from '../common/decorator/currentUser-decorator';
-import { User, UserRole } from '@app/shared';
+import { User, UserRole } from '../user/entity/user-entity';
 import { Roles } from '../common/decorator/roles.decorator';
 import { ScrapeQuotaService } from './scrape-quota.service';
 import { JwtGuard } from '../auth/gurads/jwt.guard';

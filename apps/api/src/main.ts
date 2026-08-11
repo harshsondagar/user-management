@@ -9,11 +9,11 @@ import { NestExpressApplication } from '@nestjs/platform-express';
 import path, { dirname, join } from 'path';
 import * as ejs from 'ejs';
 
+console.log(process.cwd());
 
 
 async function bootstrap() {
   const app = await NestFactory.create<NestExpressApplication>(AppModule);
-  console.log("starting");
 
   app.enableCors({
     origin: true,

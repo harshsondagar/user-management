@@ -5,7 +5,6 @@ import { UserModule } from './user/user.module';
 import { AuthModule } from './auth/auth.module';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { ConfigModule, ConfigService } from '@nestjs/config';
-import configuration from '../../../libs/config/configuration';
 import { TaskModule } from './task/task.module';
 import { APP_FILTER, APP_GUARD } from '@nestjs/core';
 import { maintenanceGuard } from './common/gaurds/maintainence-gaurd';
@@ -18,57 +17,63 @@ import { CustomThrottlerGuard } from './throttler/custom-throttler.guard';
 import { AppThrottleModule } from './throttler/throttler.module';
 import { MailModule } from './mail/mail.module';
 import { OtpModule } from './common/otp/otp.module';
-import { CronModule } from './common/report/cron.module';
 import { ScheduleModule } from '@nestjs/schedule';
 import { SyncModule } from './sync/sync.module';
-import { DatagovModule } from './datagov/fetch data/ datagov.module';
-import { MongooseModule } from '@nestjs/mongoose';
 import { RolesGuard } from "./common/gaurds/roles.guard";
 import { ScrapModuleModule } from './scrap-module/scrap-module.module';
 import { BullModule } from "@nestjs/bullmq";
 import { BullBoardModule } from "@bull-board/nestjs"
 import { ExpressAdapter } from "@bull-board/express";
-import { DlqModule } from './dlq/dlq.module';
+import { ReportModule } from "./report/report.module";
+import configuration from "./config/configuration";
+import { DlqModule } from "./dlq/dlq.module";
+
 
 @Module({
-  imports: [ScheduleModule.forRoot(), ConfigModule.forRoot({
+  imports: [ScheduleModule.forRoot(),
+  ConfigModule.forRoot({
     isGlobal: true,
-    envFilePath: '.env',
+    envFilePath: 'apps/api/.env',
     load: [configuration]
   }),
-  BullModule.forRoot({
-    connection: {
-      host: process.env.REDIS_HOST,
-      port: parseInt(process.env.REDIS_PORT!)
-    }
+  BullModule.forRootAsync({
+    inject: [ConfigService],
+    useFactory: (config: ConfigService) => ({
+      connection: {
+        host: config.getOrThrow<string>('redis.host'),
+        port: config.getOrThrow<number>('redis.port'),
+      },
+    }),
   }),
   BullBoardModule.forRoot({
     route: '/admin/queues',
     adapter: ExpressAdapter,
   }),
-    AppThrottleModule, HealthModule, RedisCacheModule, MongooseModule.forRoot(process.env.MONGO_URI!), TypeOrmModule.forRootAsync({
-      imports: [ConfigModule],
-      inject: [ConfigService],
-      useFactory: (config: ConfigService) => ({
-        type: 'postgres',
-        host: config.get<string>('database.host'),
-        port: config.get<number>('database.port'),
-        username: config.get<string>('database.username'),
-        password: config.get<string>('database.password'),
-        database: config.get<string>('database.name'),
-        autoLoadEntities: true,
-        entities: ['src/**/*.entity.ts'],
-        synchronize: false,
-        retryAttempts: 10,
-        retryDelay: 3000
-      }),
-    }), UserModule, AuthModule,
+    AppThrottleModule, HealthModule, RedisCacheModule,
+  TypeOrmModule.forRootAsync({
+    imports: [ConfigModule],
+    inject: [ConfigService],
+    useFactory: (config: ConfigService) => ({
+      type: 'postgres',
+      host: config.get<string>('database.host'),
+      port: config.get<number>('database.port'),
+      username: config.get<string>('database.username'),
+      password: config.get<string>('database.password'),
+      database: config.get<string>('database.name'),
+      autoLoadEntities: true,
+      entities: ['src/**/*.entity.ts'],
+      synchronize: false,
+      retryAttempts: 10,
+      retryDelay: 3000
+    }),
+  }), UserModule, AuthModule,
     TaskModule, MailModule,
-    OtpModule, CronModule,
-    DatagovModule,
+    OtpModule, ReportModule,
+    // DatagovModule,
     SyncModule,
     ScrapModuleModule,
-    DlqModule],
+    DlqModule
+  ],
   controllers: [],
   providers: [AppService, {
     provide: APP_FILTER,

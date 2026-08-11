@@ -16,7 +16,7 @@ import { RefreshTokenRepository } from './refreshTokenRepository';
 import { UserRepository } from '../user/user.repository';
 import { BullModule } from '@nestjs/bullmq';
 import { MailProducer } from '../mail/mail-producer';
-import { RefreshToken } from '@app/shared';
+import { RefreshToken } from './entity/jwt-entity';
 
 @Module({
   imports: [forwardRef(() => UserModule), PassportModule, MailModule, OtpModule, JwtModule.register({}), TypeOrmModule.forFeature([RefreshToken]), BullModule.registerQueue({

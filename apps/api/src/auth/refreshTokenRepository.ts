@@ -2,7 +2,7 @@ import { Injectable } from "@nestjs/common";
 import { BaseRepository } from "../common/repository/base.repository";
 import { InjectRepository } from "@nestjs/typeorm";
 import { DeepPartial, FindOptionsWhere, Repository } from "typeorm";
-import { RefreshToken } from "@app/shared";
+import { RefreshToken } from "./entity/jwt-entity";
 
 @Injectable()
 export class RefreshTokenRepository extends BaseRepository<RefreshToken> {

@@ -1,4 +1,4 @@
-// src/dlq/entities/dead-letter-entry.entity.ts
+import { DlqStatus, FailureScope } from '@app/shared';
 import {
     Entity,
     PrimaryGeneratedColumn,
@@ -8,18 +8,6 @@ import {
     Index,
 } from 'typeorm';
 
-export enum FailureScope {
-    RESOURCE = 'resource',
-    JOB = 'job',
-    SEARCH = 'search',
-}
-
-export enum DlqStatus {
-    PENDING_RETRY = 'pending_retry',
-    PERMANENTLY_FAILED = 'permanently_failed',
-    RESOLVED = 'resolved',
-    IGNORED = 'ignored',
-}
 
 @Entity('dead_letter_entries')
 export class DeadLetterEntry {

@@ -4,9 +4,9 @@ import { MongooseModule } from '@nestjs/mongoose';
 import { FullSyncService } from './full-sync.service';
 import { DatagovModule } from '../data-gov/datagov.module'; // ← the new module
 import { DlqModule } from '../dlq/dlq.module';  // confirm this exists too
-import { Dataset, DatasetSchema, SyncSkip, SyncSkipSchema } from '@app/shared';
 import { ScrapeProcessor } from '../processors/scrape.processor';
 import { BullModule } from '@nestjs/bullmq';
+import { Dataset, DatasetSchema, SyncSkip, SyncSkipSchema } from '../db/schemas';
 
 @Module({
     imports: [

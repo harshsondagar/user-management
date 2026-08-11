@@ -1,6 +1,6 @@
 import { Column, CreateDateColumn, DeleteDateColumn, Entity, Index, ManyToMany, OneToMany, PrimaryGeneratedColumn, UpdateDateColumn } from "typeorm";
-import { Task } from "./task-entity";
-import { Followers } from "@app/shared";
+import { Task } from "../../task/entity/task-entity";
+import { Followers } from "./userfollowers-entity";
 
 export enum UserRole {
     USER = 'user',

@@ -1,7 +1,7 @@
 import { ForbiddenException, HttpException, HttpStatus, Inject, Injectable, Logger, NotFoundException, UnauthorizedException } from '@nestjs/common';
 import { registerBody } from '../types';
 import { UserService } from '../user/user.service';
-import { User } from '@app/shared';
+import { User } from '../user/entity/user-entity';
 import { createHash, randomUUID } from 'crypto';
 import { JwtService, JwtSignOptions } from '@nestjs/jwt';
 import { ConfigService } from '@nestjs/config';

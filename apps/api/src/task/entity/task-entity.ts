@@ -1,5 +1,5 @@
 import { Column, CreateDateColumn, DeleteDateColumn, Entity, JoinColumn, ManyToMany, PrimaryGeneratedColumn, UpdateDateColumn } from "typeorm";
-import { User } from "./user-entity";
+import { User } from "../../user/entity/user-entity";
 
 export enum TaskStatus {
     PENDING = 'pending',

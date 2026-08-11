@@ -3,8 +3,7 @@ import { Reflector } from "@nestjs/core";
 import { Observable } from "rxjs";
 import { IS_SUPER_ADMIN } from "../decorator/isAdmin-decoretor";
 import { Request } from "express";
-import { User, UserRole } from "@app/shared";
-
+import { User, UserRole } from "../../user/entity/user-entity";
 
 @Injectable()
 export class SuperAdminGuard implements CanActivate {

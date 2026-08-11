@@ -35,22 +35,13 @@ export default () => ({
         port: process.env.REDIS_PORT!,
         password: process.env.REDIS_PASSWORD!
     },
-    smtp: {
-        user: process.env.SMTP_USER!,
-        pass: process.env.SMTP_PASS!,
-        mail_from: process.env.MAIL_FROM!,
-        host: process.env.SMTP_HOST!,
-        port: process.env.SMTP_PORT!,
-    },
-    dataGovIn: {
-        apiKey: process.env.DATA_GOV_IN_API_KEY,
-        resourceApiBaseUrl: process.env.DATA_GOV_IN_RESOURCE_API_URL || 'https://api.data.gov.in',
-        portalBackendUrl: process.env.DATA_GOV_IN_PORTAL_BACKEND_URL || 'https://www.data.gov.in/backend/dmspublic/v1',
-    },
-    mongodb: {
-        uri: process.env.MONGO_URI!
-    },
     api: {
         url: process.env.API_URL || 'http://localhost:3000'
+    },
+    queue_service: {
+        url: process.env.QUEUE_SERVICE_INTERNAL_URL || 'http://localhost:3001'
+    },
+    internal: {
+        secrete: process.env.INTERNAL_SERVICE_SECRET!
     }
 });

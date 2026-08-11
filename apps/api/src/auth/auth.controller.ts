@@ -22,7 +22,7 @@ import { RegisterResponseDTO } from './dto/register-responseDTO';
 import { ApiWrappedResponse } from '../common/decorator/api-response-wrapper.decorator';
 import { ApiResponseDto } from '../common/dto/api-response';
 import { LocalAuthGuard } from './gurads/localAuth.guard';
-import { User } from "@app/shared"
+import { User } from '../user/entity/user-entity';
 import * as e from 'express';
 import { currentUser } from '../common/decorator/currentUser-decorator';
 import { Public } from '../common/decorator/public-decoretor';
@@ -40,12 +40,20 @@ import { VerifyOtpDto } from './dto/verify-otp.dto';
 import { ResendOtpDto } from './dto/resend-otp.dto';
 import { ForgotPasswordDto } from './dto/forgot-passwordDTo';
 import { ChangeForgotPassword } from './dto/change-password-dto';
+import { ConfigService } from '@nestjs/config';
 
-const REFRESH_COOKIE_NAME = process.env.REFRESH_COOKIE_NAME!;
 
 @Controller('auth')
 export class AuthController {
-    constructor(private readonly authService: AuthService) { }
+    private readonly REFRESH_COOKIE_NAME: string;
+
+    constructor(
+        private readonly authService: AuthService,
+        private readonly configService: ConfigService,
+    ) {
+        this.REFRESH_COOKIE_NAME = this.configService.get<string>('cookie.name')!;
+    }
+
 
     @Public()
     @Throttle({ default: { limit: 5, ttl: 60000 } })
@@ -138,9 +146,9 @@ export class AuthController {
         @Req() req: e.Request,
         @Res({ passthrough: true }) res: e.Response,
     ) {
-        const rawToken = req.cookies?.[REFRESH_COOKIE_NAME];
+        const rawToken = req.cookies?.[this.REFRESH_COOKIE_NAME];
         await this.authService.logout(user.id, rawToken);
-        res.clearCookie(REFRESH_COOKIE_NAME, { path: '/auth' });
+        res.clearCookie(this.REFRESH_COOKIE_NAME, { path: '/auth' });
         return new ApiResponseDto({ success: true });
     }
 
@@ -154,7 +162,7 @@ export class AuthController {
     ) {
         await this.authService.removeAllSession(user.id);
 
-        res.clearCookie(REFRESH_COOKIE_NAME, { path: '/auth' });
+        res.clearCookie(this.REFRESH_COOKIE_NAME, { path: '/auth' });
         return new ApiResponseDto({ success: true });
     }
 
@@ -224,7 +232,7 @@ export class AuthController {
 
 
     private setRefreshCookie(res: e.Response, token: string, expireAt: Date) {
-        res.cookie(REFRESH_COOKIE_NAME, token, {
+        res.cookie(this.REFRESH_COOKIE_NAME, token, {
             httpOnly: true,
             secure: process.env.NODE_ENV === 'production',
             path: '/auth',

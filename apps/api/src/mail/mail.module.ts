@@ -7,10 +7,6 @@ import { MailProducer } from './mail-producer';
 import { BullModule } from '@nestjs/bullmq';
 import { BullBoardModule } from '@bull-board/nestjs';
 import { BullMQAdapter } from '@bull-board/api/bullMQAdapter';
-import { TypeOrmModule } from '@nestjs/typeorm';
-import { MailFailure } from '@app/shared';
-import { MailFailureService } from '../dlq/mail-failure.service';
-
 @Module({
     imports: [MailerModule.forRootAsync({
         imports: [ConfigModule],
@@ -39,8 +35,8 @@ import { MailFailureService } from '../dlq/mail-failure.service';
     }), BullBoardModule.forFeature({
         name: 'send-mail',
         adapter: BullMQAdapter,
-    }), TypeOrmModule.forFeature([MailFailure])],
-    providers: [MailProducer, MailFailureService],
+    })],
+    providers: [MailProducer],
     exports: []
 })
 export class MailModule { }

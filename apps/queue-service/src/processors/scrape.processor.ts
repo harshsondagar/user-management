@@ -7,7 +7,7 @@ import { DlqService } from "../dlq/dlq.service";
     {
         concurrency: 1,
         lockDuration: 60000,
-        stalledInterval: 30000,
+        stalledInterval: 60000,
         maxStalledCount: 3,
     }
 )

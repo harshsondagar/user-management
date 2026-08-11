@@ -2,12 +2,10 @@ import { Injectable, Logger } from "@nestjs/common";
 import { DlqService } from "./dlq.service";
 import { DatagovResourceService } from "../data-gov/datagov-resource.service";
 import { InjectModel } from "@nestjs/mongoose";
-import { Dataset } from "@app/shared"
+import { Dataset } from "../db/schemas";
 import { Model } from "mongoose";
 import { Cron, CronExpression } from "@nestjs/schedule";
 
-
-console.log("running");
 
 @Injectable()
 export class DlqRetrySweepService {

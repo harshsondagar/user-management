@@ -1,6 +1,6 @@
 import { Injectable } from "@nestjs/common";
 import { OmitType, PartialType } from "@nestjs/swagger";
-import { User } from "@app/shared"
+import { User } from "../entity/user-entity";
 
 
 @Injectable()

@@ -19,7 +19,6 @@ import { createKeyv } from "@keyv/redis";
 
             const redisUrl = `redis://${host}:${port}/${db}`;
 
-
             const keyv = createKeyv(redisUrl);
 
             keyv.on('error', (err) => {

@@ -2,12 +2,12 @@ import { HttpException, HttpStatus, Injectable, Logger } from '@nestjs/common';
 import { DatagovResourceService } from '../data-gov/datagov-resource.service';
 import * as path from 'path';
 import { InjectModel } from '@nestjs/mongoose';
-import { Dataset } from "@app/shared";
+import { Dataset } from '../db/schemas';
 import { Model } from 'mongoose';
 import { Job } from 'bullmq';
-import { SyncSkip } from "@app/shared"
+import { SyncSkip } from '../db/schemas';
 import { DlqService } from '../dlq/dlq.service';
-import { FailureScope } from "@app/shared";
+import { FailureScope } from '@app/shared';
 import { CatalogEntry, DatagovCatalogService } from '../data-gov/datagov-catalog.service';
 
 @Injectable()

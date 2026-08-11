@@ -1,7 +1,8 @@
 import { Injectable, Logger, NotFoundException } from '@nestjs/common';
-import { DeadLetterEntry, DlqStatus, FailureScope } from '@app/shared';
 import { Repository } from 'typeorm';
 import { InjectRepository } from '@nestjs/typeorm';
+import { DeadLetterEntry } from './entity/dead-letter-entry-entity';
+import { DlqStatus, FailureScope } from '@app/shared';
 
 interface RecordResourceFailureParams {
     resourceId: string;

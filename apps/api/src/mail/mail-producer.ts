@@ -1,13 +1,8 @@
+import { MailJobName } from "@app/shared";
 import { InjectQueue } from "@nestjs/bullmq";
 import { Injectable } from "@nestjs/common";
 import { Queue } from "bullmq";
 
-export enum MailJobName {
-    VERIFY_EMAIL = 'send-email-verification-mail',
-    WELCOME = 'send-welcome-mail',
-    PASSWORD_CHANGE_OTP = 'send-password-change-otp-mail',
-    WEEKLY_ADMIN_REPORT = 'send-weekly-admin-report-mail',
-}
 
 @Injectable()
 export class MailProducer {

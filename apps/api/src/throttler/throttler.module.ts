@@ -4,18 +4,14 @@ import { ThrottlerModule } from "@nestjs/throttler"
 import { ThrottlerStorageRedisService } from "@nest-lab/throttler-storage-redis"
 import Redis from "ioredis";
 
-
 @Module({
     imports: [ThrottlerModule.forRootAsync({
         imports: [ConfigModule],
         inject: [ConfigService],
         useFactory: (config: ConfigService) => {
-
-            const password = config.get<string>('redis.password');
             const host = config.get<string>('redis.host', 'localhost');
             const port = config.get<number>('redis.port', 6379);
             const db = config.get<number>('REDIS_DB', 0);
-
 
             const redisClient = new Redis({
                 host,

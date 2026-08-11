@@ -5,9 +5,9 @@ import { MailerModule } from '@nestjs-modules/mailer';
 import { EjsAdapter } from '@nestjs-modules/mailer/adapters/ejs.adapter';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { join } from 'path';
-import { MailFailure } from '@app/shared';
+import { MailFailure } from './entity/mail-failure-entity';
 import { MailService } from './mail.service';
-import { MailFailureService } from '../../../api/src/dlq/mail-failure.service';
+import { MailFailureService } from './mail-failure.service';
 import { MailProcessor } from '../processors/mail-processor';
 
 @Module({

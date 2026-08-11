@@ -1,4 +1,4 @@
-import { User } from "@app/shared";
+import { User } from "../../user/entity/user-entity";
 import { createParamDecorator, ExecutionContext, } from "@nestjs/common";;
 
 

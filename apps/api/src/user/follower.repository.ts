@@ -1,6 +1,6 @@
 import { Injectable } from "@nestjs/common";
 import { BaseRepository } from "../common/repository/base.repository";
-import { Followers, STATUS } from "@app/shared"
+import { Followers, STATUS } from "./entity/userfollowers-entity";
 import { DeepPartial } from "typeorm";
 
 @Injectable()

@@ -1,7 +1,7 @@
 import { CanActivate, ExecutionContext, Injectable } from "@nestjs/common";
 import { Reflector } from "@nestjs/core";
 import { SystemService } from "../../user/system.service";
-import { User, UserRole } from "@app/shared";
+import { User, UserRole } from "../../user/entity/user-entity";
 import { PUBLIC_KEY } from "../decorator/public-decoretor";
 import { Request } from "express";
 import { MaintenanceModeException } from "../exceptions/app.exception";

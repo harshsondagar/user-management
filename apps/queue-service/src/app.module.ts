@@ -1,3 +1,4 @@
+import "dotenv/config"
 import { BullModule } from "@nestjs/bullmq";
 import { Module } from "@nestjs/common";
 import { ConfigModule, ConfigService } from "@nestjs/config";
@@ -7,29 +8,35 @@ import { SyncModule } from "./sync/sync.module";
 import { DlqModule } from "./dlq/dlq.module";
 import { DatagovModule } from "./data-gov/datagov.module";
 import { MongooseModule } from "@nestjs/mongoose";
-import configuration from "./config/configuration";
 import { ScheduleModule } from "@nestjs/schedule";
+import configuration from "./config/configuration";
+import { AppController } from "../app.controller";
+import { DatagovDebugController } from "./data-gov/datagov.controller";
+import { InternalDlqController } from "./dlq/internal-dlq.controller";
 
 @Module({
     imports: [
         ConfigModule.forRoot({
             isGlobal: true,
-            load: [configuration],
+            envFilePath: 'apps/queue-service/.env',
+            load: [configuration]
         }),
-        ScheduleModule.forRoot()
-        ,
+        ScheduleModule.forRoot(),
         TypeOrmModule.forRootAsync({
             imports: [ConfigModule],
             inject: [ConfigService],
-            useFactory: () => ({
+            useFactory: (config: ConfigService) => ({
                 type: 'postgres',
-                host: process.env.DB_HOST,
-                port: Number(process.env.DB_PORT) || 5432,
-                username: process.env.DB_USERNAME,
-                password: process.env.DB_PASSWORD,
-                database: process.env.DB_NAME,
-                autoLoadEntities: true, // Automatically loads shared & app entities
+                host: config.get<string>('database.host'),
+                port: config.get<number>('database.port'),
+                username: config.get<string>('database.username'),
+                password: config.get<string>('database.password'),
+                database: config.get<string>('database.name'),
+                autoLoadEntities: true,
+                entities: ['src/**/*.entity.ts'],
                 synchronize: false,
+                retryAttempts: 10,
+                retryDelay: 3000
             }),
         }),
         MongooseModule.forRootAsync({
@@ -39,14 +46,12 @@ import { ScheduleModule } from "@nestjs/schedule";
                 uri: process.env.MONGO_URI,
             }),
         }),
-
         BullModule.forRootAsync({
-            imports: [ConfigModule],
             inject: [ConfigService],
-            useFactory: (configService: ConfigService) => ({
+            useFactory: (config: ConfigService) => ({
                 connection: {
-                    host: process.env.REDIS_HOST || 'localhost',
-                    port: Number(process.env.REDIS_PORT) || 6379,
+                    host: config.getOrThrow<string>('redis.host'),
+                    port: config.getOrThrow<number>('redis.port'),
                 },
             }),
         }),
@@ -59,6 +64,8 @@ import { ScheduleModule } from "@nestjs/schedule";
         DlqModule,
         DatagovModule
     ],
+    controllers: [AppController, DatagovDebugController, InternalDlqController],
     providers: [],
 })
 export class AppModule { }
+

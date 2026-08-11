@@ -4,7 +4,7 @@ import { Strategy } from "passport-local"
 import { AuthService } from "../auth/auth.service";
 import { SystemService } from "../user/system.service";
 import { UserService } from "../user/user.service";
-import { UserRole } from "@app/shared"
+import { UserRole } from "../user/entity/user-entity";
 import { AppException } from "../common/exceptions/app.exception";
 
 

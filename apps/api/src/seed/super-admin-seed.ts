@@ -1,7 +1,7 @@
 import { Injectable, Logger, OnApplicationBootstrap } from "@nestjs/common";
 import { ConfigService } from "@nestjs/config";
 import { Repository } from "typeorm";
-import { User, UserRole } from "@app/shared"
+import { User, UserRole } from "../user/entity/user-entity";
 import { InjectRepository } from "@nestjs/typeorm";
 import * as argon2 from "argon2"
 import { ARGON2_OPTIONS } from "../auth/auth.service";

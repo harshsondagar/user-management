@@ -1,17 +1,14 @@
-// user.repository.ts
-
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import {
     Repository,
     UpdateResult,
     DeleteResult,
-    DeepPartial,
     FindOptionsWhere,
 } from 'typeorm';
 
 import { BaseRepository } from '../common/repository/base.repository';
-import { User, UserRole } from '@app/shared';
+import { User, UserRole } from './entity/user-entity';
 import { UpdateUserDTO } from './dto/UpdateUserDTO';
 
 @Injectable()

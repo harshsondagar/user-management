@@ -9,7 +9,7 @@ import {
     Repository,
 } from 'typeorm';
 import { QueryDeepPartialEntity } from 'typeorm/browser';
-import { Followers } from '@app/shared';
+import { Followers } from '../../user/entity/userfollowers-entity';
 
 export interface BaseInterfaceRepository<T> {
     create(data: DeepPartial<T>): Promise<T>;

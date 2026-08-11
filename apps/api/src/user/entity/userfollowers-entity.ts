@@ -1,5 +1,5 @@
 import { Column, CreateDateColumn, Entity, Index, JoinColumn, JoinTable, ManyToOne, PrimaryGeneratedColumn, Unique } from "typeorm";
-import { User } from "@app/shared";
+import { User } from "./user-entity";
 
 export enum STATUS {
     PENDING = "pending",

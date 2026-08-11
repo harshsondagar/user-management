@@ -1,10 +1,10 @@
 import { BadRequestException, ConflictException, ForbiddenException, HttpException, HttpStatus, Inject, Injectable, NotFoundException } from '@nestjs/common';
-import { FindOptionsWhere, Repository } from 'typeorm';
-import { ProfileType, User, UserRole } from '@app/shared';
+import { FindOptionsWhere } from 'typeorm';
+import { ProfileType, User, UserRole } from './entity/user-entity';
 import { registerBody } from '../types';
 import { UpdateUserDTO } from './dto/UpdateUserDTO';
 import * as argon2 from "argon2"
-import { STATUS } from '@app/shared';
+import { STATUS } from './entity/userfollowers-entity';
 import { SafeCacheService } from '../common/cache/safe-cache.service';
 import { OtpService } from '../common/otp/opt.service';
 import { UserRepository } from './user.repository';
