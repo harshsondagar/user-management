@@ -2,7 +2,7 @@
 /dist
 /node_modules
 /build
-
+libs/shared/dist/
 # Logs
 logs
 *.log
@@ -42,6 +42,11 @@ lerna-debug.log*
 .env.test.local
 .env.production.local
 .env.local
+
+apps/api/.env          
+apps/api/.env.example   
+apps/queue-service/.env
+apps/queue-service/.env.example
 
 # temp directory
 .temp
