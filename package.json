@@ -69,6 +69,7 @@
     "ioredis": "^5.11.1",
     "keyv": "^5.6.0",
     "mongoose": "^9.8.1",
+    "nest-winston": "^1.10.2",
     "nodemailer": "^9.0.3",
     "passport-jwt": "^4.0.1",
     "passport-local": "^1.0.0",
@@ -76,7 +77,9 @@
     "reflect-metadata": "^0.2.2",
     "rxjs": "^7.8.1",
     "typeorm": "~0.3.31",
-    "uuid": "^14.0.1"
+    "uuid": "^14.0.1",
+    "winston": "^3.19.0",
+    "winston-daily-rotate-file": "^5.0.0"
   },
   "devDependencies": {
     "@eslint/eslintrc": "^3.2.0",

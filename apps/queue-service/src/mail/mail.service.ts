@@ -1,7 +1,6 @@
 import { MailerService } from '@nestjs-modules/mailer';
 import { Injectable, Logger } from '@nestjs/common';
 
-
 @Injectable()
 export class MailService {
     private readonly logger = new Logger(MailService.name)
@@ -59,7 +58,6 @@ export class MailService {
 
     async sendPasswordChangeMail(to: string, resetUrl: string) {
         try {
-
             await this.mailer.sendMail({
                 to,
                 subject: `change forgot password`,

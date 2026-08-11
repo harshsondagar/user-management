@@ -23,3 +23,31 @@ export enum DlqStatus {
     RESOLVED = 'resolved',
     IGNORED = 'ignored',
 }
+
+export interface HttpLogContext {
+    type: 'http';
+    requestId: string;
+    method: string;
+    path: string;
+    userId?: string;
+    userAgent?: string;
+    ip?: string;
+}
+
+export interface JobLogContext {
+    type: 'job';
+    jobId: string;
+    jobName: string;
+    queue: string;
+    attemptsMade?: number;
+    finishedAt: string
+}
+
+export interface CronLogContext {
+    type: 'cron';
+    jobName: string;
+}
+
+export interface SystemLogContext {
+    type: 'system';
+}

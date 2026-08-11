@@ -3,17 +3,19 @@ import { AppModule } from './app.module';
 import { HttpStatus, Logger, ValidationPipe } from '@nestjs/common';
 import cookieParser from "cookie-parser"
 import { ResponseEnvelopeInterceptor } from './common/interceptors/response-envelope.interceptor';
-import { RequestIdMiddleware } from './common/middleware/request-id.middleware';
 import { AppException } from './common/exceptions/app.exception';
 import { NestExpressApplication } from '@nestjs/platform-express';
-import path, { dirname, join } from 'path';
+import { join } from 'path';
 import * as ejs from 'ejs';
-
-console.log(process.cwd());
+import { WinstonModule } from 'nest-winston';
+import { getWinstonConfig } from '@app/shared';
 
 
 async function bootstrap() {
-  const app = await NestFactory.create<NestExpressApplication>(AppModule);
+
+  const app = await NestFactory.create<NestExpressApplication>(AppModule, {
+    logger: WinstonModule.createLogger(getWinstonConfig('api')),
+  });
 
   app.enableCors({
     origin: true,

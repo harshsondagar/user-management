@@ -1,4 +1,4 @@
-import { Controller, Get, Param, Post, Query } from '@nestjs/common';
+import { Controller, Get, InternalServerErrorException, Param, Post, Query } from '@nestjs/common';
 import { Roles } from '../common/decorator/roles.decorator';
 import { currentUser } from '../common/decorator/currentUser-decorator';
 import { DlqService } from './dlq.service';
@@ -33,7 +33,8 @@ export class DlqController {
     @Get('entries/:id')
     @Roles(UserRole.ADMIN, UserRole.SUPER_ADMIN)
     async getEntryDetail(@Param('id') id: string) {
-        return this.dlqService.findById(id);
+        throw new InternalServerErrorException("dadad")
+        // return this.dlqService.findById(id);
     }
 
     @Post('entries/:id/resolve')

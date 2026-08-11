@@ -1,8 +1,6 @@
 import { config } from 'dotenv';
 import { resolve } from 'path';
-
 config({ path: resolve(__dirname, '../../.env') })
-
 import path from "path";
 import { DataSource } from "typeorm";
 

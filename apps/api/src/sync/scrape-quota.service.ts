@@ -1,4 +1,3 @@
-import { CACHE_MANAGER } from "@nestjs/cache-manager";
 import { HttpException, HttpStatus, Inject, Injectable } from "@nestjs/common";
 import { SafeCacheService } from "../common/cache/safe-cache.service";
 

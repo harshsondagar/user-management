@@ -36,7 +36,6 @@ export class DatagovCatalogService {
         private readonly config: ConfigService
     ) {
         this.baseUrl = this.config.get<string>('dataGovIn.portalBackendUrl')!;
-        console.log("---", this.baseUrl);
 
     }
 

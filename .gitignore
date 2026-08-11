@@ -3,6 +3,7 @@
 /node_modules
 /build
 libs/shared/dist/
+/log
 # Logs
 logs
 *.log
