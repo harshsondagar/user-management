@@ -4,7 +4,7 @@ import { Job } from "bullmq";
 import { MailService } from "../mail/mail.service";
 import { MailJobName } from '@app/shared'
 import { MailFailureService } from "../mail/mail-failure.service";
-
+import { runWithJobContext } from "@app/shared";
 
 @Processor('send-mail', {
     concurrency: 1,
@@ -22,19 +22,22 @@ export class MailProcessor extends WorkerHost {
     }
 
     async process(job: Job<any, any, MailJobName>): Promise<any> {
-        switch (job.name) {
-            case MailJobName.VERIFY_EMAIL:
-                return this.sendVerificationMail(job)
-            case MailJobName.WELCOME:
-                return this.sendWelcomeMail(job)
-            case MailJobName.PASSWORD_CHANGE_OTP:
-                return this.sendPasswordChangeOtpMail(job)
-            case MailJobName.WEEKLY_ADMIN_REPORT:
-                return this.sendWeeklyAdminReportMail(job)
-            default:
-                const _exhaustive: never = job.name;
-                throw new Error(`Unhandled mail job name: ${_exhaustive}`);
-        }
+
+        return runWithJobContext(job, async () => {
+            switch (job.name) {
+                case MailJobName.VERIFY_EMAIL:
+                    return this.sendVerificationMail(job)
+                case MailJobName.WELCOME:
+                    return this.sendWelcomeMail(job)
+                case MailJobName.PASSWORD_CHANGE_OTP:
+                    return this.sendPasswordChangeOtpMail(job)
+                case MailJobName.WEEKLY_ADMIN_REPORT:
+                    return this.sendWeeklyAdminReportMail(job)
+                default:
+                    const _exhaustive: never = job.name;
+                    throw new Error(`Unhandled mail job name: ${_exhaustive}`);
+            }
+        })
     }
 
     async sendVerificationMail(job: Job) {
@@ -56,25 +59,27 @@ export class MailProcessor extends WorkerHost {
 
     @OnWorkerEvent('completed')
     onCompleted(job: Job) {
-        this.logger.log(`Mail job ${job.id} (${job.name}) sent successfully`);
+        runWithJobContext(job, async () => {
+            this.logger.log(`Mail job ${job.id} (${job.name}) sent successfully`);
+        });
     }
 
     @OnWorkerEvent('failed')
     async onFailed(job: Job, error: Error) {
-        this.logger.error(`Mail job ${job.id} (${job.name}) failed: ${error.message}`);
+        await runWithJobContext(job, async () => {
+            this.logger.error(`Mail job ${job.id} (${job.name}) failed: ${error.message}`);
 
-        const isFinalAttempt = job.attemptsMade >= (job.opts.attempts ?? 1);
-        if (!isFinalAttempt) {
-            return;
-        }
+            const isFinalAttempt = job.attemptsMade >= (job.opts.attempts ?? 1);
+            if (!isFinalAttempt) return;
 
-        await this.mailFailureService.record({
-            jobName: job.name,
-            recipientEmail: job.data.email,
-            bullJobId: String(job.id),
-            errorMessage: error.message,
-            attemptsMade: job.attemptsMade,
-            jobData: job.data,
+            await this.mailFailureService.record({
+                jobName: job.name,
+                recipientEmail: job.data.email,
+                bullJobId: String(job.id),
+                errorMessage: error.message,
+                attemptsMade: job.attemptsMade,
+                jobData: job.data,
+            });
         });
     }
 }
