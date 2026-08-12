@@ -28,6 +28,7 @@ import { ReportModule } from "./report/report.module";
 import configuration from "./config/configuration";
 import { DlqModule } from "./dlq/dlq.module";
 import { AttachUserContextInterceptor, RequestContextMiddleware } from "@app/shared";
+import { LogCleanupService } from "@app/shared";
 
 
 @Module({
@@ -89,7 +90,8 @@ import { AttachUserContextInterceptor, RequestContextMiddleware } from "@app/sha
       provide: APP_GUARD, useClass: RolesGuard
     },
     { provide: APP_INTERCEPTOR, useClass: AttachUserContextInterceptor },
-  ],
+    { provide: LogCleanupService, useFactory: () => new LogCleanupService("api") }
+  ]
 })
 
 export class AppModule implements NestModule {

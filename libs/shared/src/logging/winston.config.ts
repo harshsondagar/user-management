@@ -3,20 +3,28 @@ import { utilities as nestWinstonModuleUtilities } from 'nest-winston';
 import { logContextStore } from './log-context';
 import DailyRotateFile from 'winston-daily-rotate-file';
 
-export const contextFormat = winston.format((info) => {
-    const context = logContextStore.get();
-    info.context = context;
-    return info;
-});
 
-winston.addColors({
-    error: 'red',
-    warn: 'yellow',
-    info: 'green',
-    debug: 'blue'
-});
 export function getWinstonConfig(serviceName: string) {
-    const isProd = true
+    const isProd = process.env.NODE_ENV === 'production';
+
+    const NEST_INTERNAL_CONTEXTS = new Set([
+        'NestFactory',
+        'InstanceLoader',
+        'RoutesResolver',
+        'RouterExplorer',
+        'NestApplication',
+    ]);
+
+    const skipNestBootstrapNoise = winston.format((info) => {
+        if (
+            info.level === 'info' && // only filter routine info-level noise, never warn/error
+            typeof info.nestContext === 'string' &&
+            NEST_INTERNAL_CONTEXTS.has(info.nestContext)
+        ) {
+            return false;
+        }
+        return info;
+    });
 
     const renameNestContext = winston.format((info) => {
         if (info.context && typeof info.context === 'string') {
@@ -35,8 +43,21 @@ export function getWinstonConfig(serviceName: string) {
         return info;
     });
 
-    const prodFormat = winston.format.combine(
+    // Console + error file: show EVERYTHING, including bootstrap noise
+    // (you want to see startup failures / full boot sequence live)
+    const fullFormat = winston.format.combine(
         renameNestContext(),
+        structuredContext(),
+        addServiceMeta(),
+        winston.format.timestamp(),
+        winston.format.errors({ stack: true }),
+        winston.format.json(),
+    );
+
+    // combined file only: filter out routine bootstrap noise, keep operational logs
+    const combinedFileFormat = winston.format.combine(
+        renameNestContext(),
+        skipNestBootstrapNoise(),
         structuredContext(),
         addServiceMeta(),
         winston.format.timestamp(),
@@ -47,9 +68,10 @@ export function getWinstonConfig(serviceName: string) {
     const transports: winston.transport[] = [
         new winston.transports.Console({
             format: isProd
-                ? prodFormat
+                ? fullFormat // console always shows everything, including bootstrap — useful for live debugging/Docker logs
                 : winston.format.combine(
                     winston.format.timestamp({ format: 'HH:mm:ss' }),
+                    winston.format.colorize({ all: true }),
                     nestWinstonModuleUtilities.format.nestLike(serviceName, { prettyPrint: true }),
                 ),
         }),
@@ -62,17 +84,15 @@ export function getWinstonConfig(serviceName: string) {
                 datePattern: 'YYYY-MM-DD',
                 level: 'error',
                 maxSize: '20m',
-                maxFiles: '14d',
-                zippedArchive: true,
-                format: prodFormat
+                zippedArchive: false,
+                format: fullFormat, // error file: never filter, always show everything at error level
             }),
             new DailyRotateFile({
                 filename: `logs/${serviceName}-combined-%DATE%.log`,
                 datePattern: 'YYYY-MM-DD',
                 maxSize: '20m',
-                maxFiles: '14d',
-                zippedArchive: true,
-                format: prodFormat
+                zippedArchive: false,
+                format: combinedFileFormat, // combined file: filtered, operational-focus only
             }),
         );
     }

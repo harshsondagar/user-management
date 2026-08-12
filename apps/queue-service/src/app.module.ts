@@ -15,6 +15,8 @@ import { DatagovDebugController } from "./data-gov/datagov.controller";
 import { InternalDlqController } from "./dlq/internal-dlq.controller";
 import { AttachUserContextInterceptor, RequestContextMiddleware } from "@app/shared";
 import { APP_INTERCEPTOR } from "@nestjs/core";
+import { LogCleanupService } from "@app/shared";
+
 
 @Module({
     imports: [
@@ -69,6 +71,7 @@ import { APP_INTERCEPTOR } from "@nestjs/core";
     controllers: [AppController, DatagovDebugController, InternalDlqController],
     providers: [
         { provide: APP_INTERCEPTOR, useClass: AttachUserContextInterceptor },
+        { provide: LogCleanupService, useFactory: () => new LogCleanupService("queue-service") }
     ],
 })
 export class AppModule implements NestModule {
