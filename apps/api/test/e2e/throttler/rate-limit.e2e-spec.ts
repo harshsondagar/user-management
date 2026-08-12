@@ -23,6 +23,7 @@ describe('Rate Limiting (e2e) - real ThrottlerGuard', () => {
     afterEach(async () => {
         await truncateAllTables(dataSource)
         await flushTestRedis();
+
     })
 
     afterAll(async () => {

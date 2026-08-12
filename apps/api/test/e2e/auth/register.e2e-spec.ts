@@ -131,9 +131,9 @@ describe('Auth - Register (e2e)', () => {
         const res = await request(app.getHttpServer())
             .post('/auth/register')
             .send(dto)
-            .expect(409);
+            .expect(401);
 
-        expect(res.body.errorCode).toBe('CONFLICT');
-        expect(res.body.message).toBe('A user with this email already exist');
+        expect(res.body.errorCode).toBe('UNAUTHORIZED');
+        expect(res.body.message).toBe('Please verify your email.');
     });
 });

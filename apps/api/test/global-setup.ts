@@ -1,14 +1,17 @@
-import "dotenv/config"
-import path from "path";
+import * as  dotenv from "dotenv"
+import path, { join, resolve } from "path";
 import { Client } from "pg"
 import { DataSource } from "typeorm";
+
+dotenv.config({ path: resolve(join(process.cwd(), "apps/api/.env")) });
+console.log(path.join(__dirname, '../src/migration/*.{ts,js}'));
 
 const WORKER_COUNT = 4
 
 export default async function globalSetup() {
 
     const TEST_DB_HOST = process.env.TEST_DB_HOST || process.env.DB_HOST || 'localhost';
-    const TEST_DB_PORT = parseInt(process.env.TEST_DB_PORT || process.env.DB_PORT || '5432', 10);
+    const TEST_DB_PORT = parseInt(process.env.TEST_DB_PORT || process.env.DB_PORT || '6432', 10);
     const TEST_DB_USER = process.env.TEST_DB_USERNAME || process.env.DB_USERNAME!;
     const TEST_DB_PASSWORD = process.env.TEST_DB_PASSWORD || process.env.DB_PASSWORD!;
     const TEST_DB = process.env.DB_NAME!
