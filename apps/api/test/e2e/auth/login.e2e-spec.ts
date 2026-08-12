@@ -29,11 +29,13 @@ describe('Auth - Login (e2e)', () => {
 
     afterAll(async () => {
         await app.close();
+
     });
 
     afterAll(() => {
         jest.restoreAllMocks();
     });
+
     it('logs in successfully with correct, verified credentials', async () => {
         await registerAndVerifyUser(app, validRegisterDto);
 
