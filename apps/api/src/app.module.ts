@@ -51,6 +51,7 @@ import { LogCleanupService } from "@app/shared";
     route: '/admin/queues',
     adapter: ExpressAdapter,
   }),
+<<<<<<< Updated upstream
     AppThrottleModule, HealthModule, RedisCacheModule,
   TypeOrmModule.forRootAsync({
     imports: [ConfigModule],
@@ -69,6 +70,24 @@ import { LogCleanupService } from "@app/shared";
       retryDelay: 3000
     }),
   }), UserModule, AuthModule,
+=======
+    AppThrottleModule, HealthModule, RedisCacheModule, MongooseModule.forRoot(process.env.MONGO_URI!), TypeOrmModule.forRootAsync({
+      imports: [ConfigModule],
+      inject: [ConfigService],
+      useFactory: (config: ConfigService) => ({
+        type: 'postgres',
+        host: config.get<string>('database.host'),
+        port: 6432,
+        username: config.get<string>('database.username'),
+        password: config.get<string>('database.password'),
+        database: config.get<string>('database.name'),
+        autoLoadEntities: true,
+        entities: ['src/**/*.entity.ts'],
+        migrations: [__dirname, '../migration/*{.ts,.js}'],
+        synchronize: false
+      }),
+    }), UserModule, AuthModule,
+>>>>>>> Stashed changes
     TaskModule, MailModule,
     OtpModule, ReportModule,
     // DatagovModule,
