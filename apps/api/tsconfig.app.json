@@ -1,4 +1,5 @@
 {
+<<<<<<< Updated upstream
 "extends": "../../tsconfig.json",
 "compilerOptions": {
   "declaration": false,
@@ -7,3 +8,11 @@
 "include": ["src/**/*"],
 "exclude": ["node_modules", "dist", "test", "**/*spec.ts"]
 }
+=======
+  "extends": "../../tsconfig.build.json",
+  "compilerOptions": {
+    "outDir": "../../dist/apps/api",
+    "rootDir": "../.."
+  }
+}
+>>>>>>> Stashed changes
