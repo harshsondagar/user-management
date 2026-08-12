@@ -3,6 +3,7 @@
   "collection": "@nestjs/schematics",
   "sourceRoot": "apps/api/src",
 <<<<<<< Updated upstream
+<<<<<<< Updated upstream
   "compilerOptions": {
     "assets": [
       "mail/template/**/*",
@@ -42,10 +43,15 @@
       "entryFile": "index",
       "sourceRoot": "libs/shared/src"
 =======
+=======
+>>>>>>> Stashed changes
   "assets": [
     {
       "include": "views/**/*",
       "outDir": "dist"
+<<<<<<< Updated upstream
+>>>>>>> Stashed changes
+=======
 >>>>>>> Stashed changes
     }
   ],

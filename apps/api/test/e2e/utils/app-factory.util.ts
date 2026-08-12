@@ -2,7 +2,6 @@ import "dotenv/config"
 import { Test } from '@nestjs/testing';
 import { INestApplication, ValidationPipe, HttpStatus, CanActivate, ExecutionContext } from '@nestjs/common';
 import { AppModule } from '../../../src/app.module';
-import { MailService } from '../../../src/mail/mail.service';
 import { SuperAdminSeed } from '../../../src/seed/super-admin-seed';
 import { CustomThrottlerGuard } from '../../../src/throttler/custom-throttler.guard'; // ← correct path
 import { AppException } from '../../../src/common/exceptions/app.exception';
@@ -11,6 +10,8 @@ import { Reflector } from '@nestjs/core';
 import { ResponseEnvelopeInterceptor } from '../../../src/common/interceptors/response-envelope.interceptor';
 import { NestExpressApplication } from '@nestjs/platform-express';
 import { join } from 'path';
+import { MailModule } from "../../../src/mail/mail.module";
+import Mail from "nodemailer/lib/mailer";
 
 jest.mock('@css-inline/css-inline', () => ({
     inline: (html: string) => html,
@@ -38,7 +39,7 @@ export async function createTestApp(): Promise<INestApplication> {
     const moduleRef = await Test.createTestingModule({
         imports: [AppModule],
     })
-        .overrideProvider(MailService)
+        .overrideProvider(MailModule)
         .useValue(mockMailService)
         .overrideProvider(SuperAdminSeed)
         .useValue({ onModuleInit: () => Promise.resolve() })
@@ -81,7 +82,7 @@ export async function createTestAppWithThrottler(): Promise<INestApplication> {
     const moduleRef = await Test.createTestingModule({
         imports: [AppModule],
     })
-        .overrideProvider(MailService)
+        .overrideProvider(Mail)
         .useValue(mockMailService)
         .overrideProvider(SuperAdminSeed)
         .useValue({ onModuleInit: () => Promise.resolve() })
