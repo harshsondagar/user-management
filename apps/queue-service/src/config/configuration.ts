@@ -1,8 +1,4 @@
 import 'dotenv/config';
-console.log('--- ENV DIAGNOSTIC START ---');
-console.log('ALL KEYS:', Object.keys(process.env).filter(k => k.includes('SECRET') || k.includes('REDIS')));
-console.log('--- ENV DIAGNOSTIC END ---');
-
 
 export default () => ({
     nodeEnv: process.env.NODE_ENV || 'development',

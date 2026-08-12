@@ -6,7 +6,7 @@ import { AuthModule } from './auth/auth.module';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { TaskModule } from './task/task.module';
-import { APP_FILTER, APP_GUARD } from '@nestjs/core';
+import { APP_FILTER, APP_GUARD, APP_INTERCEPTOR } from '@nestjs/core';
 import { maintenanceGuard } from './common/gaurds/maintainence-gaurd';
 import { JwtGuard } from './auth/gurads/jwt.guard';
 import { GlobalExceptionFilter } from './common/filters/global-exception.filter';
@@ -27,6 +27,8 @@ import { ExpressAdapter } from "@bull-board/express";
 import { ReportModule } from "./report/report.module";
 import configuration from "./config/configuration";
 import { DlqModule } from "./dlq/dlq.module";
+import { AttachUserContextInterceptor, RequestContextMiddleware } from "@app/shared";
+import { LogCleanupService } from "@app/shared";
 
 
 @Module({
@@ -86,11 +88,14 @@ import { DlqModule } from "./dlq/dlq.module";
       provide: APP_GUARD, useClass: JwtGuard
     }, {
       provide: APP_GUARD, useClass: RolesGuard
-    },],
+    },
+    { provide: APP_INTERCEPTOR, useClass: AttachUserContextInterceptor },
+    { provide: LogCleanupService, useFactory: () => new LogCleanupService("api") }
+  ]
 })
 
 export class AppModule implements NestModule {
   configure(consumer: MiddlewareConsumer) {
-    consumer.apply(RequestIdMiddleware).forRoutes('*')
+    consumer.apply(RequestIdMiddleware, RequestContextMiddleware).forRoutes('*')
   }
 }

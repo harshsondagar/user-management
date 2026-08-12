@@ -1,8 +1,9 @@
-import { Injectable, Logger, NotFoundException } from '@nestjs/common';
+import { Injectable, InternalServerErrorException, Logger, NotFoundException } from '@nestjs/common';
 import { Repository } from 'typeorm';
 import { InjectRepository } from '@nestjs/typeorm';
 import { DeadLetterEntry } from './entity/dead-letter-entry-entity';
 import { DlqStatus, FailureScope } from '@app/shared';
+import { InternalDlqController } from './internal-dlq.controller';
 
 interface RecordResourceFailureParams {
     resourceId: string;
@@ -29,6 +30,7 @@ export class DlqService {
     constructor(
         @InjectRepository(DeadLetterEntry)
         private readonly dlqRepo: Repository<DeadLetterEntry>,
+
     ) { }
 
     async recordResourceFailure(params: RecordResourceFailureParams) {

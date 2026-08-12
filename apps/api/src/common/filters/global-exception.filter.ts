@@ -122,16 +122,16 @@ export class GlobalExceptionFilter implements ExceptionFilter {
 
         if (isServerError) {
             this.logger.error(
-                `${errorResponse.message}`,
+                errorResponse.message,
                 exception instanceof Error ? exception.stack : String(exception),
-                JSON.stringify(logPayload),
+                GlobalExceptionFilter.name,
             );
             Sentry.captureException(exception, {
                 tags: { requestId: errorResponse.requestId },
                 extra: logPayload,
             });
         } else {
-            this.logger.warn(`${errorResponse.message}`, JSON.stringify(logPayload));
+            this.logger.warn(errorResponse.message, GlobalExceptionFilter.name);
         }
     }
 }

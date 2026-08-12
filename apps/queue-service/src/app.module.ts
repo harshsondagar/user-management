@@ -1,6 +1,6 @@
 import "dotenv/config"
 import { BullModule } from "@nestjs/bullmq";
-import { Module } from "@nestjs/common";
+import { MiddlewareConsumer, Module, NestModule } from "@nestjs/common";
 import { ConfigModule, ConfigService } from "@nestjs/config";
 import { TypeOrmModule } from "@nestjs/typeorm";
 import { MailModule } from "./mail/mail.module";
@@ -13,6 +13,10 @@ import configuration from "./config/configuration";
 import { AppController } from "../app.controller";
 import { DatagovDebugController } from "./data-gov/datagov.controller";
 import { InternalDlqController } from "./dlq/internal-dlq.controller";
+import { AttachUserContextInterceptor, RequestContextMiddleware } from "@app/shared";
+import { APP_INTERCEPTOR } from "@nestjs/core";
+import { LogCleanupService } from "@app/shared";
+
 
 @Module({
     imports: [
@@ -65,7 +69,14 @@ import { InternalDlqController } from "./dlq/internal-dlq.controller";
         DatagovModule
     ],
     controllers: [AppController, DatagovDebugController, InternalDlqController],
-    providers: [],
+    providers: [
+        { provide: APP_INTERCEPTOR, useClass: AttachUserContextInterceptor },
+        { provide: LogCleanupService, useFactory: () => new LogCleanupService("queue-service") }
+    ],
 })
-export class AppModule { }
+export class AppModule implements NestModule {
+    configure(consumer: MiddlewareConsumer) {
+        consumer.apply(RequestContextMiddleware).forRoutes('*')
+    }
+}
 
