@@ -1,8 +1,45 @@
 {
   "$schema": "https://json.schemastore.org/nest-cli",
   "collection": "@nestjs/schematics",
-  "sourceRoot": "src",
+  "sourceRoot": "apps/api/src",
   "compilerOptions": {
-    "deleteOutDir": true
+    "assets": [
+      "mail/template/**/*",
+      {
+        "include": "../../views/**/*",
+        "outDir": "dist/apps/api"
+      }
+    ],
+    "deleteOutDir": true,
+    "webpack": true,
+    "tsConfigPath": "apps/api/tsconfig.app.json"
+  },
+  "monorepo": true,
+  "root": "apps/api",
+  "projects": {
+    "queue-service": {
+      "type": "application",
+      "root": "apps/queue-service",
+      "entryFile": "main",
+      "sourceRoot": "apps/queue-service/src",
+      "compilerOptions": {
+        "tsConfigPath": "apps/queue-service/tsconfig.app.json"
+      }
+    },
+    "api": {
+      "type": "application",
+      "root": "apps/api",
+      "entryFile": "main",
+      "sourceRoot": "apps/api/src",
+      "compilerOptions": {
+        "tsConfigPath": "apps/api/tsconfig.app.json"
+      }
+    },
+    "@app/shared": {
+      "type": "library",
+      "root": "libs/shared",
+      "entryFile": "index",
+      "sourceRoot": "libs/shared/src"
+    }
   }
 }
