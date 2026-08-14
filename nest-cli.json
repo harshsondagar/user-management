@@ -2,8 +2,6 @@
   "$schema": "https://json.schemastore.org/nest-cli",
   "collection": "@nestjs/schematics",
   "sourceRoot": "apps/api/src",
-<<<<<<< Updated upstream
-<<<<<<< Updated upstream
   "compilerOptions": {
     "assets": [
       "mail/template/**/*",
@@ -41,55 +39,49 @@
       "type": "library",
       "root": "libs/shared",
       "entryFile": "index",
-      "sourceRoot": "libs/shared/src"
-=======
-=======
->>>>>>> Stashed changes
-  "assets": [
-    {
-      "include": "views/**/*",
-      "outDir": "dist"
-<<<<<<< Updated upstream
->>>>>>> Stashed changes
-=======
->>>>>>> Stashed changes
-    }
-  ],
-  "watchAssets": true
-},
-"monorepo": true,
-"root": "apps/api",
-"projects": {
-  "queue-service": {
-    "type": "application",
-    "root": "apps/queue-service",
-    "entryFile": "main",
-    "sourceRoot": "apps/queue-service/src",
-    "compilerOptions": {
-      "tsConfigPath": "apps/queue-service/tsconfig.app.json",
+      "sourceRoot": "libs/shared/src",
       "assets": [
         {
-          "include": "src/views/**/*.ejs",
-          "watchAssets": true,
-          "outDir": "dist/apps"
+          "include": "views/**/*",
+          "outDir": "dist"
         }
-      ]
-    }
-  },
-  "api": {
-    "type": "application",
+      ],
+      "watchAssets": true
+    },
+    "monorepo": true,
     "root": "apps/api",
-    "entryFile": "main",
-    "sourceRoot": "apps/api/src",
-    "compilerOptions": {
-      "tsConfigPath": "apps/api/tsconfig.app.json"
+    "projects": {
+      "queue-service": {
+        "type": "application",
+        "root": "apps/queue-service",
+        "entryFile": "main",
+        "sourceRoot": "apps/queue-service/src",
+        "compilerOptions": {
+          "tsConfigPath": "apps/queue-service/tsconfig.app.json",
+          "assets": [
+            {
+              "include": "src/views/**/*.ejs",
+              "watchAssets": true,
+              "outDir": "dist/apps"
+            }
+          ]
+        }
+      },
+      "api": {
+        "type": "application",
+        "root": "apps/api",
+        "entryFile": "main",
+        "sourceRoot": "apps/api/src",
+        "compilerOptions": {
+          "tsConfigPath": "apps/api/tsconfig.app.json"
+        }
+      },
+      "@app/shared": {
+        "type": "library",
+        "root": "libs/shared",
+        "entryFile": "index",
+        "sourceRoot": "libs/shared/src"
+      }
     }
-  },
-  "@app/shared": {
-    "type": "library",
-    "root": "libs/shared",
-    "entryFile": "index",
-    "sourceRoot": "libs/shared/src"
   }
-}
 }

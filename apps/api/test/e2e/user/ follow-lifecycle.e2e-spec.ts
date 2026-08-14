@@ -5,15 +5,19 @@ import { createTestApp } from '../utils/app-factory.util';
 import { truncateAllTables } from '../utils/db.util';
 import { makeRegisterDto } from '../../fixtures/users.fixture';
 import { createAuthenticatedUser, createTwoAuthenticatedUsers } from '../utils/auth-helper.util';
+import { flushTestRedis } from '../utils/redis.util';
 
 describe('User - Follow Lifecycle (e2e)', () => {
     let app: INestApplication;
     let dataSource: DataSource;
 
     beforeAll(async () => {
+        await flushTestRedis()
         app = await createTestApp();
         dataSource = app.get(DataSource);
         await truncateAllTables(dataSource);
+        jest.spyOn(console, 'log').mockImplementation(() => { });
+        jest.spyOn(console, 'error').mockImplementation(() => { });
     });
 
     afterEach(async () => {
@@ -26,6 +30,8 @@ describe('User - Follow Lifecycle (e2e)', () => {
         }
 
         await app.close();
+        await flushTestRedis()
+
     });
 
     describe('POST /user/:followingId/follow', () => {

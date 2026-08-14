@@ -13,16 +13,22 @@ import configuration from "./config/configuration";
 import { AppController } from "../app.controller";
 import { DatagovDebugController } from "./data-gov/datagov.controller";
 import { InternalDlqController } from "./dlq/internal-dlq.controller";
-import { AttachUserContextInterceptor, RequestContextMiddleware } from "@app/shared";
+import { AttachUserContextInterceptor, RequestContextMiddleware, testEnv } from "@app/shared";
 import { APP_INTERCEPTOR } from "@nestjs/core";
 import { LogCleanupService } from "@app/shared";
 
+const workerId = process.env.JEST_WORKER_ID!
+
+const isTestEnv = process.env.NODE_ENV === 'test' || workerId;
+const tEnv = isTestEnv ? testEnv() : null;
 
 @Module({
     imports: [
         ConfigModule.forRoot({
             isGlobal: true,
-            envFilePath: 'apps/queue-service/.env',
+            envFilePath: isTestEnv
+                ? 'apps/api/test/.env.test'
+                : 'apps/queue-service/.env',
             load: [configuration]
         }),
         ScheduleModule.forRoot(),
@@ -31,11 +37,11 @@ import { LogCleanupService } from "@app/shared";
             inject: [ConfigService],
             useFactory: (config: ConfigService) => ({
                 type: 'postgres',
-                host: config.get<string>('database.host'),
-                port: config.get<number>('database.port'),
-                username: config.get<string>('database.username'),
-                password: config.get<string>('database.password'),
-                database: config.get<string>('database.name'),
+                host: tEnv?.postgresHost ?? config.get<string>('database.host'),
+                port: tEnv?.postgresPort ?? config.get<number>('database.port'),
+                username: tEnv?.postgresUser ?? config.get<string>('database.username'),
+                password: tEnv?.postgresPassword ?? config.get<string>('database.password'),
+                database: tEnv?.dbName ?? config.get<string>('database.name'),
                 autoLoadEntities: true,
                 entities: ['src/**/*.entity.ts'],
                 synchronize: false,
@@ -47,21 +53,24 @@ import { LogCleanupService } from "@app/shared";
             imports: [ConfigModule],
             inject: [ConfigService],
             useFactory: () => ({
-                uri: process.env.MONGO_URI,
+                uri: tEnv
+                    ? tEnv.mongoUri!
+                    : process.env.MONGO_URI!,
             }),
         }),
         BullModule.forRootAsync({
             inject: [ConfigService],
             useFactory: (config: ConfigService) => ({
                 connection: {
-                    host: config.getOrThrow<string>('redis.host'),
-                    port: config.getOrThrow<number>('redis.port'),
+                    host: tEnv?.redisHost ?? config.getOrThrow<string>('redis.host'),
+                    port: tEnv?.redisPort ?? config.getOrThrow<number>('redis.port'),
+                    db: tEnv?.redisDb ?? config.get<number>('redis.db', 0),
                 },
             }),
         }),
         BullModule.registerQueue(
-            { name: 'send-email' },
-            { name: 'scrape-gov-data' },
+            { name: `scrape-gov-data` },
+            { name: 'send-mail' },
         ),
         MailModule,
         SyncModule,
@@ -79,4 +88,3 @@ export class AppModule implements NestModule {
         consumer.apply(RequestContextMiddleware).forRoutes('*')
     }
 }
-

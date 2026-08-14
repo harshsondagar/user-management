@@ -1,4 +1,4 @@
-import { BadRequestException, ConflictException, ForbiddenException, HttpException, HttpStatus, Inject, Injectable, NotFoundException } from '@nestjs/common';
+import { BadRequestException, ConflictException, ForbiddenException, HttpException, HttpStatus, Inject, Injectable, NotFoundException, UnauthorizedException } from '@nestjs/common';
 import { FindOptionsWhere } from 'typeorm';
 import { ProfileType, User, UserRole } from './entity/user-entity';
 import { registerBody } from '../types';
@@ -49,10 +49,14 @@ export class UserService {
     async create(body: registerBody) {
         const existing = await this.userRepository.findOne({ where: { email: body.email } });
 
+        if (existing && !existing.isEmailVerified) {
+            throw new UnauthorizedException('Please verify your email.');
+
+        }
+
         if (existing && existing.isEmailVerified) {
             throw new ConflictException('An account with this email already exists.');
         }
-
 
         if (existing && !existing.isEmailVerified) {
             await this.resendOtp(body.email);

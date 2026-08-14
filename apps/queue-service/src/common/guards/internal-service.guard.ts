@@ -12,7 +12,6 @@ export class InternalServiceGuard implements CanActivate {
         const req = context.switchToHttp().getRequest<Request>();
         const secret = req.headers['x-internal-secret'];
         const expected = this.config.get('internal.secret');
-        console.log(expected);
 
         if (!expected) {
             throw new UnauthorizedException('Internal service secret not configured');
