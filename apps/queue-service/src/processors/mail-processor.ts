@@ -6,6 +6,8 @@ import { MailJobName } from '@app/shared'
 import { MailFailureService } from "../mail/mail-failure.service";
 import { runWithJobContext } from "@app/shared";
 
+
+const QUEUE_NAME = `scrape-gov-data${process.env.QUEUE_SUFFIX || ''}`;
 @Processor('send-mail', {
     concurrency: 1,
     lockDuration: 60000,
@@ -74,7 +76,7 @@ export class MailProcessor extends WorkerHost {
 
             await this.mailFailureService.record({
                 jobName: job.name,
-                recipientEmail: job.data.email,
+                recipientEmail: job.data.email ?? job.data.adminEmail,
                 bullJobId: String(job.id),
                 errorMessage: error.message,
                 attemptsMade: job.attemptsMade,

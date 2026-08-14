@@ -1,7 +1,7 @@
 import { INestApplication } from "@nestjs/common"
 import { DataSource } from "typeorm"
 import { flushTestRedis } from "../utils/redis.util"
-import { createTestAppWithThrottler } from "../utils/app-factory.util"
+import { createTestApp } from "../utils/app-factory.util"
 import { truncateAllTables } from "../utils/db.util"
 import { makeRegisterDto } from "../../fixtures/users.fixture"
 import request from "supertest"
@@ -14,9 +14,11 @@ describe('Rate Limiting (e2e) - real ThrottlerGuard', () => {
 
     beforeAll(async () => {
         await flushTestRedis()
-        app = await createTestAppWithThrottler()
+        app = await createTestApp({ bypassThrottler: false })
         dataSource = app.get(DataSource)
         await truncateAllTables(dataSource)
+        jest.spyOn(console, 'log').mockImplementation(() => { });
+        jest.spyOn(console, 'error').mockImplementation(() => { });
     })
 
 
@@ -27,6 +29,7 @@ describe('Rate Limiting (e2e) - real ThrottlerGuard', () => {
 
     afterAll(async () => {
         await app.close()
+        await flushTestRedis()
     })
 
 
@@ -37,7 +40,6 @@ describe('Rate Limiting (e2e) - real ThrottlerGuard', () => {
             const res = await request(app.getHttpServer())
                 .post("/auth/register")
                 .send(dto)
-
             expect(res.status).not.toBe(429)
         }
 
@@ -107,8 +109,6 @@ describe('Rate Limiting (e2e) - real ThrottlerGuard', () => {
             const res = await request(app.getHttpServer())
                 .get('/user/me')
                 .set('Authorization', `Bearer ${accessToken}`)
-                .send({ email: 'ttl-test@example.com', password: 'wrong' });
-
             expect(res.status).not.toBe(429)
         }
     })

@@ -17,15 +17,17 @@ import { MailProcessor } from '../processors/mail-processor';
             imports: [ConfigModule],
             inject: [ConfigService],
             useFactory: () => ({
-                transport: {
-                    host: process.env.SMTP_HOST,
-                    port: Number(process.env.SMTP_PORT) || 587,
-                    secure: false,
-                    auth: {
-                        user: process.env.SMTP_USER,
-                        pass: process.env.SMTP_PASS,
+                transport: process.env.NODE_ENV === 'test'
+                    ? { jsonTransport: true }
+                    : {
+                        host: process.env.SMTP_HOST,
+                        port: Number(process.env.SMTP_PORT) || 587,
+                        secure: false,
+                        auth: {
+                            user: process.env.SMTP_USER,
+                            pass: process.env.SMTP_PASS,
+                        },
                     },
-                },
                 defaults: {
                     from: process.env.MAIL_FROM || 'APP <noreply@example.com>',
                 },

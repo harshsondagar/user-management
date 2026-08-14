@@ -3,6 +3,7 @@ import { DataSource } from "typeorm"
 import { createTestApp } from "../utils/app-factory.util"
 import { truncateAllTables } from "../utils/db.util"
 import request from "supertest"
+import { flushTestRedis } from "../utils/redis.util"
 
 describe('Health - check (e2e)', () => {
 
@@ -10,9 +11,12 @@ describe('Health - check (e2e)', () => {
     let dataSource: DataSource
 
     beforeAll(async () => {
+        await flushTestRedis()
         app = await createTestApp()
         dataSource = await app.get(DataSource)
         await truncateAllTables(dataSource)
+        jest.spyOn(console, 'log').mockImplementation(() => { });
+        jest.spyOn(console, 'error').mockImplementation(() => { });
     })
 
     afterEach(async () => {
@@ -21,6 +25,7 @@ describe('Health - check (e2e)', () => {
 
     afterAll(async () => {
         await app.close()
+        await flushTestRedis()
     })
 
 

@@ -1,8 +1,15 @@
+import "dotenv/config"
 import { OnWorkerEvent, Processor, WorkerHost } from "@nestjs/bullmq";
 import { Job } from "bullmq";
 import { FullSyncService } from "../sync/full-sync.service";
 import { DlqService } from "../dlq/dlq.service";
 import { runWithJobContext } from "@app/shared";
+
+// const workerId = process.env.JEST_WORKER_ID!
+// process.env.QUEUE_SUFFIX = `_worker_${workerId}`
+// const QUEUE_NAME = `scrape-gov-data${process.env.QUEUE_SUFFIX || ''}`;
+
+// console.log("queue name : from processor :", QUEUE_NAME);
 
 @Processor('scrape-gov-data',
     {
@@ -22,9 +29,6 @@ export class ScrapeProcessor extends WorkerHost {
     }
 
     async process(job: Job, token?: string): Promise<any> {
-
-
-
         return runWithJobContext(job, async () => {
             const { query, userId } = job.data
             return this.fullSyncService.runFullSync(query, job)

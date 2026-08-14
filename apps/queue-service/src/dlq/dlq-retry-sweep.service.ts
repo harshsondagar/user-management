@@ -18,7 +18,7 @@ export class DlqRetrySweepService {
         @InjectModel(Dataset.name) private readonly datasetModel: Model<Dataset>,
     ) { }
 
-    @Cron(CronExpression.EVERY_10_SECONDS)
+    @Cron(CronExpression.EVERY_30_MINUTES)
     async sweep() {
         return runWithCronContext('dlq-retry-sweep', async () => {
 

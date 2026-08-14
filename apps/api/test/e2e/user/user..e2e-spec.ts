@@ -5,6 +5,7 @@ import { truncateAllTables } from "../utils/db.util";
 import request from "supertest"
 import { makeRegisterDto } from "../../fixtures/users.fixture";
 import { createAuthenticatedUser } from "../utils/auth-helper.util";
+import { flushTestRedis } from "../utils/redis.util";
 
 
 
@@ -14,9 +15,12 @@ describe('User - GET me (e2e)', () => {
     let dataSource: DataSource;
 
     beforeAll(async () => {
+        await flushTestRedis()
         app = await createTestApp()
         dataSource = app.get(DataSource)
         await truncateAllTables(dataSource)
+        jest.spyOn(console, 'log').mockImplementation(() => { });
+        jest.spyOn(console, 'error').mockImplementation(() => { });
     })
 
     afterEach(async () => {
@@ -26,6 +30,7 @@ describe('User - GET me (e2e)', () => {
 
     afterAll(async () => {
         await app.close();
+        await flushTestRedis()
     });
 
     it('return current user when authenticated', async () => {

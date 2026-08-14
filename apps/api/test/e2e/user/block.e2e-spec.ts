@@ -5,6 +5,7 @@ import { truncateAllTables } from "../utils/db.util";
 import request from "supertest"
 import { createTestApp } from "../utils/app-factory.util";
 import { makeRegisterDto } from "../../fixtures/users.fixture";
+import { flushTestRedis } from "../utils/redis.util";
 
 
 describe('User - Block (e2e)', () => {
@@ -12,9 +13,12 @@ describe('User - Block (e2e)', () => {
     let dataSource: DataSource;
 
     beforeAll(async () => {
+        await flushTestRedis()
         app = await createTestApp();
         dataSource = app.get(DataSource);
         await truncateAllTables(dataSource);
+        jest.spyOn(console, 'log').mockImplementation(() => { });
+        jest.spyOn(console, 'error').mockImplementation(() => { });
     });
 
     afterEach(async () => {
@@ -23,6 +27,7 @@ describe('User - Block (e2e)', () => {
 
     afterAll(async () => {
         await app.close();
+        await flushTestRedis()
     });
 
     describe('POST /user/:targetId/block', () => {

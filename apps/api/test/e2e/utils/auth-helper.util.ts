@@ -16,6 +16,9 @@ export async function registerAndVerifyUser(
     app: INestApplication,
     registerDto: RegisterInput,
 ): Promise<void> {
+
+
+
     await request(app.getHttpServer())
         .post('/auth/register')
         .send(registerDto)

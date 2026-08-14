@@ -1,6 +1,6 @@
 import { NestFactory, Reflector } from '@nestjs/core';
 import { AppModule } from './app.module';
-import { HttpStatus, Logger, ValidationPipe } from '@nestjs/common';
+import { HttpStatus, InternalServerErrorException, Logger, ValidationPipe } from '@nestjs/common';
 import cookieParser from "cookie-parser"
 import { ResponseEnvelopeInterceptor } from './common/interceptors/response-envelope.interceptor';
 import { AppException } from './common/exceptions/app.exception';
@@ -37,6 +37,7 @@ async function bootstrap() {
       return new AppException('VALIDATION_ERROR', messages.join('; '), HttpStatus.BAD_REQUEST);
     }
   }))
+
 
   app.set('trust proxy', 1);
 
