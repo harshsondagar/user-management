@@ -8,14 +8,18 @@ import request from "supertest"
 import { RegisterDTO } from '../../../src/auth/dto/register-dto';
 import { register } from 'module';
 import { mockMailService } from '../utils/mock-mail.util';
+import { flushTestRedis } from '../utils/redis.util';
 describe('AUTH - Reset password (e2e)', () => {
     let app: INestApplication
     let dataSource: DataSource
 
     beforeAll(async () => {
+        await flushTestRedis()
         app = await createTestApp()
         dataSource = app.get(DataSource)
         await truncateAllTables(dataSource)
+        jest.spyOn(console, 'log').mockImplementation(() => { });
+        jest.spyOn(console, 'error').mockImplementation(() => { });
     })
 
     afterEach(async () => {
@@ -28,6 +32,7 @@ describe('AUTH - Reset password (e2e)', () => {
 
     afterAll(async () => {
         await app.close()
+        await flushTestRedis()
     })
 
     it('should change the password with correct current password', async () => {

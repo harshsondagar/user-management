@@ -3,18 +3,17 @@ import path, { join, resolve } from "path";
 import { Client } from "pg"
 import { DataSource } from "typeorm";
 
-dotenv.config({ path: resolve(join(process.cwd(), "apps/api/.env")) });
-console.log(path.join(__dirname, '../src/migration/*.{ts,js}'));
-
+dotenv.config({ path: resolve(join(process.cwd(), "apps/api/test/.env.test")) });
 const WORKER_COUNT = 4
+
 
 export default async function globalSetup() {
 
-    const TEST_DB_HOST = process.env.TEST_DB_HOST || process.env.DB_HOST || 'localhost';
-    const TEST_DB_PORT = parseInt(process.env.TEST_DB_PORT || process.env.DB_PORT || '6432', 10);
-    const TEST_DB_USER = process.env.TEST_DB_USERNAME || process.env.DB_USERNAME!;
-    const TEST_DB_PASSWORD = process.env.TEST_DB_PASSWORD || process.env.DB_PASSWORD!;
-    const TEST_DB = process.env.DB_NAME!
+    const TEST_DB_HOST = process.env.TEST_POSTGRES_HOST || 'localhost';
+    const TEST_DB_PORT = parseInt(process.env.TEST_POSTGRES_PORT!, 10);
+    const TEST_DB_USER = process.env.TEST_POSTGRES_USER!
+    const TEST_DB_PASSWORD = process.env.TEST_POSTGRES_PASSWORD!
+    const TEST_DB = process.env.TEST_POSTGRES_DB!;
 
     const adminClient = new Client({
         host: TEST_DB_HOST,
@@ -29,7 +28,7 @@ export default async function globalSetup() {
     for (let i = 1; i <= WORKER_COUNT; i++) {
         const dbName = `test_db_${i}`;
 
-        await adminClient.query(`DROP DATABASE IF EXISTS ${dbName}`);
+        // await adminClient.query(`DROP DATABASE IF EXISTS ${dbName}`);
         await adminClient.query(`CREATE DATABASE ${dbName}`);
 
         const ds = new DataSource({

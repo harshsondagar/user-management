@@ -17,7 +17,7 @@ export function getWinstonConfig(serviceName: string) {
 
     const skipNestBootstrapNoise = winston.format((info) => {
         if (
-            info.level === 'info' && // only filter routine info-level noise, never warn/error
+            info.level === 'info' &&
             typeof info.nestContext === 'string' &&
             NEST_INTERNAL_CONTEXTS.has(info.nestContext)
         ) {
@@ -43,18 +43,16 @@ export function getWinstonConfig(serviceName: string) {
         return info;
     });
 
-    // Console + error file: show EVERYTHING, including bootstrap noise
-    // (you want to see startup failures / full boot sequence live)
     const fullFormat = winston.format.combine(
         renameNestContext(),
         structuredContext(),
         addServiceMeta(),
         winston.format.timestamp(),
+        winston.format.colorize({ all: true }),
         winston.format.errors({ stack: true }),
         winston.format.json(),
     );
 
-    // combined file only: filter out routine bootstrap noise, keep operational logs
     const combinedFileFormat = winston.format.combine(
         renameNestContext(),
         skipNestBootstrapNoise(),
