@@ -11,8 +11,10 @@ export * from "./logging/job-context.util"
 export * from './logging/job-context.util';
 export * from './logging/cron-context.util';
 export * from './logging/log-cleanup.service';
+export * from "./test-utils/test-env"
 
 
-// One small thing worth tidying: nestContext here is a stringified JSON blob (from GlobalExceptionFilter's old logging pattern), not a clean class name like "RouterExplorer". That's a separate, pre-existing quirk in GlobalExceptionFilter.logException() — it's passing JSON.stringify(logPayload) as what becomes nestContext, which is now redundant since our structured context object already carries requestId/method/path. Worth cleaning up later, but not blocking — flag it and move on for now unless you want to fix it immediately.
 
-// Step 3 confirmed working. On to step 4: job/cron context for queue-service.
+
+
+// "test:e2e": "jest --config ./apps/api/test/jest-e2e.json",

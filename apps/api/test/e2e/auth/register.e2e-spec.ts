@@ -14,15 +14,19 @@ import {
     noSpecialCharPasswordDto,
     tooShortPasswordDto,
 } from '../../fixtures/users.fixture';
+import { flushTestRedis } from '../utils/redis.util';
 
 describe('Auth - Register (e2e)', () => {
     let app: INestApplication;
     let dataSource: DataSource;
 
     beforeAll(async () => {
+        await flushTestRedis()
         app = await createTestApp();
         dataSource = app.get(DataSource);
         await truncateAllTables(dataSource);
+        jest.spyOn(console, 'log').mockImplementation(() => { });
+        jest.spyOn(console, 'error').mockImplementation(() => { });
     });
 
     afterEach(async () => {
@@ -34,8 +38,9 @@ describe('Auth - Register (e2e)', () => {
     });
 
 
-    afterAll(() => {
+    afterAll(async () => {
         jest.restoreAllMocks();
+        await flushTestRedis()
     });
 
     it('rejects password missing an uppercase letter', async () => {

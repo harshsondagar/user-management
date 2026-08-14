@@ -39,7 +39,49 @@
       "type": "library",
       "root": "libs/shared",
       "entryFile": "index",
-      "sourceRoot": "libs/shared/src"
+      "sourceRoot": "libs/shared/src",
+      "assets": [
+        {
+          "include": "views/**/*",
+          "outDir": "dist"
+        }
+      ],
+      "watchAssets": true
+    },
+    "monorepo": true,
+    "root": "apps/api",
+    "projects": {
+      "queue-service": {
+        "type": "application",
+        "root": "apps/queue-service",
+        "entryFile": "main",
+        "sourceRoot": "apps/queue-service/src",
+        "compilerOptions": {
+          "tsConfigPath": "apps/queue-service/tsconfig.app.json",
+          "assets": [
+            {
+              "include": "src/views/**/*.ejs",
+              "watchAssets": true,
+              "outDir": "dist/apps"
+            }
+          ]
+        }
+      },
+      "api": {
+        "type": "application",
+        "root": "apps/api",
+        "entryFile": "main",
+        "sourceRoot": "apps/api/src",
+        "compilerOptions": {
+          "tsConfigPath": "apps/api/tsconfig.app.json"
+        }
+      },
+      "@app/shared": {
+        "type": "library",
+        "root": "libs/shared",
+        "entryFile": "index",
+        "sourceRoot": "libs/shared/src"
+      }
     }
   }
 }

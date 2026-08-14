@@ -11,6 +11,11 @@ import {
     nonExistentEmailLoginDto,
     shortPasswordLoginDto,
 } from '../../fixtures/users.fixture';
+import { getLastJobByName } from '../utils/queue-assertions';
+import { MailJobName } from '@app/shared';
+import { getQueueToken } from '@nestjs/bullmq';
+import { Queue } from 'bullmq';
+import { flushTestRedis } from '../utils/redis.util';
 
 
 describe('Auth - Login (e2e)', () => {
@@ -18,9 +23,12 @@ describe('Auth - Login (e2e)', () => {
     let dataSource: DataSource;
 
     beforeAll(async () => {
+        await flushTestRedis()
         app = await createTestApp();
         dataSource = app.get(DataSource);
         await truncateAllTables(dataSource);
+        jest.spyOn(console, 'log').mockImplementation(() => { });
+        jest.spyOn(console, 'error').mockImplementation(() => { });
     });
 
     afterEach(async () => {
@@ -32,8 +40,9 @@ describe('Auth - Login (e2e)', () => {
 
     });
 
-    afterAll(() => {
+    afterAll(async () => {
         jest.restoreAllMocks();
+        await flushTestRedis()
     });
 
     it('logs in successfully with correct, verified credentials', async () => {
@@ -114,5 +123,15 @@ describe('Auth - Login (e2e)', () => {
         if (res.status === 200) {
             expect(res.body.data.accessToken).toBeTruthy();
         }
+    });
+
+    it('enqueues a verification mail job on signup', async () => {
+        await request(app.getHttpServer()).post('/auth/register').send(validRegisterDto).expect(201);
+
+        const sendMailQueue = app.get<Queue>(getQueueToken('send-mail'));
+        const job = await getLastJobByName(sendMailQueue, MailJobName.VERIFY_EMAIL);
+
+        expect(job).toBeDefined();
+        expect(job!.data).toMatchObject({ email: validRegisterDto.email });
     });
 });
