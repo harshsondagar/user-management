@@ -44,10 +44,6 @@ describe('Scrape sync — resource-level processing (e2e)', () => {
 
     describe('via the real queue + processor', () => {
         it('persists a Dataset when the resource fetch succeeds', async () => {
-
-            const preExisting = await getDatasetModel(app).countDocuments();
-            console.log('Dataset count at test start (should be 0 if beforeAll truncate worked):', preExisting);
-
             const row = buildRawCatalogRow({ nid: 2001, uuid: 'res-scrape-success', title: 'Rainfall Data' });
             mockSearchSuccess(buildSearchResponse([row]));
             mockResourceSuccess('res-scrape-success', { records: [{ station: 'A', mm: 12 }] });
@@ -55,6 +51,7 @@ describe('Scrape sync — resource-level processing (e2e)', () => {
             const queue = getScrapeQueue(app);
             const job = await queue.add('scrape-gov-data', { query: 'rainfall', userId: 'u1' });
             const result = await waitForJobResult(queue, job.id!);
+
             expect(result).toMatchObject({ succeededThisRun: 1, failedThisRun: 0, totalSucceeded: 1, totalFailed: 0 });
 
             const dataset = await getDatasetModel(app).findOne({ resourceId: 'res-scrape-success' });
