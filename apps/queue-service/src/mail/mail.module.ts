@@ -1,4 +1,5 @@
 // apps/queue-service/src/mail/mail.module.ts
+import "dotenv/config"
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { MailerModule } from '@nestjs-modules/mailer';
@@ -16,27 +17,33 @@ import { MailProcessor } from '../processors/mail-processor';
         MailerModule.forRootAsync({
             imports: [ConfigModule],
             inject: [ConfigService],
-            useFactory: () => ({
-                transport: process.env.NODE_ENV === 'test'
-                    ? { jsonTransport: true }
-                    : {
-                        host: process.env.SMTP_HOST,
-                        port: Number(process.env.SMTP_PORT) || 587,
-                        secure: false,
-                        auth: {
-                            user: process.env.SMTP_USER,
-                            pass: process.env.SMTP_PASS,
+            useFactory: (config: ConfigService) => {
+
+                const isTest = config.get<string>('nodeEnv') === 'test';
+                const smtpConfig = config.get('smtp');
+
+                return {
+                    transport: isTest
+                        ? { jsonTransport: true }
+                        : {
+                            host: smtpConfig.host,
+                            port: smtpConfig.port,
+                            secure: smtpConfig.secure,
+                            auth: {
+                                user: smtpConfig.user,
+                                pass: smtpConfig.pass,
+                            },
                         },
+                    defaults: {
+                        from: smtpConfig.mail_from || 'APP <noreply@example.com>',
                     },
-                defaults: {
-                    from: process.env.MAIL_FROM || 'APP <noreply@example.com>',
-                },
-                template: {
-                    dir: join(__dirname, 'mail/template'),
-                    adapter: new EjsAdapter(),
-                    options: { strict: false },
-                },
-            }),
+                    template: {
+                        dir: join(__dirname, 'mail/template'),
+                        adapter: new EjsAdapter(),
+                        options: { strict: false },
+                    },
+                };
+            },
         }),
     ],
     providers: [MailService, MailFailureService, MailProcessor],
