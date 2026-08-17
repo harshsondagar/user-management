@@ -48,7 +48,6 @@ export function getWinstonConfig(serviceName: string) {
         structuredContext(),
         addServiceMeta(),
         winston.format.timestamp(),
-        winston.format.colorize({ all: true }),
         winston.format.errors({ stack: true }),
         winston.format.json(),
     );

@@ -10,8 +10,6 @@ import * as ejs from 'ejs';
 import { WinstonModule } from 'nest-winston';
 import { getWinstonConfig } from '@app/shared';
 
-console.log(join(__dirname, '..', '/api/views'));
-
 async function bootstrap() {
 
   const app = await NestFactory.create<NestExpressApplication>(AppModule, {
