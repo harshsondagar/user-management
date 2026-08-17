@@ -103,7 +103,7 @@ export class DatagovResourceService {
             }
 
 
-            this.logger.error(`Failed fetching resource ${resourceId}: ${axiosErr.message}`);
+            this.logger.error(`Failed fetching resource ${resourceId}: ${axiosErr.message}`, (err as Error).stack);
             throw new HttpException(
                 `data.gov.in resource request failed: ${axiosErr.message}`,
                 HttpStatus.BAD_GATEWAY,

@@ -22,6 +22,7 @@ describe('DLQ retry sweep (e2e)', () => {
         disableCronJobs(app);
         dataSource = app.get(DataSource);
         await truncateAllTables(dataSource);
+
         jest.spyOn(console, 'log').mockImplementation(() => { });
         jest.spyOn(Logger.prototype, 'error').mockImplementation(() => { });
 

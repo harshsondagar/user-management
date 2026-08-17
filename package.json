@@ -36,7 +36,8 @@
     "test:e2e:api": "jest --config apps/api/test/jest-e2e.json --maxWorkers=4",
     "test:e2e:queue": "jest --config apps/queue-service/test/jest-e2e.json --maxWorkers=4",
     "test:e2e:cross": "jest --config test/e2e-cross-app/jest-e2e.json --runInBand",
-    "test:e2e": "pnpm run test:e2e:infra:up && pnpm run test:e2e:api && pnpm run test:e2e:queue && pnpm run test:e2e:infra:down"
+    "test:e2e": "pnpm run test:e2e:infra:up && pnpm run test:e2e:api && pnpm run test:e2e:queue && pnpm run test:e2e:infra:down",
+    "logs:watch": "logdy follow logs/api-combined-*.log logs/api-error-*.log logs/queue-service-combined-*.log logs/queue-service-error-*.log"
   },
   "dependencies": {
     "@app/shared": "workspace:*",

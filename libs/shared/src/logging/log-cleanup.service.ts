@@ -19,7 +19,7 @@ export class LogCleanupService {
 
     constructor(private readonly serviceName: string) { }
 
-    @Cron(CronExpression.EVERY_10_SECONDS)
+    @Cron(CronExpression.EVERY_HOUR)
     async cleanup() {
         try {
 
