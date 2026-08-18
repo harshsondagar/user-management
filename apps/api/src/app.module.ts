@@ -30,6 +30,8 @@ import { DlqModule } from "./dlq/dlq.module";
 import { AttachUserContextInterceptor, RequestContextMiddleware } from "@app/shared";
 import { LogCleanupService } from "@app/shared";
 import { testEnv } from "@app/shared";
+import { BillingModule } from "./billing/billing.module";
+import { WebhookModule } from "./webhooks/stripe-webhook.module";
 
 
 const isTestEnv = process.env.NODE_ENV === 'test' || !!process.env.JEST_WORKER_ID;
@@ -56,6 +58,7 @@ const tEnv = isTestEnv ? testEnv() : null;
       },
     }),
   }),
+
   // BullModule.forRootAsync({
   //   inject: [ConfigService],
   //   useFactory: (config: ConfigService) => ({
@@ -69,7 +72,7 @@ const tEnv = isTestEnv ? testEnv() : null;
     route: '/admin/queues',
     adapter: ExpressAdapter,
   }),
-    AppThrottleModule, HealthModule, RedisCacheModule,
+    AppThrottleModule, HealthModule, RedisCacheModule, WebhookModule,
   // TypeOrmModule.forRootAsync({
   //   imports: [ConfigModule],
   //   inject: [ConfigService],
@@ -107,7 +110,7 @@ const tEnv = isTestEnv ? testEnv() : null;
     UserModule, AuthModule,
     TaskModule, MailModule,
     OtpModule, ReportModule,
-    // DatagovModule,
+    BillingModule,
     SyncModule,
     ScrapModuleModule,
     DlqModule
