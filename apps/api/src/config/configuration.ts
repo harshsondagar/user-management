@@ -44,5 +44,9 @@ export default () => ({
     },
     internal: {
         secrete: process.env.INTERNAL_SERVICE_SECRET!
+    },
+    stripe: {
+        key: process.env.STRIPE_SECRET_KEY!,
+        webhookSecret: process.env.STRIPE_WEBHOOK_SECRET!
     }
 });

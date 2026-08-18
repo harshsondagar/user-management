@@ -1,5 +1,5 @@
 import { BadRequestException, ConflictException, ForbiddenException, HttpException, HttpStatus, Inject, Injectable, NotFoundException, UnauthorizedException } from '@nestjs/common';
-import { FindOptionsWhere } from 'typeorm';
+import { FindOptionsWhere, Repository } from 'typeorm';
 import { ProfileType, User, UserRole } from './entity/user-entity';
 import { registerBody } from '../types';
 import { UpdateUserDTO } from './dto/UpdateUserDTO';
@@ -10,6 +10,9 @@ import { OtpService } from '../common/otp/opt.service';
 import { UserRepository } from './user.repository';
 import { FollowerRepository } from './follower.repository';
 import { MailProducer } from '../mail/mail-producer';
+import { Plan } from '../billing/entities/plan-entity';
+import { InjectRepository } from '@nestjs/typeorm';
+import { SubscriptionStatus, UserSubscription } from '../billing/entities/user-subscription-entity';
 
 const ARGON2_OPTIONS: argon2.HashOptions = {
     type: argon2.argon2id,
@@ -25,6 +28,8 @@ export class UserService {
     constructor(
         private readonly userRepository: UserRepository,
         private readonly followerRepository: FollowerRepository,
+        @InjectRepository(Plan) private readonly planRepo: Repository<Plan>,
+        @InjectRepository(UserSubscription) private readonly userSubscriptionRepo: Repository<UserSubscription>,
         private readonly otpService: OtpService,
         private readonly cache: SafeCacheService,
         private readonly mailProducer: MailProducer
@@ -64,7 +69,7 @@ export class UserService {
         }
 
         const user = await this.userRepository.create(body);
-
+        await this.assignFreePlan(user.id)
         const otp = this.otpService.generateOtp();
         await this.otpService.storeOtp(user.email, otp);
         await this.mailProducer.addVerificationMailJob(user.email, user.firstName!, otp);
@@ -431,5 +436,19 @@ export class UserService {
     private stripPrivateFields(user: User) {
         const { passwordHash, failedLoginAttempts, lockedUntil, tokenVersion, ...safeUser } = user as any
         return safeUser
+    }
+
+    private async assignFreePlan(userId: string) {
+        const freePlan = await this.planRepo.findOne({ where: { code: 'free' } });
+        if (!freePlan) throw new Error('Free plan not seeded — cannot complete registration');
+
+        await this.userSubscriptionRepo.save(
+            this.userSubscriptionRepo.create({
+                userId,
+                planId: freePlan.id,
+                status: SubscriptionStatus.ACTIVE,
+                stripeSubscriptionId: null, // free plan has no real Stripe subscription
+            }),
+        );
     }
 }

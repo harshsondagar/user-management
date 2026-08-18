@@ -3,37 +3,25 @@ import { Controller, Get, HttpException, HttpStatus, NotFoundException, Param, P
 import { currentUser } from '../common/decorator/currentUser-decorator';
 import { User, UserRole } from '../user/entity/user-entity';
 import { Roles } from '../common/decorator/roles.decorator';
-import { ScrapeQuotaService } from './scrape-quota.service';
 import { JwtGuard } from '../auth/gurads/jwt.guard';
 import { ScrapeProducer } from '../scrap-module/scrape.producer';
 import { InjectQueue } from '@nestjs/bullmq';
 import { Queue } from 'bullmq';
+import { EntitlementGuard, RequireEntitlement } from '../billing/entitlement/entitlement.guard';
 
 
 @Controller('sync')
 export class SyncController {
     constructor(
         @InjectQueue('scrape-gov-data') private readonly syncQueue: Queue,
-        private readonly scrapeQuota: ScrapeQuotaService,
         private readonly scrapeProducer: ScrapeProducer
     ) { }
 
     @UseGuards(JwtGuard)
-    @Roles(UserRole.SUPER_ADMIN, UserRole.ADMIN, UserRole.USER)
+    @UseGuards(EntitlementGuard)
+    @RequireEntitlement('scrape_requests')
     @Post('run')
     async run(@currentUser() user: User, @Query('q') q: string) {
-        const isAdmin = user.role === UserRole.ADMIN || user.role === UserRole.SUPER_ADMIN;
-
-        if (!isAdmin) {
-            await this.scrapeQuota.checkAndIncrement(user.id, 2);
-            if (!q.trim()) {
-                throw new HttpException(
-                    'q (dataset name) is required for non-admin users.',
-                    HttpStatus.BAD_REQUEST,
-                );
-            }
-        }
-
         const job = await this.scrapeProducer.triggerScrape(q, user.id)
 
         return { jobId: job.id, status: 'queued' };

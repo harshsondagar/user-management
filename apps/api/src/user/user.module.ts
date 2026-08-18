@@ -16,9 +16,11 @@ import { UserRepository } from './user.repository';
 import { FollowerRepository } from './follower.repository';
 import { BullModule } from '@nestjs/bullmq';
 import { MailProducer } from '../mail/mail-producer';
+import { Plan } from '../billing/entities/plan-entity';
+import { UserSubscription } from '../billing/entities/user-subscription-entity';
 
 @Module({
-  imports: [forwardRef(() => AuthModule), MailModule, OtpModule, RedisCacheModule, TypeOrmModule.forFeature([User, System, Followers])
+  imports: [forwardRef(() => AuthModule), MailModule, OtpModule, RedisCacheModule, TypeOrmModule.forFeature([User, System, Followers, Plan, UserSubscription])
     , BullModule.registerQueue({
       name: "send-mail"
     })],

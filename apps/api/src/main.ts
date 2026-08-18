@@ -9,12 +9,14 @@ import { join } from 'path';
 import * as ejs from 'ejs';
 import { WinstonModule } from 'nest-winston';
 import { getWinstonConfig } from '@app/shared';
-
+import express from 'express';
 async function bootstrap() {
 
   const app = await NestFactory.create<NestExpressApplication>(AppModule, {
     logger: WinstonModule.createLogger(getWinstonConfig('api')),
   });
+
+  app.use('/webhooks/stripe', express.raw({ type: 'application/json' }));
 
   app.enableCors({
     origin: true,
@@ -53,6 +55,7 @@ async function bootstrap() {
     Logger.error('Uncaught Exception', error.stack);
     process.exit(1);
   });
+
 
   await app.listen(process.env.PORT ?? 3000);
 

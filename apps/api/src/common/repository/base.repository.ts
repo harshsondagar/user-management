@@ -1,15 +1,15 @@
 import { NotFoundException } from '@nestjs/common';
-import { InjectRepository } from '@nestjs/typeorm';
 import {
     DeepPartial,
     FindManyOptions,
     FindOneOptions,
     FindOptionsWhere,
+    InsertResult,
     ObjectLiteral,
     Repository,
+    UpsertOptions,
 } from 'typeorm';
 import { QueryDeepPartialEntity } from 'typeorm/browser';
-import { Followers } from '../../user/entity/userfollowers-entity';
 
 export interface BaseInterfaceRepository<T> {
     create(data: DeepPartial<T>): Promise<T>;
@@ -28,12 +28,15 @@ export interface BaseInterfaceRepository<T> {
     remove(entity: T): Promise<T>;
     deleteBy(where: FindOptionsWhere<T> | FindOptionsWhere<T>[]): Promise<void>;
     delete(id: string): Promise<void>;
+    upsert(
+        entityOrEntities: QueryDeepPartialEntity<T> | QueryDeepPartialEntity<T>[],
+        conflictPathsOrOptions: string[] | UpsertOptions<T>
+    ): Promise<InsertResult>;
 }
-
 
 export abstract class BaseRepository<T extends ObjectLiteral> implements BaseInterfaceRepository<T> {
 
-    constructor(@InjectRepository(Followers) protected readonly repository: Repository<T>) {
+    constructor(protected readonly repository: Repository<T>) {
 
     }
 
@@ -58,10 +61,7 @@ export abstract class BaseRepository<T extends ObjectLiteral> implements BaseInt
         });
     }
 
-    async updateBy(
-        where: FindOptionsWhere<T>,
-        data: DeepPartial<T>,
-    ): Promise<void> {
+    async updateBy(where: FindOptionsWhere<T>, data: DeepPartial<T>,): Promise<void> {
         await this.repository.update(where, data as QueryDeepPartialEntity<T>);
     }
 
@@ -79,9 +79,7 @@ export abstract class BaseRepository<T extends ObjectLiteral> implements BaseInt
         return this.repository.count(options);
     }
 
-    async findOneBy(
-        where: FindOptionsWhere<T> | FindOptionsWhere<T>[],
-    ): Promise<T | null> {
+    async findOneBy(where: FindOptionsWhere<T> | FindOptionsWhere<T>[],): Promise<T | null> {
         return this.repository.findOneBy(where);
     }
 
@@ -125,9 +123,6 @@ export abstract class BaseRepository<T extends ObjectLiteral> implements BaseInt
     async findWithRelations(relations: FindManyOptions<T>): Promise<T[]> {
         return this.repository.find(relations);
     }
-    // async save(entity: T): Promise<T> {
-    //     return this.repository.save(entity);
-    // }
 
     async remove(data: T): Promise<T> {
         return this.repository.remove(data);
@@ -143,9 +138,7 @@ export abstract class BaseRepository<T extends ObjectLiteral> implements BaseInt
         return entity;
     }
 
-    async deleteBy(
-        where: FindOptionsWhere<T> | FindOptionsWhere<T>[],
-    ): Promise<void> {
+    async deleteBy(where: FindOptionsWhere<T> | FindOptionsWhere<T>[]): Promise<void> {
         if (
             !where ||
             (Array.isArray(where) && where.length === 0) ||
@@ -154,5 +147,12 @@ export abstract class BaseRepository<T extends ObjectLiteral> implements BaseInt
             throw new Error('deleteBy: "where" must be a non-empty condition or array of conditions');
         }
         await this.repository.delete(where as any);
+    }
+
+    async upsert(
+        entityOrEntities: QueryDeepPartialEntity<T> | QueryDeepPartialEntity<T>[],
+        conflictPathsOrOptions: string[] | UpsertOptions<T>
+    ): Promise<InsertResult> {
+        return await this.repository.upsert(entityOrEntities, conflictPathsOrOptions);
     }
 }
