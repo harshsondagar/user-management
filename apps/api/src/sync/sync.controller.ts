@@ -22,6 +22,8 @@ export class SyncController {
     @RequireEntitlement('scrape_requests')
     @Post('run')
     async run(@currentUser() user: User, @Query('q') q: string) {
+        console.log("came here");
+
         const job = await this.scrapeProducer.triggerScrape(q, user.id)
 
         return { jobId: job.id, status: 'queued' };

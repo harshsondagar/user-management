@@ -50,5 +50,7 @@ export class EntitlementGuard implements CanActivate {
         response.setHeader('X-RateLimit-Remaining', result.remaining);
 
         return true;
+
+
     }
 }

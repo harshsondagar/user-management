@@ -1,8 +1,7 @@
-import { Controller, Headers, HttpStatus, Post, Req, Res } from "@nestjs/common";
+import { Controller, Headers, HttpStatus, Post, Req, Res, type RawBodyRequest } from "@nestjs/common";
+import type { Request, Response } from "express";
 import { StripeWebhookService } from "./stripe-webhook.service";
 import { Public } from "../common/decorator/public-decoretor";
-import type { Request, Response } from "express";
-
 
 @Controller('webhooks')
 export class StripeWebhookController {
@@ -11,15 +10,23 @@ export class StripeWebhookController {
     @Public()
     @Post('stripe')
     async handleStripeWebhook(
-        @Req() req: Request,
+        @Req() req: RawBodyRequest<Request>,
         @Res() res: Response,
         @Headers('stripe-signature') signature: string,
     ) {
+
+
+        if (!req.rawBody) {
+            console.log("came ehree", req.rawBody);
+
+            res.status(HttpStatus.INTERNAL_SERVER_ERROR).json({ error: 'Raw body unavailable' });
+            return;
+        }
+
         try {
-            await this.webhookService.processWebhook(req.body, signature);
-            res.status(HttpStatus.OK).json({ received: true }); // MUST respond fast — Stripe times out otherwise
+            await this.webhookService.processWebhook(req.rawBody, signature);
+            res.status(HttpStatus.OK).json({ received: true });
         } catch (err: any) {
-            // signature verification failure, or any other rejection — tell Stripe clearly
             res.status(HttpStatus.BAD_REQUEST).json({ error: err.message });
         }
     }

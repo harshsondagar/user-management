@@ -13,10 +13,9 @@ import express from 'express';
 async function bootstrap() {
 
   const app = await NestFactory.create<NestExpressApplication>(AppModule, {
+    rawBody: true,
     logger: WinstonModule.createLogger(getWinstonConfig('api')),
   });
-
-  app.use('/webhooks/stripe', express.raw({ type: 'application/json' }));
 
   app.enableCors({
     origin: true,

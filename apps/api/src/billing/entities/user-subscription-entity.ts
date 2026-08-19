@@ -40,6 +40,9 @@ export class UserSubscription {
     currentPeriodEnd?: Date | null;
 
     @Column({ type: 'timestamptz', nullable: true })
+    graceStartedAt?: Date | null;
+
+    @Column({ type: 'timestamptz', nullable: true })
     canceledAt?: Date | null;
 
     @CreateDateColumn({ type: 'timestamptz' })

@@ -1,4 +1,3 @@
-// apps/api/src/billing/webhook/webhook.module.ts
 import { Module } from '@nestjs/common';
 import { BullModule } from '@nestjs/bullmq';
 import { TypeOrmModule } from '@nestjs/typeorm';
@@ -21,6 +20,14 @@ import { PaymentRepository } from '../billing/repositorys/payment.repository';
         TypeOrmModule.forFeature([StripeWebhookEvent, UserSubscription, Plan, Payment]),
     ],
     controllers: [StripeWebhookController],
-    providers: [StripeWebhookService, WebhookProducer, StripeEventProcessor, StripeWebhookRepository, UserSubscriptionRepository, PlanRepository, PaymentRepository],
+    providers: [
+        StripeWebhookService,
+        WebhookProducer,
+        StripeEventProcessor,
+        StripeWebhookRepository,
+        UserSubscriptionRepository,
+        PlanRepository,
+        PaymentRepository,
+    ],
 })
 export class WebhookModule { }

@@ -79,6 +79,13 @@ export class User {
 
     @Column({ type: 'varchar', nullable: true, unique: true })
     declare stripeCustomerId: string | null;
+
+    @Column({
+        type: 'varchar',
+        default: 'UTC',
+        nullable: false
+    })
+    timezone!: string;
 }
 
 

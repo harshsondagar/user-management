@@ -1,12 +1,10 @@
-import { HttpException, HttpStatus, Inject, Injectable, Logger } from "@nestjs/common";
-import { UserSubscriptionRepository } from "../repositorys/user-subscription.repository";
-import { EntitlementRepository } from "../repositorys/plan-entitlement.repository";
-import { FeatureRepository } from "../repositorys/feature.repository";
-import { UsageRepository } from "../repositorys/usage.repository";
-import { SubscriptionStatus } from "../entities/user-subscription-entity";
-import { InjectRedis } from '@nestjs-modules/ioredis'
-import { EntitlementPeriod } from "../entities/plan-entitlement-entity";
-import Redis from "ioredis";
+import { HttpException, HttpStatus, Injectable, Logger, OnModuleInit } from '@nestjs/common';
+import { UserSubscriptionRepository } from '../repositorys/user-subscription.repository';
+import { FeatureRepository } from '../repositorys/feature.repository';
+import { UsageRepository } from '../repositorys/usage.repository';
+import { DateTime } from 'luxon';
+import Redis from 'ioredis';
+import { InjectRedis } from '@nestjs-modules/ioredis';
 
 export interface EntitlementCheckResult {
     allowed: boolean;
@@ -14,123 +12,103 @@ export interface EntitlementCheckResult {
     used: number;
     remaining: number;
     periodEnd: Date;
+    periodStart: Date;
+    redisKey: string;
 }
 
-@Injectable()
-export class EntitlementService {
+type Period = 'daily' | 'monthly' | 'lifetime';
 
-    private readonly logger = new Logger(EntitlementService.name)
+const USAGE_LUA = `
+local current = redis.call('INCR', KEYS[1])
+if current == 1 and tonumber(ARGV[2]) > 0 then
+  redis.call('EXPIRE', KEYS[1], ARGV[2])
+end
+if current > tonumber(ARGV[1]) then
+  redis.call('DECR', KEYS[1])
+  return {0, tonumber(ARGV[1])}
+end
+return {1, current}
+`;
+
+@Injectable()
+export class EntitlementService implements OnModuleInit {
+    private readonly logger = new Logger(EntitlementService.name);
+
     constructor(
         private readonly subRepo: UserSubscriptionRepository,
-        private readonly entitlementRepo: EntitlementRepository,
         private readonly featureRepo: FeatureRepository,
         private readonly usageRepo: UsageRepository,
         @InjectRedis() private readonly redis: Redis,
     ) { }
 
+    onModuleInit() {
+        this.redis.defineCommand('usageIncr', { numberOfKeys: 1, lua: USAGE_LUA });
+    }
+
+    private async getActiveEntitlement(userId: string, featureKey: string) {
+        const row = await this.subRepo
+            .createQueryBuilder('us')
+            .innerJoin('us.plan', 'p')
+            .innerJoin('p.entitlements', 'pe')
+            .innerJoin('pe.feature', 'f')
+            .innerJoin('us.user', 'u')
+            .select([
+                'pe.valueLimit AS "valueLimit"',
+                'pe.period AS period',
+                'u.timezone AS timezone',
+                'f.id AS "featureId"',
+            ])
+            .where('us.userId = :userId', { userId })
+            .andWhere('us.status = :status', { status: 'active' })
+            .andWhere('f.key = :featureKey', { featureKey })
+            .getRawOne();
+
+        return row ?? null;
+    }
+
     async checkAndConsume(userId: string, featureKey: string): Promise<EntitlementCheckResult> {
-
-        const subscription = await this.subRepo.findOne({
-            where: { userId, status: SubscriptionStatus.ACTIVE },
-        });
-
-        if (!subscription) {
-            throw new HttpException('No active subscription found', HttpStatus.FORBIDDEN);
-        }
-
-        const feature = await this.featureRepo.findOne({ where: { key: featureKey } });
-        if (!feature) {
-            throw new HttpException(`Unknown feature: ${featureKey}`, HttpStatus.INTERNAL_SERVER_ERROR);
-        }
-
-        const entitlement = await this.entitlementRepo.findOne({
-            where: { planId: subscription.planId, featureId: feature.id },
-        });
-
+        const entitlement = await this.getActiveEntitlement(userId, featureKey);
         if (!entitlement) {
-            throw new HttpException(`Your plan does not include access to this feature`, HttpStatus.FORBIDDEN);
+            throw new HttpException('No active plan entitlement found', HttpStatus.PAYMENT_REQUIRED);
         }
 
-        const { periodStart, periodEnd, redisKey } = this.computePeriodWindow(userId, feature.id, entitlement.period);
+        const { valueLimit: limit, period, timezone, featureId } = entitlement;
+        const { start, end } = this.computeWindow(timezone, period);
 
-
-        try {
-
-            // Atomic increment — Redis INCR is safe under concurrent requests, no race condition
-            const currentCount = await this.redis.get(redisKey);
-
-            if (currentCount && parseInt(currentCount) >= entitlement.valueLimit) {
-                return {
-                    allowed: false,
-                    limit: entitlement.valueLimit,
-                    used: parseInt(currentCount),
-                    remaining: 0,
-                    periodEnd,
-                };
-            }
-
-            const newCount = await this.incrementRedisCounter(redisKey, periodEnd);
-
-            if (newCount > entitlement.valueLimit) {
-                // over limit — compensate by decrementing back, since we already incremented
-                await this.redis.decr(redisKey);
-                return { allowed: false, limit: entitlement.valueLimit, used: entitlement.valueLimit, remaining: 0, periodEnd };
-            }
-
-            // fire-and-forget durable mirror to Postgres — don't block the request on this
-            this.syncToPostgres(userId, feature.id, periodStart, periodEnd, newCount).catch(() => {
-                // logged inside syncToPostgres; a Postgres mirror failure shouldn't fail the actual request,
-                // since Redis is the source of truth for enforcement — Postgres is just for reporting/audit
-            });
-
-            return {
-                allowed: true,
-                limit: entitlement.valueLimit,
-                used: newCount,
-                remaining: entitlement.valueLimit - newCount,
-                periodEnd,
-            };
-
-        } catch (error) {
-            this.logger.error(`Redis unavailable during entitlement check for user ${userId}: ${(error as Error).message}`);
-            return { allowed: true, limit: entitlement.valueLimit, used: -1, remaining: -1, periodEnd }; // -1 signals "unknown, degraded mode"
-        }
-    }
-
-    private computePeriodWindow(userId: string, featureId: string, period: EntitlementPeriod) {
-        const now = new Date();
-        let periodStart: Date;
-        let periodEnd: Date;
-        let periodKey: string;
-
-        if (period === EntitlementPeriod.DAILY) {
-            periodStart = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-            periodEnd = new Date(periodStart);
-            periodEnd.setDate(periodEnd.getDate() + 1);
-            periodKey = periodStart.toISOString().slice(0, 10); // YYYY-MM-DD
-        } else if (period === EntitlementPeriod.MONTHLY) {
-            periodStart = new Date(now.getFullYear(), now.getMonth(), 1);
-            periodEnd = new Date(now.getFullYear(), now.getMonth() + 1, 1);
-            periodKey = periodStart.toISOString().slice(0, 7); // YYYY-MM
-        } else {
-            // LIFETIME — no reset ever
-            periodStart = new Date(0);
-            periodEnd = new Date('9999-12-31');
-            periodKey = 'lifetime';
-        }
-
+        const periodKey =
+            period === 'daily' ? DateTime.fromJSDate(start).toFormat('yyyy-LL-dd') :
+                period === 'monthly' ? DateTime.fromJSDate(start).toFormat('yyyy-LL') : 'lifetime';
         const redisKey = `usage:${userId}:${featureId}:${periodKey}`;
-        return { periodStart, periodEnd, redisKey };
+        const ttlSeconds = period === 'lifetime' ? 0 : Math.max(1, Math.ceil((end.getTime() - Date.now()) / 1000));
+
+        const [allowedFlag, used] = (await (this.redis as any).usageIncr(redisKey, limit, ttlSeconds)) as [number, number];
+
+        if (allowedFlag === 0) {
+            return { allowed: false, used, limit, remaining: 0, periodEnd: end, periodStart: start, redisKey };
+        }
+
+        // Fire-and-forget mirror — Redis is already source of truth, this is reporting/audit only.
+        this.syncToPostgres(userId, featureId, start, end, used).catch((err) => {
+            this.logger.error(`usage_counter mirror failed for user=${userId} feature=${featureId}`, err);
+        });
+
+        return { allowed: true, used, limit, remaining: limit - used, periodEnd: end, periodStart: start, redisKey };
     }
 
-    private async incrementRedisCounter(redisKey: string, periodEnd: Date): Promise<number> {
-        const next = await this.redis.incr(redisKey); // genuinely atomic, no race
-        if (next === 1) {
-            // only set TTL on the first increment of this key, avoid resetting TTL on every hit
-            const ttlSeconds = Math.ceil((periodEnd.getTime() - Date.now()) / 1000);
-            await this.redis.expire(redisKey, ttlSeconds);
+    private computeWindow(timezone: string, period: Period): { start: Date; end: Date } {
+        const now = DateTime.now().setZone(timezone || 'UTC');
+        if (period === 'daily') {
+            const start = now.startOf('day');
+            return { start: start.toUTC().toJSDate(), end: start.plus({ days: 1 }).toUTC().toJSDate() };
         }
-        return next;
+        if (period === 'monthly') {
+            const start = now.startOf('month');
+            return { start: start.toUTC().toJSDate(), end: start.plus({ months: 1 }).toUTC().toJSDate() };
+        }
+        return {
+            start: DateTime.fromISO('1970-01-01T00:00:00Z').toJSDate(),
+            end: DateTime.fromISO('9999-12-31T00:00:00Z').toJSDate(),
+        };
     }
 
     private async syncToPostgres(userId: string, featureId: string, periodStart: Date, periodEnd: Date, count: number) {
@@ -140,4 +118,7 @@ export class EntitlementService {
         );
     }
 
+    async release(redisKey: string): Promise<void> {
+        await this.redis.decr(redisKey);
+    }
 }
