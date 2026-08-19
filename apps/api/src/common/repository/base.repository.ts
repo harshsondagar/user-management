@@ -7,11 +7,12 @@ import {
     InsertResult,
     ObjectLiteral,
     Repository,
+    SelectQueryBuilder,
     UpsertOptions,
 } from 'typeorm';
 import { QueryDeepPartialEntity } from 'typeorm/browser';
 
-export interface BaseInterfaceRepository<T> {
+export interface BaseInterfaceRepository<T extends ObjectLiteral> {
     create(data: DeepPartial<T>): Promise<T>;
     createMany(data: DeepPartial<T>[]): Promise<T[]>
     save(data: DeepPartial<T>): Promise<T>
@@ -32,6 +33,7 @@ export interface BaseInterfaceRepository<T> {
         entityOrEntities: QueryDeepPartialEntity<T> | QueryDeepPartialEntity<T>[],
         conflictPathsOrOptions: string[] | UpsertOptions<T>
     ): Promise<InsertResult>;
+    createQueryBuilder(alias: string): SelectQueryBuilder<T>;
 }
 
 export abstract class BaseRepository<T extends ObjectLiteral> implements BaseInterfaceRepository<T> {
@@ -40,6 +42,9 @@ export abstract class BaseRepository<T extends ObjectLiteral> implements BaseInt
 
     }
 
+    createQueryBuilder(alias: string): SelectQueryBuilder<T> {
+        return this.repository.createQueryBuilder(alias);
+    }
     async create(data: DeepPartial<T>): Promise<T> {
         const entity = this.repository.create(data);
         return this.repository.save(entity);
@@ -149,10 +154,10 @@ export abstract class BaseRepository<T extends ObjectLiteral> implements BaseInt
         await this.repository.delete(where as any);
     }
 
-    async upsert(
-        entityOrEntities: QueryDeepPartialEntity<T> | QueryDeepPartialEntity<T>[],
+    async upsert(entityOrEntities: QueryDeepPartialEntity<T> | QueryDeepPartialEntity<T>[],
         conflictPathsOrOptions: string[] | UpsertOptions<T>
     ): Promise<InsertResult> {
         return await this.repository.upsert(entityOrEntities, conflictPathsOrOptions);
     }
+
 }

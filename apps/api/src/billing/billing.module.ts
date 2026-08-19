@@ -18,6 +18,12 @@ import { BillingController } from './billing.controller';
 import { BillingService } from './billing.service';
 import { UserRepository } from '../user/user.repository';
 import { User } from '../user/entity/user-entity';
+import { UserSubscriptionRepository } from './repositorys/user-subscription.repository';
+import { SubscriptionExpiryJob } from '../webhooks/subscription-expiry.processor';
+import { RenewalTokenRepository } from './repositorys/renewal-token.repository';
+import { MailProducer } from '../mail/mail-producer';
+import { RenewalToken } from './entities/renewalToken-entity';
+import { BullModule } from '@nestjs/bullmq';
 
 @Global()
 @Module({
@@ -30,8 +36,12 @@ import { User } from '../user/entity/user-entity';
             StripeWebhookEvent,
             UsageCounter,
             Payment,
-            User
+            User,
+            RenewalToken
         ]),
+        BullModule.registerQueue({
+            name: 'send-mail'
+        })
     ],
 
     providers: [
@@ -52,9 +62,13 @@ import { User } from '../user/entity/user-entity';
         UserRepository,
         BillingService,
         PlanRepository,
+        UserSubscriptionRepository,
         EntitlementRepository,
         FeatureRepository,
         PaymentRepository,
+        SubscriptionExpiryJob,
+        RenewalTokenRepository,
+        MailProducer
     ],
     controllers: [BillingController],
     exports: [TypeOrmModule, 'STRIPE_CLIENT'],

@@ -75,6 +75,7 @@
     "express": "^5.2.1",
     "ioredis": "^5.11.1",
     "keyv": "^5.6.0",
+    "luxon": "^3.7.2",
     "mongoose": "^9.8.1",
     "nest-winston": "^1.10.2",
     "nodemailer": "^9.0.3",

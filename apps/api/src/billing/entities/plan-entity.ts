@@ -21,6 +21,12 @@ export class Plan {
     @OneToMany(() => PlanEntitlement, (entitlement) => entitlement.plan)
     entitlements!: PlanEntitlement[];
 
+    @Column({ type: 'int', default: 0 })
+    rank!: number;
+
+    @Column({ type: 'int', default: 0 })
+    gracePeriodDays!: number;
+
     @CreateDateColumn({ type: 'timestamptz' })
     createdAt!: Date;
 
