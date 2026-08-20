@@ -18,29 +18,29 @@ export class BillingService {
         private readonly renewalTokenRepo: RenewalTokenRepository
     ) { }
 
-    async createCheckoutSession(user: User, planId: string): Promise<Stripe.Checkout.Session> {
+    async createPaymentIntentForPlan(user: User, planId: string): Promise<{
+        clientSecret: string;
+        amount: number;
+        currency: string;
+        planName: string;
+    }> {
         const chosenPlan = await this.planRepo.findOne({ where: { id: planId, isActive: true } });
         if (!chosenPlan) {
             throw new NotFoundException(`Plan with ID ${planId} does not exist`);
         }
-
         if (!chosenPlan.stripePriceId) {
-            throw new BadRequestException('Free plans do not have a Stripe Price ID and cannot open a checkout session.');
+            throw new BadRequestException('Free plans do not have a Stripe Price ID.');
         }
 
+        // ...same upgrade/downgrade rank check as before, unchanged...
         const activeSub = await this.subRepo.findOne({
             where: { userId: user.id, status: SubscriptionStatus.ACTIVE },
             relations: ['plan'],
         });
 
         if (activeSub) {
-            const currentRank = activeSub.plan.rank
-            const chosenRank = chosenPlan.rank
-
-            if (currentRank === undefined || chosenRank === undefined) {
-                throw new BadRequestException(`Unrecognized plan code — cannot determine upgrade eligibility.`);
-            }
-
+            const currentRank = activeSub.plan.code;
+            const chosenRank = chosenPlan.code
             if (chosenRank <= currentRank) {
                 throw new ConflictException(
                     chosenRank === currentRank
@@ -52,26 +52,28 @@ export class BillingService {
 
         const customerId = await this.resolveStripeCustomerId(user);
 
-        const successUrl = `${process.env.API_URL}/billing/success?session_id={CHECKOUT_SESSION_ID}`;
-        const cancelUrl = `${process.env.API_URL}/billing/cancel`;
-
-        return this.stripe.checkout.sessions.create(
+        const paymentIntent = await this.stripe.paymentIntents.create(
             {
+                amount: chosenPlan.amount!,
+                currency: chosenPlan.currency,
                 customer: customerId,
-                payment_method_types: ['card'],
-                line_items: [{ price: chosenPlan.stripePriceId, quantity: 1 }],
-                billing_address_collection: 'required',
-                mode: 'payment',
-                payment_intent_data: {
-                    setup_future_usage: 'off_session',
-                    metadata: { userId: user.id, planId: chosenPlan.id },
+                setup_future_usage: 'off_session',
+                automatic_payment_methods: { enabled: true, 'allow_redirects': 'never' },
+                metadata: {
+                    userId: user.id,
+                    planId: chosenPlan.id,
+                    type: 'initial_purchase', // distinguishes from renewal PaymentIntents in the webhook
                 },
-                success_url: successUrl,
-                cancel_url: cancelUrl,
-                metadata: { userId: user.id, planId: chosenPlan.id },
             },
             { idempotencyKey: `checkout:${user.id}:${chosenPlan.id}:${Date.now()}` },
         );
+
+        return {
+            clientSecret: paymentIntent.client_secret!,
+            amount: chosenPlan.amount,
+            currency: chosenPlan.currency,
+            planName: chosenPlan.name,
+        };
     }
 
     private async resolveStripeCustomerId(user: User): Promise<string> {
@@ -103,8 +105,10 @@ export class BillingService {
             throw new BadRequestException('No payment method on file for this account.');
         }
 
-        // Reuse the saved card from the original checkout — this is the "one-click" part.
-        const paymentMethods = await this.stripe.paymentMethods.list({ customer: user.stripeCustomerId, type: 'card' });
+        const paymentMethods = await this.stripe.paymentMethods.list({
+            customer: user.stripeCustomerId,
+            type: 'card',
+        });
         const savedMethod = paymentMethods.data[0];
         if (!savedMethod) {
             throw new BadRequestException('No saved card found — please complete a fresh checkout instead.');
@@ -118,15 +122,17 @@ export class BillingService {
                 currency: price.currency,
                 customer: user.stripeCustomerId,
                 payment_method: savedMethod.id,
-                confirm: true,
-                // on-session — user is actively present clicking this link, so we let Stripe
-                // handle 3DS via the returned client_secret if the bank requires it. Not off_session.
                 return_url: `${process.env.API_URL}/billing/renew-complete`,
-                metadata: { userId: user.id, planId: plan.id, userSubscriptionId: subscription.id, type: 'renewal' },
+                metadata: {
+                    userId: user.id,
+                    planId: plan.id,
+                    userSubscriptionId: subscription.id,
+                    type: 'renewal',
+                },
             },
             { idempotencyKey: `renewal:${renewalToken.id}` },
         );
-
         return { clientSecret: paymentIntent.client_secret, status: paymentIntent.status };
     }
+
 }

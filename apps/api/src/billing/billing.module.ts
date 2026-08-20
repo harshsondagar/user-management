@@ -24,6 +24,7 @@ import { RenewalTokenRepository } from './repositorys/renewal-token.repository';
 import { MailProducer } from '../mail/mail-producer';
 import { RenewalToken } from './entities/renewalToken-entity';
 import { BullModule } from '@nestjs/bullmq';
+import { BillingViewController } from './billing-view.controller';
 
 @Global()
 @Module({
@@ -70,7 +71,7 @@ import { BullModule } from '@nestjs/bullmq';
         RenewalTokenRepository,
         MailProducer
     ],
-    controllers: [BillingController],
+    controllers: [BillingController, BillingViewController],
     exports: [TypeOrmModule, 'STRIPE_CLIENT'],
 })
 export class BillingModule { }

@@ -26,16 +26,10 @@ export class MailProducer {
         return this.queue.add(MailJobName.WEEKLY_ADMIN_REPORT, { adminEmail, newUsersCount, reportData }, this.defaultOpts)
     }
     async addRenewalFinalNoticeMailJob(email: string, firstName: string, renewalUrl: string, graceEnd: Date) {
-        console.log(MailJobName.RENEWAL_FINAL_NOTICE);
 
         return this.queue.add(
             MailJobName.RENEWAL_FINAL_NOTICE,
-            {
-                email: String(email),
-                firstName: String(firstName),
-                renewalUrl: String(renewalUrl),
-                graceEnd: graceEnd.toISOString()
-            },
+            { email, firstName, renewalUrl, graceEnd: graceEnd.toISOString() },
             this.defaultOpts,
         );
     }

@@ -52,7 +52,9 @@ export class SubscriptionExpiryJob {
             await this.subRepo.update(sub.id, { currentPeriodEnd: graceEnd, graceStartedAt: new Date() });
 
             const token = await this.renewalTokenRepo.generate(sub.userId, sub.id);
-            const renewalUrl = `${process.env.API_URL}/billing/renew?token=${token}`;
+            const renewalUrl = `${process.env.API_URL}/checkout.html?token=${token}`;
+            console.log(renewalUrl);
+
 
             await this.mailProducer.addRenewalFinalNoticeMailJob(
                 user.email,
@@ -69,7 +71,7 @@ export class SubscriptionExpiryJob {
             currentPeriodEnd: new Date('9999-12-31'),
         });
 
-        await this.mailProducer.addDowngradedToFreeMailJob(user.email, user.email.split('@')[0]);
+        await this.mailProducer.addDowngradedToFreeMailJob(user.email, user.email.split('@')[0])
 
     }
 }

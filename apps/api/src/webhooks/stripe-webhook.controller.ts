@@ -17,8 +17,6 @@ export class StripeWebhookController {
 
 
         if (!req.rawBody) {
-            console.log("came ehree", req.rawBody);
-
             res.status(HttpStatus.INTERNAL_SERVER_ERROR).json({ error: 'Raw body unavailable' });
             return;
         }
