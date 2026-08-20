@@ -24,6 +24,12 @@ export class Plan {
     @Column({ type: 'int', default: 0 })
     rank!: number;
 
+    @Column({ type: 'int' })
+    amount!: number;
+
+    @Column({ type: 'varchar', length: 3, default: 'inr' })
+    currency!: string;
+
     @Column({ type: 'int', default: 0 })
     gracePeriodDays!: number;
 

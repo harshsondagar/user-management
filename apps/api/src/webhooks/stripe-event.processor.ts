@@ -35,24 +35,52 @@ export class StripeEventProcessor extends WorkerHost {
         const { eventId, eventType, data } = job.data as StripeJobData;
 
         switch (eventType) {
-            case 'checkout.session.completed':
-                await this.handleCheckoutCompleted(data); // no try/catch here — let it throw
-                break;
             case 'payment_intent.payment_failed':
                 this.logger.warn(`payment_intent.payment_failed: pi=${data.id}`);
                 break;
             case 'payment_intent.succeeded': {
+                const type = data.metadata?.type;
+                if (type === 'initial_purchase') {
+                    await this.handleInitialPurchaseSucceeded(data);
+                }
                 if (data.metadata?.type === 'renewal') {
                     await this.handleRenewalSucceeded(data);
                 }
                 break;
             }
+
             default:
                 break;
         }
 
         // Only reached if the handler above completed without throwing.
         await this.webhookEventRepo.updateBy({ stripeEventId: eventId }, { processedAt: new Date() });
+    }
+
+    private async handleInitialPurchaseSucceeded(pi: any) {
+        const userId = pi.metadata?.userId;
+        const planId = pi.metadata?.planId;
+        if (!userId || !planId) {
+            this.logger.error(`payment_intent.succeeded (initial_purchase) missing metadata: pi=${pi.id}`);
+            return;
+        }
+
+        const periodEnd = new Date();
+        periodEnd.setDate(periodEnd.getDate() + DAYS_PER_CYCLE);
+
+        const newSubscription = await this.subRepo.transitionToNewPlan(userId, planId, {
+            stripeSubscriptionId: null,
+            currentPeriodEnd: periodEnd,
+        });
+
+        await this.paymentRepo.create({
+            userSubscriptionId: newSubscription.id,
+            stripeInvoiceId: pi.id,
+            amount: pi.amount,
+            currency: pi.currency,
+            status: PaymentStatus.SUCCEEDED,
+            paidAt: new Date(),
+        });
     }
 
     private async handleCheckoutCompleted(session: any) {

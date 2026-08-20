@@ -1,4 +1,4 @@
-import { Controller, Post, Body, Req, UseGuards } from '@nestjs/common';
+import { Controller, Post, Body, Req, UseGuards, Get, Query } from '@nestjs/common';
 import { BillingService } from './billing.service';
 import { JwtGuard } from '../auth/gurads/jwt.guard';
 import { currentUser } from '../common/decorator/currentUser-decorator';
@@ -15,14 +15,15 @@ export class BillingController {
         @Body('planId') planId: string,
         @currentUser() user: User,
     ) {
-        const session = await this.billingService.createCheckoutSession(user, planId);
-        return { url: session.url };
+        return await this.billingService.createPaymentIntentForPlan(user, planId);
+
     }
 
     @Public()
     @Post('renew')
     async renewSubscription(@Body('token') token: string) {
-        const result = await this.billingService.renewViaToken(token);
-        return result; // { clientSecret } for the frontend to confirm via Stripe.js if 3DS is required
+        console.log("request came here");
+
+        return this.billingService.renewViaToken(token);
     }
 }

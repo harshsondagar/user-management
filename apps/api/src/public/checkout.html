@@ -1,0 +1,244 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Complete your payment</title>
+    <script src="https://js.stripe.com/v3/"></script>
+    <style>
+      body {
+        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+        background: #0f1115;
+        color: #e5e7eb;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        min-height: 100vh;
+        margin: 0;
+      }
+      .card {
+        background: #171a21;
+        border: 1px solid #262b36;
+        border-radius: 10px;
+        padding: 32px;
+        width: 100%;
+        max-width: 420px;
+      }
+      h1 {
+        font-size: 18px;
+        margin: 0 0 4px 0;
+      }
+      .plan-name {
+        color: #9ca3af;
+        font-size: 14px;
+        margin: 0 0 24px 0;
+      }
+      #payment-element {
+        margin-bottom: 20px;
+      }
+      button {
+        width: 100%;
+        background: #f9fafb;
+        color: #111827;
+        border: none;
+        border-radius: 6px;
+        padding: 12px;
+        font-size: 15px;
+        font-weight: 600;
+        cursor: pointer;
+      }
+      button:disabled {
+        opacity: 0.6;
+        cursor: not-allowed;
+      }
+      #message {
+        margin-top: 16px;
+        font-size: 14px;
+        text-align: center;
+      }
+      #message.error {
+        color: #f87171;
+      }
+      #message.success {
+        color: #4ade80;
+      }
+      #spinner {
+        display: none;
+        text-align: center;
+        padding: 40px 0;
+        color: #9ca3af;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="card">
+      <div id="form-container">
+        <h1 id="title">Complete your payment</h1>
+        <p class="plan-name" id="plan-name"></p>
+        <div id="payment-element"></div>
+        <button id="submit">Pay now</button>
+        <div id="message"></div>
+      </div>
+      <div id="spinner">Loading…</div>
+    </div>
+
+    <script>
+      const STRIPE_PUBLISHABLE_KEY =
+        'pk_test_51U5frP966ZuhnSVFMZC7QUvjAzB33O7G9rzSY0rPspKMSUwauM02VH5QOVMdBDcUx5RxNld0hBWvnLRnRveI6X6E00BcOPBb8T'; // from Stripe Dashboard → API keys
+      const API_BASE = 'http://localhost:3000';
+
+      const params = new URLSearchParams(window.location.search);
+      const planId = params.get('planId'); // present for a fresh purchase
+      const token = params.get('token'); // present for a renewal link
+      const jwt = localStorage.getItem('jwt'); // however you're storing the logged-in user's token for manual testing
+      console.log(jwt);
+
+      const stripe = Stripe(STRIPE_PUBLISHABLE_KEY);
+      let elements;
+
+      async function init() {
+        if (!clientSecret) {
+          showMessage('Missing clientSecret from backend response', 'error');
+          document.getElementById('spinner').style.display = 'none';
+          return;
+        }
+
+        try {
+          elements = stripe.elements({
+            clientSecret: clientSecret,
+            appearance: { theme: 'night' },
+          });
+          const paymentElement = elements.create('payment');
+          paymentElement.mount('#payment-element');
+        } catch (stripeError) {
+          console.error('Stripe UI Mounting Error:', stripeError);
+          showMessage(
+            'Failed to load payment form: ' + stripeError.message,
+            'error',
+          );
+          document.getElementById('spinner').style.display = 'none';
+          return;
+        }
+
+        document.getElementById('spinner').style.display = 'block';
+        console.log('block the spinner');
+
+        document.getElementById('form-container').style.display = 'none';
+
+        let data;
+        try {
+          if (token) {
+            console.log(token);
+
+            // Renewal — no auth needed, token itself authenticates
+            const res = await fetch(`${API_BASE}/payments/renew`, {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+                Authorization: `Bearer ${jwt}`,
+              },
+              body: JSON.stringify({ token }),
+            });
+            const json = await res.json();
+            if (!res.ok)
+              throw new Error(
+                json.message || 'Renewal link is invalid or expired.',
+              );
+            data = json.data ?? json;
+            const clientSecret = data.clientSecret ?? json.clientSecret;
+          } else if (planId) {
+            // Fresh purchase — requires the logged-in user's JWT
+            const res = await fetch(`${API_BASE}/payments/checkout`, {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+                Authorization: `Bearer ${jwt}`,
+              },
+              body: JSON.stringify({ planId }),
+            });
+            const json = await res.json();
+            if (!res.ok)
+              throw new Error(json.message || 'Could not start checkout.');
+            data = json.data ?? json;
+          } else {
+            throw new Error('Missing planId or token in URL.');
+          }
+        } catch (err) {
+          showMessage(err.message, 'error');
+          document.getElementById('spinner').style.display = 'none';
+          return;
+        }
+
+        document.getElementById('plan-name').textContent = data.planName
+          ? `${data.planName} — ${(data.amount / 100).toFixed(2)} ${data.currency?.toUpperCase() ?? ''}`
+          : '';
+
+        // If the PaymentIntent already succeeded server-side (e.g. renewal confirmed instantly
+        // with no 3DS challenge), skip Elements entirely and just show success.
+        if (data.status === 'succeeded') {
+          showSuccess();
+          return;
+        }
+
+        elements = stripe.elements({
+          clientSecret: data.clientSecret,
+          appearance: { theme: 'night' },
+        });
+        const paymentElement = elements.create('payment');
+        paymentElement.mount('#payment-element');
+
+        document.getElementById('spinner').style.display = 'none';
+        document.getElementById('form-container').style.display = 'block';
+
+        document
+          .getElementById('submit')
+          .addEventListener('click', () => handleSubmit(data.clientSecret));
+      }
+
+      async function handleSubmit(clientSecret) {
+        const submitBtn = document.getElementById('submit');
+        submitBtn.disabled = true;
+        showMessage('Processing…', '');
+
+        // redirect: 'if_required' — Stripe.js shows any 3DS challenge as an inline modal
+        // and only navigates away for payment methods that genuinely require it (e.g. some bank redirects).
+        const { error, paymentIntent } = await stripe.confirmPayment({
+          elements,
+          clientSecret,
+          confirmParams: { return_url: window.location.href },
+          redirect: 'if_required',
+        });
+
+        if (error) {
+          showMessage(error.message, 'error');
+          submitBtn.disabled = false;
+          return;
+        }
+
+        if (paymentIntent && paymentIntent.status === 'succeeded') {
+          showSuccess();
+        } else {
+          // requires_payment_method, processing, etc.
+          showMessage(
+            `Payment status: ${paymentIntent?.status ?? 'unknown'}. Please try again.`,
+            'error',
+          );
+          submitBtn.disabled = false;
+        }
+      }
+
+      function showMessage(text, type) {
+        const el = document.getElementById('message');
+        el.textContent = text;
+        el.className = type;
+      }
+
+      function showSuccess() {
+        document.getElementById('form-container').innerHTML =
+          `<h1>You're all set 🎉</h1><p class="plan-name">Your subscription is now active.</p>`;
+      }
+
+      init();
+    </script>
+  </body>
+</html>

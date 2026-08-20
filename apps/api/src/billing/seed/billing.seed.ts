@@ -10,7 +10,6 @@ import { EntitlementRepository } from "../repositorys/plan-entitlement.repositor
 export class BillingSeedService implements OnApplicationBootstrap {
     private readonly logger = new Logger(BillingSeedService.name)
 
-
     constructor(
         private readonly planRepo: PlanRepository,
         private readonly featureRepo: FeatureRepository,

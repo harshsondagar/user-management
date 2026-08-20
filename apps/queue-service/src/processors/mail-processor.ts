@@ -35,6 +35,10 @@ export class MailProcessor extends WorkerHost {
                     return this.sendPasswordChangeOtpMail(job)
                 case MailJobName.WEEKLY_ADMIN_REPORT:
                     return this.sendWeeklyAdminReportMail(job)
+                case MailJobName.RENEWAL_FINAL_NOTICE:
+                    return this.sendRenewalNoticeMail(job)
+                case MailJobName.DOWNGRADED_TO_FREE:
+                    return this.sendDownGradeToFreeMail(job)
                 default:
                     const _exhaustive: never = job.name;
                     throw new Error(`Unhandled mail job name: ${_exhaustive}`);
@@ -57,6 +61,16 @@ export class MailProcessor extends WorkerHost {
     async sendWeeklyAdminReportMail(job: Job) {
         const { adminEmail, newUsersCount, reportData } = job.data;
         return this.mailService.sendReportMail(adminEmail, newUsersCount, reportData)
+    }
+
+    async sendRenewalNoticeMail(job: Job) {
+        const { email, firstName, renewalUrl, graceEnd } = job.data;
+        return this.mailService.sendRenewalFinalNoticeMail(email, firstName, renewalUrl, new Date(graceEnd).toDateString());
+    }
+
+    async sendDownGradeToFreeMail(job: Job) {
+        const { email, firstName } = job.data;
+        return this.mailService.sendDowngradedToFreeMail(email, firstName, process.env.APP_URL!);
     }
 
     @OnWorkerEvent('completed')
