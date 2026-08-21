@@ -19,7 +19,7 @@ export async function registerAndVerifyUser(
 
 
 
-    await request(app.getHttpServer())
+    const res = await request(app.getHttpServer())
         .post('/auth/register')
         .send(registerDto)
         .expect(201);

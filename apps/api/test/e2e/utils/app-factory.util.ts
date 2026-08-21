@@ -9,6 +9,9 @@ import { Reflector } from '@nestjs/core';
 import { ResponseEnvelopeInterceptor } from '../../../src/common/interceptors/response-envelope.interceptor';
 import { NestExpressApplication } from '@nestjs/platform-express';
 import { join } from 'path';
+import { BillingSeedService } from "../../../src/billing/seed/billing.seed";
+import { BillingModule } from "../../../src/billing/billing.module";
+import { UserService } from "../../../src/user/user.service";
 
 jest.mock('@css-inline/css-inline', () => ({
     inline: (html: string) => html,
@@ -41,8 +44,13 @@ export async function createTestApp(
     process.env.REDIS_DB = workerId;
 
     const builder = Test.createTestingModule({ imports: [AppModule] })
-        .overrideProvider(SuperAdminSeed)
+        .overrideProvider(SuperAdminSeed,)
+        .useValue({ onModuleInit: () => Promise.resolve() })
+        .overrideProvider(BillingSeedService)
+        .useValue({ onModuleInit: () => Promise.resolve() })
+        .overrideProvider(BillingModule)
         .useValue({ onModuleInit: () => Promise.resolve() });
+
 
     if (bypassThrottler) {
         jest.spyOn(CustomThrottlerGuard.prototype, 'canActivate').mockResolvedValue(true);
@@ -52,6 +60,10 @@ export async function createTestApp(
     const moduleRef = await builder.compile();
 
     const app = moduleRef.createNestApplication<NestExpressApplication>();
+
+
+    const userService = app.get(UserService);
+    jest.spyOn(userService as any, 'assignFreePlan').mockResolvedValue(true);
 
     app.useStaticAssets(join(__dirname, '../../../public'));
     app.setBaseViewsDir(join(__dirname, '../../../../../views'));

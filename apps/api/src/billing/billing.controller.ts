@@ -16,14 +16,17 @@ export class BillingController {
         @currentUser() user: User,
     ) {
         return await this.billingService.createPaymentIntentForPlan(user, planId);
-
     }
 
     @Public()
     @Post('renew')
     async renewSubscription(@Body('token') token: string) {
-        console.log("request came here");
-
         return this.billingService.renewViaToken(token);
+    }
+
+    @Get('plans')
+    @UseGuards(JwtGuard)
+    async listPlans(@currentUser() user: User) {
+        return this.billingService.listPurchasablePlans(user);
     }
 }

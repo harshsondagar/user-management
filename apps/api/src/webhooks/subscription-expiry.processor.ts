@@ -1,10 +1,12 @@
-import { Injectable, Logger } from "@nestjs/common";
+import { Inject, Injectable, Logger } from "@nestjs/common";
 import { Cron, CronExpression } from "@nestjs/schedule";
 import { UserSubscriptionRepository } from "../billing/repositorys/user-subscription.repository";
 import { PlanRepository } from "../billing/repositorys/plan.repository";
 import { RenewalTokenRepository } from "../billing/repositorys/renewal-token.repository";
 import { UserRepository } from "../user/user.repository";
 import { MailProducer } from "../mail/mail-producer";
+import Stripe from "stripe"
+
 
 @Injectable()
 export class SubscriptionExpiryJob {
@@ -16,6 +18,7 @@ export class SubscriptionExpiryJob {
         private readonly renewalTokenRepo: RenewalTokenRepository,
         private readonly userRepo: UserRepository,
         private readonly mailProducer: MailProducer,
+        @Inject('STRIPE_CLIENT') private readonly stripe: Stripe,
     ) { }
 
     @Cron(CronExpression.EVERY_10_SECONDS) // swap to EVERY_15_MINUTES for tighter granularity
@@ -44,6 +47,9 @@ export class SubscriptionExpiryJob {
         const plan = await this.planRepo.findOneById(sub.planId);
         const user = await this.userRepo.findOneById(sub.userId);
 
+        const paymentMethods = await this.stripe.paymentMethods.list({ customer: user.stripeCustomerId!, type: 'card' });
+
+
         if (plan.gracePeriodDays > 0 && !sub.graceStartedAt) {
 
             const graceEnd = new Date(sub.currentPeriodEnd!);
@@ -51,18 +57,26 @@ export class SubscriptionExpiryJob {
 
             await this.subRepo.update(sub.id, { currentPeriodEnd: graceEnd, graceStartedAt: new Date() });
 
-            const token = await this.renewalTokenRepo.generate(sub.userId, sub.id);
-            const renewalUrl = `${process.env.API_URL}/checkout.html?token=${token}`;
-            console.log(renewalUrl);
-
-
-            await this.mailProducer.addRenewalFinalNoticeMailJob(
-                user.email,
-                user.email.split('@')[0],
-                renewalUrl,
-                graceEnd,
-            );
-            return;
+            if (paymentMethods.data.length > 0) {
+                // existing one-click renewal token flow
+                const token = await this.renewalTokenRepo.generate(sub.userId, sub.id);
+                const renewalUrl = `${process.env.API_URL}/checkout.html?token=${token}`;
+                await this.mailProducer.addRenewalFinalNoticeMailJob(
+                    user.email,
+                    user.email.split('@')[0],
+                    renewalUrl,
+                    graceEnd,
+                );
+            } else {
+                const checkoutUrl = `${process.env.API_URL}/checkout.html?planId=${sub.planId}`;
+                await this.mailProducer.addRenewalFinalNoticeMailJob(
+                    user.email,
+                    user.email.split('@')[0],
+                    checkoutUrl,
+                    graceEnd,
+                );
+            }
+            return
         }
 
         const freePlan = await this.planRepo.findOne({ where: { code: 'free' } });
