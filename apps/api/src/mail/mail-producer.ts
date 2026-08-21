@@ -25,4 +25,19 @@ export class MailProducer {
     async addWeeklyAdminReportMailJob(adminEmail: string, newUsersCount: number, reportData?: any) {
         return this.queue.add(MailJobName.WEEKLY_ADMIN_REPORT, { adminEmail, newUsersCount, reportData }, this.defaultOpts)
     }
+    async addRenewalFinalNoticeMailJob(email: string, firstName: string, renewalUrl: string, graceEnd: Date) {
+
+        return this.queue.add(
+            MailJobName.RENEWAL_FINAL_NOTICE,
+            { email, firstName, renewalUrl, graceEnd: graceEnd.toISOString() },
+            this.defaultOpts,
+        );
+    }
+    async addDowngradedToFreeMailJob(email: string, firstName: string) {
+        return this.queue.add(MailJobName.DOWNGRADED_TO_FREE, { email, firstName }, this.defaultOpts);
+    }
+    async addPaymentFailedMailJob(email: string, firstName: string, reason: string) {
+        return this.queue.add(MailJobName.PAYMENT_FAILED, { email, firstName, reason }, this.defaultOpts);
+    }
+
 }

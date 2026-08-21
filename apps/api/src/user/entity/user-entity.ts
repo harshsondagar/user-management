@@ -76,6 +76,16 @@ export class User {
 
     @DeleteDateColumn()
     declare deletedAt: Date;
+
+    @Column({ type: 'varchar', nullable: true, unique: true })
+    declare stripeCustomerId: string | null;
+
+    @Column({
+        type: 'varchar',
+        default: 'UTC',
+        nullable: false
+    })
+    timezone!: string;
 }
 
 

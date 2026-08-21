@@ -17,8 +17,8 @@ describe('Internal DLQ API (e2e)', () => {
         app = await createQueueTestApp();
         disableCronJobs(app);
         dataSource = app.get(DataSource);
+        jest.spyOn(console, 'log').mockImplementation(() => { });
         jest.spyOn(console, 'error').mockImplementation(() => { });
-
     });
 
     afterEach(async () => {
