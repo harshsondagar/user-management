@@ -8,6 +8,8 @@ import { PaymentStatus } from "../billing/entities/payment-entity";
 import * as Sentry from '@sentry/node';
 import { UserSubscriptionRepository } from "../billing/repositorys/user-subscription.repository";
 import { PaymentRepository } from "../billing/repositorys/payment.repository";
+import { UserRepository } from "../user/user.repository";
+import { MailProducer } from "../mail/mail-producer";
 
 export interface StripeJobData {
     eventId: string;
@@ -26,7 +28,9 @@ export class StripeEventProcessor extends WorkerHost {
         private readonly dataSource: DataSource,
         private readonly webhookEventRepo: StripeWebhookRepository,
         private readonly subRepo: UserSubscriptionRepository,
-        private readonly paymentRepo: PaymentRepository
+        private readonly userRepo: UserRepository,
+        private readonly paymentRepo: PaymentRepository,
+        private readonly mailProducer: MailProducer,
     ) {
         super();
     }
@@ -35,9 +39,6 @@ export class StripeEventProcessor extends WorkerHost {
         const { eventId, eventType, data } = job.data as StripeJobData;
 
         switch (eventType) {
-            case 'payment_intent.payment_failed':
-                this.logger.warn(`payment_intent.payment_failed: pi=${data.id}`);
-                break;
             case 'payment_intent.succeeded': {
                 const type = data.metadata?.type;
                 if (type === 'initial_purchase') {
@@ -46,6 +47,10 @@ export class StripeEventProcessor extends WorkerHost {
                 if (data.metadata?.type === 'renewal') {
                     await this.handleRenewalSucceeded(data);
                 }
+                break;
+            }
+            case 'payment_intent.payment_failed': {
+                await this.handlePaymentFailed(data);
                 break;
             }
 
@@ -68,49 +73,49 @@ export class StripeEventProcessor extends WorkerHost {
         const periodEnd = new Date();
         periodEnd.setDate(periodEnd.getDate() + DAYS_PER_CYCLE);
 
-        const newSubscription = await this.subRepo.transitionToNewPlan(userId, planId, {
-            stripeSubscriptionId: null,
-            currentPeriodEnd: periodEnd,
-        });
+        await this.dataSource.transaction(async (manager) => {
+            // Deactivate any existing active subscription, insert the new one —
+            // same logic as transitionToNewPlan, run against THIS transaction's manager
+            // so it's atomic together with the payment insert below.
+            await manager
+                .createQueryBuilder()
+                .update('user_subscriptions')
+                .set({ status: SubscriptionStatus.CANCELED, canceledAt: new Date() })
+                .where('userId = :userId AND status = :status', { userId, status: SubscriptionStatus.ACTIVE })
+                .execute();
 
-        await this.paymentRepo.create({
-            userSubscriptionId: newSubscription.id,
-            stripeInvoiceId: pi.id,
-            amount: pi.amount,
-            currency: pi.currency,
-            status: PaymentStatus.SUCCEEDED,
-            paidAt: new Date(),
+            const insertResult = await manager
+                .createQueryBuilder()
+                .insert()
+                .into('user_subscriptions')
+                .values({
+                    userId,
+                    planId,
+                    status: SubscriptionStatus.ACTIVE,
+                    stripeSubscriptionId: null,
+                    currentPeriodEnd: periodEnd,
+                })
+                .returning('id')
+                .execute();
+
+            const newSubscriptionId = insertResult.identifiers[0].id;
+
+            await manager
+                .createQueryBuilder()
+                .insert()
+                .into('payments')
+                .values({
+                    userSubscriptionId: newSubscriptionId,
+                    stripeInvoiceId: pi.id,
+                    amount: pi.amount,
+                    currency: pi.currency,
+                    status: PaymentStatus.SUCCEEDED,
+                    paidAt: new Date(),
+                })
+                .execute();
         });
     }
 
-    private async handleCheckoutCompleted(session: any) {
-        const userId = session.metadata?.userId;
-        const planId = session.metadata?.planId;
-
-        if (!userId || !planId) {
-            this.logger.error(`checkout.session.completed missing metadata: session=${session.id}`);
-            return;
-        }
-
-        const periodEnd = new Date();
-        periodEnd.setDate(periodEnd.getDate() + DAYS_PER_CYCLE);
-
-        const newSubscription = await this.subRepo.transitionToNewPlan(userId, planId, {
-            stripeSubscriptionId: null,
-            currentPeriodEnd: periodEnd,
-        });
-
-        if (session.payment_intent) {
-            await this.paymentRepo.create({
-                userSubscriptionId: newSubscription.id,
-                stripeInvoiceId: session.payment_intent,
-                amount: session.amount_total,
-                currency: session.currency,
-                status: PaymentStatus.SUCCEEDED,
-                paidAt: new Date(),
-            });
-        }
-    }
     private async handleRenewalSucceeded(pi: any) {
         const { userId, planId, userSubscriptionId } = pi.metadata;
         const periodEnd = new Date();
@@ -132,6 +137,27 @@ export class StripeEventProcessor extends WorkerHost {
             }).execute();
         });
     }
+
+    private async handlePaymentFailed(pi: any) {
+        const userId = pi.metadata?.userId;
+        const type = pi.metadata?.type;
+
+        if (!userId) {
+            this.logger.warn(`payment_intent.payment_failed with no userId metadata: pi=${pi.id}`);
+            return;
+        }
+
+        const user = await this.userRepo.findOneById(userId);
+        const reason = pi.last_payment_error?.message ?? 'Your payment could not be completed.';
+
+        if (type === 'renewal') {
+            await this.mailProducer.addPaymentFailedMailJob(user.email, user.email.split('@')[0], reason);
+        } else if (type === 'initial_purchase') {
+            this.logger.warn(`Initial purchase failed for user=${userId}: ${reason}`);
+        }
+    }
+
+
 
     @OnWorkerEvent('failed')
     onFailed(job: Job, error: Error) {

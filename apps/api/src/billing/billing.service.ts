@@ -28,9 +28,11 @@ export class BillingService {
         if (!chosenPlan) {
             throw new NotFoundException(`Plan with ID ${planId} does not exist`);
         }
-        if (!chosenPlan.stripePriceId) {
-            throw new BadRequestException('Free plans do not have a Stripe Price ID.');
+
+        if (chosenPlan.amount == null || chosenPlan.amount <= 0) {
+            throw new BadRequestException('Free plans cannot be purchased via checkout.');
         }
+
 
         // ...same upgrade/downgrade rank check as before, unchanged...
         const activeSub = await this.subRepo.findOne({
@@ -39,11 +41,9 @@ export class BillingService {
         });
 
         if (activeSub) {
-            const currentRank = activeSub.plan.code;
-            const chosenRank = chosenPlan.code
-            if (chosenRank <= currentRank) {
+            if (chosenPlan.rank <= activeSub.plan.rank) {
                 throw new ConflictException(
-                    chosenRank === currentRank
+                    chosenPlan.rank === activeSub.plan.rank
                         ? `You already have an active ${chosenPlan.name} subscription.`
                         : `You're already on ${activeSub.plan.name}. Downgrades aren't available via checkout.`,
                 );
@@ -57,8 +57,7 @@ export class BillingService {
                 amount: chosenPlan.amount!,
                 currency: chosenPlan.currency,
                 customer: customerId,
-                setup_future_usage: 'off_session',
-                automatic_payment_methods: { enabled: true, 'allow_redirects': 'never' },
+                payment_method_types: ['card', 'upi'],
                 metadata: {
                     userId: user.id,
                     planId: chosenPlan.id,
@@ -114,15 +113,16 @@ export class BillingService {
             throw new BadRequestException('No saved card found — please complete a fresh checkout instead.');
         }
 
-        const price = await this.stripe.prices.retrieve(plan.stripePriceId!);
 
         const paymentIntent = await this.stripe.paymentIntents.create(
             {
-                amount: price.unit_amount!,
-                currency: price.currency,
+                amount: plan.amount!,
+                currency: plan.currency,
                 customer: user.stripeCustomerId,
                 payment_method: savedMethod.id,
-                return_url: `${process.env.API_URL}/billing/renew-complete`,
+                payment_method_types: ['card'],
+                confirm: true,
+                return_url: `${process.env.APP_URL}/checkout.html`,
                 metadata: {
                     userId: user.id,
                     planId: plan.id,
@@ -133,6 +133,30 @@ export class BillingService {
             { idempotencyKey: `renewal:${renewalToken.id}` },
         );
         return { clientSecret: paymentIntent.client_secret, status: paymentIntent.status };
+    }
+
+    async listPurchasablePlans(user: User) {
+        const plans = await this.planRepo.findAll({ where: { isActive: true } });
+
+        const activeSub = await this.subRepo.findOne({
+            where: { userId: user.id, status: SubscriptionStatus.ACTIVE },
+            relations: ['plan'],
+        });
+        const currentRank = activeSub?.plan.rank ?? 0;
+
+        return plans
+            .filter((p) => p.amount > 0)
+            .sort((a, b) => a.rank - b.rank)
+            .map((p) => ({
+                id: p.id,
+                code: p.code,
+                name: p.name,
+                amount: p.amount,
+                currency: p.currency,
+                rank: p.rank,
+                isCurrent: p.rank === currentRank,
+                isDowngrade: p.rank < currentRank,
+            }));
     }
 
 }

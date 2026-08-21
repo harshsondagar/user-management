@@ -5,6 +5,7 @@ export enum MailJobName {
     WEEKLY_ADMIN_REPORT = 'weekly-admin-report',
     RENEWAL_FINAL_NOTICE = 'renewal-final-notice',
     DOWNGRADED_TO_FREE = 'downgraded-to-free',
+    PAYMENT_FAILED = 'payment-failed'
 }
 
 export enum UserRole {

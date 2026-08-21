@@ -84,59 +84,28 @@
 
     <script>
       const STRIPE_PUBLISHABLE_KEY =
-        'pk_test_51U5frP966ZuhnSVFMZC7QUvjAzB33O7G9rzSY0rPspKMSUwauM02VH5QOVMdBDcUx5RxNld0hBWvnLRnRveI6X6E00BcOPBb8T'; // from Stripe Dashboard → API keys
+        'pk_test_51U5frP966ZuhnSVFMZC7QUvjAzB33O7G9rzSY0rPspKMSUwauM02VH5QOVMdBDcUx5RxNld0hBWvnLRnRveI6X6E00BcOPBb8T';
       const API_BASE = 'http://localhost:3000';
 
       const params = new URLSearchParams(window.location.search);
-      const planId = params.get('planId'); // present for a fresh purchase
-      const token = params.get('token'); // present for a renewal link
-      const jwt = localStorage.getItem('jwt'); // however you're storing the logged-in user's token for manual testing
-      console.log(jwt);
+      const planId = params.get('planId');
+      const token = params.get('token');
+      const jwt = localStorage.getItem('jwt');
 
       const stripe = Stripe(STRIPE_PUBLISHABLE_KEY);
       let elements;
 
       async function init() {
-        if (!clientSecret) {
-          showMessage('Missing clientSecret from backend response', 'error');
-          document.getElementById('spinner').style.display = 'none';
-          return;
-        }
-
-        try {
-          elements = stripe.elements({
-            clientSecret: clientSecret,
-            appearance: { theme: 'night' },
-          });
-          const paymentElement = elements.create('payment');
-          paymentElement.mount('#payment-element');
-        } catch (stripeError) {
-          console.error('Stripe UI Mounting Error:', stripeError);
-          showMessage(
-            'Failed to load payment form: ' + stripeError.message,
-            'error',
-          );
-          document.getElementById('spinner').style.display = 'none';
-          return;
-        }
-
         document.getElementById('spinner').style.display = 'block';
-        console.log('block the spinner');
-
         document.getElementById('form-container').style.display = 'none';
 
         let data;
         try {
           if (token) {
-            console.log(token);
-
-            // Renewal — no auth needed, token itself authenticates
+            // Renewal — token itself authenticates, no JWT needed
             const res = await fetch(`${API_BASE}/payments/renew`, {
               method: 'POST',
-              headers: {
-                'Content-Type': 'application/json',
-                Authorization: `Bearer ${jwt}`,
-              },
+              headers: { 'Content-Type': 'application/json' },
               body: JSON.stringify({ token }),
             });
             const json = await res.json();
@@ -145,9 +114,9 @@
                 json.message || 'Renewal link is invalid or expired.',
               );
             data = json.data ?? json;
-            const clientSecret = data.clientSecret ?? json.clientSecret;
           } else if (planId) {
-            // Fresh purchase — requires the logged-in user's JWT
+            if (!jwt)
+              throw new Error('Not logged in — set localStorage.jwt first.');
             const res = await fetch(`${API_BASE}/payments/checkout`, {
               method: 'POST',
               headers: {
@@ -173,19 +142,38 @@
           ? `${data.planName} — ${(data.amount / 100).toFixed(2)} ${data.currency?.toUpperCase() ?? ''}`
           : '';
 
-        // If the PaymentIntent already succeeded server-side (e.g. renewal confirmed instantly
-        // with no 3DS challenge), skip Elements entirely and just show success.
         if (data.status === 'succeeded') {
+          document.getElementById('spinner').style.display = 'none';
+          document.getElementById('form-container').style.display = 'block';
           showSuccess();
           return;
         }
 
-        elements = stripe.elements({
-          clientSecret: data.clientSecret,
-          appearance: { theme: 'night' },
-        });
-        const paymentElement = elements.create('payment');
-        paymentElement.mount('#payment-element');
+        if (!data.clientSecret) {
+          showMessage(
+            'Server did not return a clientSecret — check the API response shape.',
+            'error',
+          );
+          document.getElementById('spinner').style.display = 'none';
+          return;
+        }
+
+        try {
+          elements = stripe.elements({
+            clientSecret: data.clientSecret,
+            appearance: { theme: 'night' },
+          });
+          const paymentElement = elements.create('payment');
+          paymentElement.mount('#payment-element');
+        } catch (stripeError) {
+          console.error('Stripe UI Mounting Error:', stripeError);
+          showMessage(
+            'Failed to load payment form: ' + stripeError.message,
+            'error',
+          );
+          document.getElementById('spinner').style.display = 'none';
+          return;
+        }
 
         document.getElementById('spinner').style.display = 'none';
         document.getElementById('form-container').style.display = 'block';
@@ -200,8 +188,17 @@
         submitBtn.disabled = true;
         showMessage('Processing…', '');
 
-        // redirect: 'if_required' — Stripe.js shows any 3DS challenge as an inline modal
-        // and only navigates away for payment methods that genuinely require it (e.g. some bank redirects).
+        const { error: submitError } = await elements.submit();
+        if (submitError) {
+          handleError(submitError);
+          return;
+        }
+        if (submitError) {
+          showMessage(submitError.message, 'error');
+          submitBtn.disabled = false;
+          return;
+        }
+
         const { error, paymentIntent } = await stripe.confirmPayment({
           elements,
           clientSecret,
@@ -215,10 +212,11 @@
           return;
         }
 
+        console.log('see fot the paymentIntent ', paymentIntent);
+
         if (paymentIntent && paymentIntent.status === 'succeeded') {
           showSuccess();
         } else {
-          // requires_payment_method, processing, etc.
           showMessage(
             `Payment status: ${paymentIntent?.status ?? 'unknown'}. Please try again.`,
             'error',
@@ -238,7 +236,37 @@
           `<h1>You're all set 🎉</h1><p class="plan-name">Your subscription is now active.</p>`;
       }
 
-      init();
+      async function checkForRedirectReturn() {
+        const clientSecretFromRedirect = params.get(
+          'payment_intent_client_secret',
+        );
+        const redirectStatus = params.get('redirect_status');
+
+        if (!clientSecretFromRedirect) return false; // not a redirect return — normal fresh load
+
+        document.getElementById('spinner').style.display = 'block';
+        document.getElementById('form-container').style.display = 'none';
+
+        if (redirectStatus === 'succeeded') {
+          showSuccess();
+        } else if (redirectStatus === 'processing') {
+          showMessage(
+            'Your payment is processing — this can take a moment for UPI. Refresh shortly to check status.',
+            '',
+          );
+        } else {
+          showMessage('Payment was not completed. Please try again.', 'error');
+        }
+
+        document.getElementById('spinner').style.display = 'none';
+        document.getElementById('form-container').style.display = 'block';
+        return true;
+      }
+
+      (async () => {
+        const wasRedirect = await checkForRedirectReturn();
+        if (!wasRedirect) init();
+      })();
     </script>
   </body>
 </html>

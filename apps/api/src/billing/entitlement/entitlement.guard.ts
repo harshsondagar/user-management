@@ -45,6 +45,8 @@ export class EntitlementGuard implements CanActivate {
             );
         }
 
+        (context.switchToHttp().getRequest<Request>() as any).entitlement = result
+
         const response = context.switchToHttp().getResponse();
         response.setHeader('X-RateLimit-Limit', result.limit);
         response.setHeader('X-RateLimit-Remaining', result.remaining);

@@ -1,4 +1,4 @@
-import { Entity, PrimaryColumn, Column } from 'typeorm';
+import { Entity, PrimaryColumn, Column, CreateDateColumn } from 'typeorm';
 
 @Entity('stripe_webhook_events')
 export class StripeWebhookEvent {
@@ -13,4 +13,7 @@ export class StripeWebhookEvent {
 
     @Column({ type: 'jsonb' })
     payload!: Record<string, any>;
+
+    @CreateDateColumn({ type: 'timestamptz' })
+    createdAt!: Date
 }

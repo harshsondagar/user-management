@@ -36,5 +36,8 @@ export class MailProducer {
     async addDowngradedToFreeMailJob(email: string, firstName: string) {
         return this.queue.add(MailJobName.DOWNGRADED_TO_FREE, { email, firstName }, this.defaultOpts);
     }
+    async addPaymentFailedMailJob(email: string, firstName: string, reason: string) {
+        return this.queue.add(MailJobName.PAYMENT_FAILED, { email, firstName, reason }, this.defaultOpts);
+    }
 
 }

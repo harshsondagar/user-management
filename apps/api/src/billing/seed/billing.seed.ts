@@ -42,9 +42,9 @@ export class BillingSeedService implements OnApplicationBootstrap {
     }
     private async seedPlans() {
         const plans = [
-            { code: 'free', name: 'Free', stripePriceId: null, isActive: true },
-            { code: 'pro', name: 'Pro', stripePriceId: process.env.STRIPE_PRICE_ID_PRO ?? null, isActive: true },
-            { code: 'enterprise', name: 'Enterprise', stripePriceId: process.env.STRIPE_PRICE_ID_ENTERPRISE ?? null, isActive: true },
+            { code: 'free', name: 'Free', stripePriceId: null, isActive: true, amount: 0, rank: 0 },
+            { code: 'pro', name: 'Pro', stripePriceId: process.env.STRIPE_PRICE_ID_PRO ?? null, isActive: true, amount: 990, rank: 1 },
+            { code: 'enterprise', name: 'Enterprise', stripePriceId: process.env.STRIPE_PRICE_ID_ENTERPRISE ?? null, isActive: true, amount: 2990, rank: 2 },
         ];
 
         for (const p of plans) {
