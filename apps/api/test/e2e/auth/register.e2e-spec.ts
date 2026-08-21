@@ -60,6 +60,8 @@ describe('Auth - Register (e2e)', () => {
             .send(dto)
             .expect(201);
 
+
+
         expect(res.body.data).toEqual({
             message: 'Registered. Please verify your email.',
             email: dto.email,

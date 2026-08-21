@@ -4,10 +4,17 @@
   "sourceRoot": "apps/api/src",
   "compilerOptions": {
     "assets": [
-      "mail/template/**/*",
+      "mail/template/*",
+      "apps/api/public/*",
       {
-        "include": "../../views/**/*",
-        "outDir": "dist/apps/api"
+        "include": "public/*",
+        "outDir": "dist/apps/api",
+        "watchAssets": true
+      },
+      {
+        "include": "view/*",
+        "outDir": "dist/apps/api",
+        "watchAssets": true
       }
     ],
     "deleteOutDir": true,
@@ -23,7 +30,14 @@
       "entryFile": "main",
       "sourceRoot": "apps/queue-service/src",
       "compilerOptions": {
-        "tsConfigPath": "apps/queue-service/tsconfig.app.json"
+        "tsConfigPath": "apps/queue-service/tsconfig.app.json",
+        "assets": [
+          {
+            "include": "mail/template/*",
+            "outDir": "dist/apps/queue-service",
+            "watchAssets": true
+          }
+        ]
       }
     },
     "api": {
@@ -47,41 +61,6 @@
         }
       ],
       "watchAssets": true
-    },
-    "monorepo": true,
-    "root": "apps/api",
-    "projects": {
-      "queue-service": {
-        "type": "application",
-        "root": "apps/queue-service",
-        "entryFile": "main",
-        "sourceRoot": "apps/queue-service/src",
-        "compilerOptions": {
-          "tsConfigPath": "apps/queue-service/tsconfig.app.json",
-          "assets": [
-            {
-              "include": "src/views/**/*.ejs",
-              "watchAssets": true,
-              "outDir": "dist/apps"
-            }
-          ]
-        }
-      },
-      "api": {
-        "type": "application",
-        "root": "apps/api",
-        "entryFile": "main",
-        "sourceRoot": "apps/api/src",
-        "compilerOptions": {
-          "tsConfigPath": "apps/api/tsconfig.app.json"
-        }
-      },
-      "@app/shared": {
-        "type": "library",
-        "root": "libs/shared",
-        "entryFile": "index",
-        "sourceRoot": "libs/shared/src"
-      }
     }
   }
 }

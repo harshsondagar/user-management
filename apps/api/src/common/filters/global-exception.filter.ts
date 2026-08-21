@@ -71,8 +71,20 @@ export class GlobalExceptionFilter implements ExceptionFilter {
             };
         }
         if (exception instanceof QueryFailedError) {
+            const pgCode = (exception.driverError as any)?.code;
+
+            const CLIENT_FACING_CODES: Record<string, { status: number; errorCode: string; message: string }> = {
+                '23505': { status: HttpStatus.CONFLICT, errorCode: 'DUPLICATE_ENTRY', message: 'This record already exists' },
+                '23503': { status: HttpStatus.UNPROCESSABLE_ENTITY, errorCode: 'INVALID_REFERENCE', message: 'Referenced record does not exist' },
+                '23502': { status: HttpStatus.BAD_REQUEST, errorCode: 'MISSING_FIELD', message: 'A required field was missing' },
+            };
+
+            if (pgCode && CLIENT_FACING_CODES[pgCode]) {
+                return CLIENT_FACING_CODES[pgCode];
+            }
+
             return {
-                status: HttpStatus.CONFLICT,
+                status: HttpStatus.INTERNAL_SERVER_ERROR,
                 errorCode: 'DATABASE_ERROR',
                 message: 'A database error occurred while processing your request',
             };

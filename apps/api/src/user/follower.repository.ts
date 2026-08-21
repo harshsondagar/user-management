@@ -1,10 +1,15 @@
 import { Injectable } from "@nestjs/common";
 import { BaseRepository } from "../common/repository/base.repository";
 import { Followers, STATUS } from "./entity/userfollowers-entity";
-import { DeepPartial } from "typeorm";
+import { DeepPartial, Repository } from "typeorm";
+import { InjectRepository } from "@nestjs/typeorm";
 
 @Injectable()
 export class FollowerRepository extends BaseRepository<Followers> {
+
+    constructor(@InjectRepository(Followers) repository: Repository<Followers>) {
+        super(repository)
+    }
 
     async findBlockBetween(userId: string, otherId: string): Promise<Followers | null> {
         return this.findOne({
@@ -47,7 +52,8 @@ export class FollowerRepository extends BaseRepository<Followers> {
     }
 
     async getFollowers(userId: string): Promise<Followers[]> {
-        return this.findAll({ where: { followingId: userId, status: STATUS.ACCEPTED } });
+        const res = await this.findAll({ where: { followingId: userId, status: STATUS.ACCEPTED } });
+        return res
     }
 
     async getFollowing(userId: string): Promise<Followers[]> {

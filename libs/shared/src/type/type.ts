@@ -1,8 +1,11 @@
 export enum MailJobName {
-    VERIFY_EMAIL = 'send-email-verification-mail',
-    WELCOME = 'send-welcome-mail',
-    PASSWORD_CHANGE_OTP = 'send-password-change-otp-mail',
-    WEEKLY_ADMIN_REPORT = 'send-weekly-admin-report-mail',
+    VERIFY_EMAIL = 'verify-email',
+    WELCOME = 'welcome',
+    PASSWORD_CHANGE_OTP = 'password-change-otp',
+    WEEKLY_ADMIN_REPORT = 'weekly-admin-report',
+    RENEWAL_FINAL_NOTICE = 'renewal-final-notice',
+    DOWNGRADED_TO_FREE = 'downgraded-to-free',
+    PAYMENT_FAILED = 'payment-failed'
 }
 
 export enum UserRole {
