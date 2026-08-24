@@ -11,7 +11,7 @@ import { NestExpressApplication } from '@nestjs/platform-express';
 import { join } from 'path';
 import { BillingSeedService } from "../../../src/billing/seed/billing.seed";
 import { BillingModule } from "../../../src/billing/billing.module";
-import { UserService } from "../../../src/user/user.service";
+import { DataSource } from "typeorm";
 
 jest.mock('@css-inline/css-inline', () => ({
     inline: (html: string) => html,
@@ -61,12 +61,8 @@ export async function createTestApp(
 
     const app = moduleRef.createNestApplication<NestExpressApplication>();
 
-
-    const userService = app.get(UserService);
-    jest.spyOn(userService as any, 'assignFreePlan').mockResolvedValue(true);
-
     app.useStaticAssets(join(__dirname, '../../../public'));
-    app.setBaseViewsDir(join(__dirname, '../../../../../views'));
+    app.setBaseViewsDir(join(__dirname, '../../../views'));
     app.setViewEngine('ejs');
 
     app.useGlobalInterceptors(
@@ -84,8 +80,11 @@ export async function createTestApp(
             },
         }),
     );
-    app.useLogger(['fatal'])
+    app.useLogger(['error', 'warn', 'fatal']); // temporarily, just for debugging this failure
     await app.init();
+
+    const ds = app.get(DataSource);
+    console.log(`[createTestApp] App's actual DataSource is connected to: ${ds.options.database}`);
 
     return app;
 }

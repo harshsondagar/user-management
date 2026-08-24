@@ -110,7 +110,6 @@ describe('User - Follower/Following Lists (e2e)', () => {
                 .get('/user/me/followers')
                 .set('Authorization', `Bearer ${accessToken}tampered`)
                 .expect(401);
-            console.log(res);
 
 
             expect(res.body.message).toContain('invalid signature');
