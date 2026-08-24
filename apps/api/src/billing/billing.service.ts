@@ -159,4 +159,27 @@ export class BillingService {
             }));
     }
 
+    async subscriptionHistory(user: User, params: { page: number, pageSize: number, status?: string }) {
+        let where: any = {}
+        if (params.status) where.status = params.status as SubscriptionStatus
+        // if (user.id) where.userId = user.id
+        const sanitizedPage = Math.max(1, params.page || 1);
+        const pageSize = Math.min(Math.max(params.pageSize ?? 20, 1), 100);
+
+        const [history, total] = await this.subRepo.findAndCount({
+            where,
+            select: ['id', 'userId', 'planId', 'status', 'createdAt', 'canceledAt', 'graceStartedAt', 'currentPeriodEnd', 'updatedAt'],
+            order: { createdAt: 'ASC', id: 'ASC' },
+            skip: (sanitizedPage - 1) * pageSize,
+            take: pageSize,
+        })
+
+        const totalPages = Math.max(Math.ceil(total / pageSize), 1);
+        const hasNextPage = sanitizedPage < totalPages;
+        const hasPreviousPage = sanitizedPage > 1;
+
+        return { history, total, sanitizedPage, pageSize, totalPages, hasNextPage, hasPreviousPage };
+
+    }
+
 }

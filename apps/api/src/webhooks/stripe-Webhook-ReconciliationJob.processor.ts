@@ -24,6 +24,8 @@ export class WebhookReconciliationJob {
 
         const stuck = await this.webhookEventRepo.findAll({
             where: { processedAt: IsNull(), createdAt: LessThan(cutoff) },
+            order: { createdAt: 'ASC' },
+            take: 100
         });
         if (stuck.length === 0) return;
 
