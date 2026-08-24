@@ -3,6 +3,7 @@ import path, { join, resolve } from "path";
 import { Client } from "pg"
 import { DataSource } from "typeorm";
 
+
 dotenv.config({ path: resolve(join(process.cwd(), "apps/api/test/.env.test")) });
 const WORKER_COUNT = 4
 
@@ -42,10 +43,16 @@ export default async function globalSetup() {
             migrations: [path.join(__dirname, '../src/migration/*.{ts,js}')],
         });
 
+
         await ds.initialize();
         await ds.runMigrations();
-        await ds.destroy();
+        await ds.query(`
+            INSERT INTO plans (id, code, name, amount, currency, rank, "isActive", "gracePeriodDays")
+            VALUES (gen_random_uuid(), 'free', 'Free', 0, 'inr', 0, true, 0)
+            ON CONFLICT (code) DO NOTHING
+        `);
 
+        await ds.destroy();
     }
 
     await adminClient.end();
