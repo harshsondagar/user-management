@@ -1,5 +1,6 @@
 import { DataSource } from 'typeorm';
 const SEED_TABLES = new Set(['plans', 'features', 'plan_entitlements']);
+
 export async function truncateAllTables(dataSource: DataSource): Promise<void> {
     const entities = dataSource.entityMetadatas;
     await dataSource.query('SET session_replication_role = replica;');

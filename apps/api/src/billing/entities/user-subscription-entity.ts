@@ -10,6 +10,8 @@ export enum SubscriptionStatus {
 }
 
 @Entity('user_subscriptions')
+@Index('idx_user_subscriptions_created_at', ['createdAt'])
+@Index('idx_user_subscriptions_user_id', ['userId'])
 @Index(['userId'])
 export class UserSubscription {
     @PrimaryGeneratedColumn('uuid')
@@ -42,6 +44,7 @@ export class UserSubscription {
     @Column({ type: 'timestamptz', nullable: true })
     graceStartedAt?: Date | null;
 
+    @Index('idx_subs_created_at')
     @Column({ type: 'timestamptz', nullable: true })
     canceledAt?: Date | null;
 

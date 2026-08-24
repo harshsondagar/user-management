@@ -34,6 +34,7 @@ export interface BaseInterfaceRepository<T extends ObjectLiteral> {
         conflictPathsOrOptions: string[] | UpsertOptions<T>
     ): Promise<InsertResult>;
     createQueryBuilder(alias: string): SelectQueryBuilder<T>;
+    findAndCount(options: FindManyOptions<T>): Promise<[T[], number]>
 }
 
 export abstract class BaseRepository<T extends ObjectLiteral> implements BaseInterfaceRepository<T> {
@@ -158,6 +159,10 @@ export abstract class BaseRepository<T extends ObjectLiteral> implements BaseInt
         conflictPathsOrOptions: string[] | UpsertOptions<T>
     ): Promise<InsertResult> {
         return await this.repository.upsert(entityOrEntities, conflictPathsOrOptions);
+    }
+
+    async findAndCount(options: FindManyOptions<T>) {
+        return this.repository.findAndCount(options)
     }
 
 }

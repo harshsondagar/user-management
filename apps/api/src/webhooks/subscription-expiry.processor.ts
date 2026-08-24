@@ -21,7 +21,7 @@ export class SubscriptionExpiryJob {
         @Inject('STRIPE_CLIENT') private readonly stripe: Stripe,
     ) { }
 
-    @Cron(CronExpression.EVERY_10_SECONDS) // swap to EVERY_15_MINUTES for tighter granularity
+    @Cron(CronExpression.EVERY_HOUR) // swap to EVERY_15_MINUTES for tighter granularity
     async run() {
 
         const expiring = await this.subRepo.findExpiringActive();

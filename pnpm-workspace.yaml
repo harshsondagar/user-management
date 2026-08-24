@@ -1,6 +1,7 @@
 allowBuilds:
   '@scarf/scarf': false
   argon2: false
+  bcrypt: false
   esbuild: false
   msgpackr-extract: false
   unrs-resolver: false
