@@ -1,0 +1,15 @@
+The practical review checklist, every time you run migration:generate:
+
+Read every statement — don't just skim, actually read it.
+Any NOT NULL on a new column of an existing table? → split into nullable-add + backfill + constrain.
+Any CREATE INDEX? → add CONCURRENTLY, and check if the migration needs the transaction disabled for it.
+Any DROP COLUMN immediately followed by ADD COLUMN with a similar name? → probably a rename, verify and rewrite.
+Any ALTER COLUMN ... TYPE? → check data compatibility first, consider a USING clause.
+Does down() actually reverse up() correctly, in reverse order?
+Is this migration going to hold a lock on a table your app is actively reading/writing during deploy? → if yes, does it need to be split into multiple deploy-safe steps?
+
+
+
+
+checks for broken, half-built index sitting in pg_indexes marked invalid
+SELECT indexrelid::regclass, indisvalid FROM pg_index WHERE indisvalid = false;
