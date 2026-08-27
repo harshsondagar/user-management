@@ -35,9 +35,6 @@ export class UserSubscription {
     @Column({ type: 'enum', enum: SubscriptionStatus })
     status!: SubscriptionStatus;
 
-    @Column({ type: 'varchar', nullable: true, unique: true })
-    stripeSubscriptionId?: string | null; // null for free plan
-
     @Column({ type: 'timestamptz', nullable: true })
     currentPeriodEnd?: Date | null;
 
@@ -53,6 +50,4 @@ export class UserSubscription {
 
     @UpdateDateColumn({ type: 'timestamptz' })
     updatedAt!: Date;
-
-
 }
