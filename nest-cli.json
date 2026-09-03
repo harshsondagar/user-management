@@ -24,6 +24,28 @@
   "monorepo": true,
   "root": "apps/api",
   "projects": {
+    "@app/shared": {
+      "type": "library",
+      "root": "libs/shared",
+      "entryFile": "index",
+      "sourceRoot": "libs/shared/src",
+      "assets": [
+        {
+          "include": "views/**/*",
+          "outDir": "dist"
+        }
+      ],
+      "watchAssets": true
+    },
+    "api": {
+      "type": "application",
+      "root": "apps/api",
+      "entryFile": "main",
+      "sourceRoot": "apps/api/src",
+      "compilerOptions": {
+        "tsConfigPath": "apps/api/tsconfig.app.json"
+      }
+    },
     "queue-service": {
       "type": "application",
       "root": "apps/queue-service",
@@ -40,27 +62,14 @@
         ]
       }
     },
-    "api": {
+    "ws-service": {
       "type": "application",
-      "root": "apps/api",
+      "root": "apps/ws-service",
       "entryFile": "main",
-      "sourceRoot": "apps/api/src",
+      "sourceRoot": "apps/ws-service/src",
       "compilerOptions": {
-        "tsConfigPath": "apps/api/tsconfig.app.json"
+        "tsConfigPath": "apps/ws-service/tsconfig.app.json"
       }
-    },
-    "@app/shared": {
-      "type": "library",
-      "root": "libs/shared",
-      "entryFile": "index",
-      "sourceRoot": "libs/shared/src",
-      "assets": [
-        {
-          "include": "views/**/*",
-          "outDir": "dist"
-        }
-      ],
-      "watchAssets": true
     }
   }
 }
