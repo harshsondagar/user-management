@@ -11,5 +11,51 @@ Is this migration going to hold a lock on a table your app is actively reading/w
 
 
 
-checks for broken, half-built index sitting in pg_indexes marked invalid
+checks for broken, half-built index sitting in pg_indexes marked invalid :
 SELECT indexrelid::regclass, indisvalid FROM pg_index WHERE indisvalid = false;
+
+
+start
+{
+  "event": "GAME_STATE_UPDATE",
+  "data": {
+    "board": ["", "", "", "", "", "", "", "", ""], 
+    "currentTurn": "player_1_id",
+    "lastMoveBy": "",
+    "moveSequenceNumber": 0
+  }
+}
+
+1st
+{
+  "event": "GAME_STATE_UPDATE",
+  "data": {
+    "board": ["", "", "X", "", "", "", "", "", ""], 
+    "currentTurn": "player_2_id",
+    "lastMoveBy": "player_1_id",
+    "moveSequenceNumber": 1
+  }
+}
+
+2st
+{
+  "event": "GAME_STATE_UPDATE",
+  "data": {
+    "board": ["", "", "X", "", "", "", "", "O", ""], 
+    "currentTurn": "player_1_id",
+    "lastMoveBy": "player_2_id",
+    "moveSequenceNumber": 2
+  }
+}
+
+
+3st
+{
+  "event": "GAME_STATE_UPDATE",
+  "data": {
+    "board": ["", "", "X", "", "", "", "", "", ""], 
+    "currentTurn": "player_2_id",
+    "lastMoveBy": "player_1_id",
+    "moveSequenceNumber": 3
+  }
+}
