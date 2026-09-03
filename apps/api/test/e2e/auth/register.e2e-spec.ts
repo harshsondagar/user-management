@@ -15,6 +15,7 @@ import {
     tooShortPasswordDto,
 } from '../../fixtures/users.fixture';
 import { flushTestRedis } from '../utils/redis.util';
+import { registerAndVerifyUser } from '../utils/auth-helper.util';
 
 describe('Auth - Register (e2e)', () => {
     let app: INestApplication;
@@ -59,8 +60,6 @@ describe('Auth - Register (e2e)', () => {
             .post('/auth/register')
             .send(dto)
             .expect(201);
-
-
 
         expect(res.body.data).toEqual({
             message: 'Registered. Please verify your email.',
@@ -132,15 +131,14 @@ describe('Auth - Register (e2e)', () => {
     });
     it('rejects duplicate email registration with 409 CONFLICT', async () => {
         const dto = makeRegisterDto();
-
-        await request(app.getHttpServer()).post('/auth/register').send(dto).expect(201);
+        await registerAndVerifyUser(app, dto)
 
         const res = await request(app.getHttpServer())
             .post('/auth/register')
             .send(dto)
-            .expect(401);
+            .expect(409);
 
-        expect(res.body.errorCode).toBe('UNAUTHORIZED');
-        expect(res.body.message).toBe('Please verify your email.');
+        expect(res.body.errorCode).toBe('CONFLICT');
+        expect(res.body.message).toBe('An account with this email already exists.');
     });
 });

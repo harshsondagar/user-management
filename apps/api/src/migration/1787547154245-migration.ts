@@ -1,7 +1,7 @@
 import { MigrationInterface, QueryRunner } from "typeorm";
 
-export class Migration1787295900626 implements MigrationInterface {
-    name = 'Migration1787295900626'
+export class Migration1787547154245 implements MigrationInterface {
+    name = 'Migration1787547154245'
 
     public async up(queryRunner: QueryRunner): Promise<void> {
         await queryRunner.query(`CREATE TYPE "public"."tasks_iscompleted_enum" AS ENUM('pending', 'done', 'CANCELLED')`);
@@ -24,7 +24,7 @@ export class Migration1787295900626 implements MigrationInterface {
         await queryRunner.query(`CREATE INDEX "IDX_SUBSCRIPTION_USER" ON "user_subscriptions" ("userId") `);
         await queryRunner.query(`CREATE INDEX "IDX_2dfab576863bc3f84d4f696227" ON "user_subscriptions" ("userId") `);
         await queryRunner.query(`CREATE TABLE "usage_counters" ("userId" uuid NOT NULL, "featureId" uuid NOT NULL, "periodStart" TIMESTAMP WITH TIME ZONE NOT NULL, "periodEnd" TIMESTAMP WITH TIME ZONE NOT NULL, "count" integer NOT NULL DEFAULT '0', CONSTRAINT "PK_755a1aeb25249b2a5319366bd9e" PRIMARY KEY ("userId", "featureId", "periodStart"))`);
-        await queryRunner.query(`CREATE TABLE "stripe_webhook_events" ("stripeEventId" character varying NOT NULL, "type" character varying NOT NULL, "processedAt" TIMESTAMP WITH TIME ZONE, "payload" jsonb NOT NULL, CONSTRAINT "PK_0cd20ab615b5a55f84accf8a018" PRIMARY KEY ("stripeEventId"))`);
+        await queryRunner.query(`CREATE TABLE "stripe_webhook_events" ("stripeEventId" character varying NOT NULL, "type" character varying NOT NULL, "processedAt" TIMESTAMP WITH TIME ZONE, "payload" jsonb NOT NULL, "createdAt" TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now(), CONSTRAINT "PK_0cd20ab615b5a55f84accf8a018" PRIMARY KEY ("stripeEventId"))`);
         await queryRunner.query(`CREATE TABLE "renewal_tokens" ("id" uuid NOT NULL DEFAULT uuid_generate_v4(), "userId" uuid NOT NULL, "userSubscriptionId" uuid NOT NULL, "token" character varying(64) NOT NULL, "expiresAt" TIMESTAMP WITH TIME ZONE NOT NULL, "usedAt" TIMESTAMP WITH TIME ZONE, "createdAt" TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now(), CONSTRAINT "PK_42eafb7d7a54d46ec5e0fdfa741" PRIMARY KEY ("id"))`);
         await queryRunner.query(`CREATE UNIQUE INDEX "IDX_62ee4698ac196cfc90ca54d5ff" ON "renewal_tokens" ("token") `);
         await queryRunner.query(`CREATE TYPE "public"."payments_status_enum" AS ENUM('succeeded', 'failed', 'pending', 'refunded')`);

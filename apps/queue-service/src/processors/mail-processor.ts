@@ -39,6 +39,8 @@ export class MailProcessor extends WorkerHost {
                     return this.sendRenewalNoticeMail(job)
                 case MailJobName.DOWNGRADED_TO_FREE:
                     return this.sendDownGradeToFreeMail(job)
+                case MailJobName.PAYMENT_FAILED:
+                    return ''
                 default:
                     const _exhaustive: never = job.name;
                     throw new Error(`Unhandled mail job name: ${_exhaustive}`);
