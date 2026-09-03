@@ -67,6 +67,7 @@
     "@sentry/node": "^10.67.0",
     "argon2": "^0.45.0",
     "axios": "^1.18.1",
+    "bcrypt": "^6.0.0",
     "bullmq": "^6.0.6",
     "cache-manager": "^6.4.3",
     "class-transformer": "^0.5.1",

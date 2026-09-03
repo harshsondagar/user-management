@@ -13,4 +13,5 @@ export class Feature {
 
     @Column({ type: 'text', nullable: true })
     description?: string | null;
+
 }

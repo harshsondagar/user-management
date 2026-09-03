@@ -17,9 +17,7 @@ export async function registerAndVerifyUser(
     registerDto: RegisterInput,
 ): Promise<void> {
 
-
-
-    const res = await request(app.getHttpServer())
+    await request(app.getHttpServer())
         .post('/auth/register')
         .send(registerDto)
         .expect(201);
