@@ -3,7 +3,7 @@ import { RoomsService } from "../service/room-service";
 import { Server, Socket } from "socket.io";
 import { ChatDto } from "../dto/chat-dto";
 
-// handlers/chat.handler.ts
+
 @Injectable()
 export class ChatHandler {
     constructor(private readonly rooms: RoomsService) { }

@@ -1,8 +1,10 @@
-import "dotenv/config"
+import * as dotenv from "dotenv"
+import { join, resolve } from "path";
+dotenv.config({ path: resolve(join(process.cwd(), "/apps/ws-service/.env")) })
 import { ConnectedSocket, MessageBody, OnGatewayConnection, OnGatewayDisconnect, SubscribeMessage, WebSocketGateway, WebSocketServer } from '@nestjs/websockets';
 import { Server, Socket } from 'socket.io';
 import { RoomsService } from './service/room-service';
-import { Logger, UseGuards } from '@nestjs/common';
+import { Logger, UseGuards, } from '@nestjs/common';
 import { JoinRoomDto } from './dto/join-room.dto';
 import { MoveDto } from './dto/move-dto';
 import { ChatDto } from './dto/chat-dto';
@@ -12,8 +14,12 @@ import { WsAuthGuard } from './guard/ws-auth.guard';
 
 
 @WebSocketGateway(8080, {
-  cors: { origin: '*' }
+  cors: { origin: '*' },
+  pingInterval: 10000,  // server pings every 10s
+  pingTimeout: 5000,
 })
+
+
 export class WsGateway implements OnGatewayConnection, OnGatewayDisconnect {
   private readonly logger = new Logger(WsGateway.name)
   @WebSocketServer()
@@ -23,11 +29,18 @@ export class WsGateway implements OnGatewayConnection, OnGatewayDisconnect {
     private readonly rooms: RoomsService,
     private readonly chatHandler: ChatHandler,
     private readonly jwt: JwtService,
-  ) { }
+
+  ) {
+    this.rooms.on('user-timed-out', ({ roomId, userId }) => {
+      this.server.to(roomId).emit('user_left', { userId });
+    });
+  }
 
   handleConnection(client: Socket) {
     try {
-      const token = client.handshake.auth?.token;
+      const token = client.handshake.auth?.token || client.handshake.query?.token;
+
+
       if (!token) throw new Error('No token provided');
 
       const payload = this.jwt.verify(token, { secret: process.env.JWT_ACCESS_SECRET });
@@ -47,25 +60,28 @@ export class WsGateway implements OnGatewayConnection, OnGatewayDisconnect {
   @UseGuards(WsAuthGuard)
   @SubscribeMessage('join_room')
   handleJoin(@MessageBody() dto: JoinRoomDto, @ConnectedSocket() client: Socket) {
-    const userId = client.data.userId;
-    const username = client.data.username;
-    try {
-      const user = this.rooms.join(dto.roomId, username, userId, client.id);
+    const { user, reconnected } = this.rooms.join(
+      dto.roomId,
+      client.data.username,
+      client.data.userId,
+      client.id
+    )
 
-      client.join(dto.roomId);
+    client.join(dto.roomId);
 
-      client.emit('room_state', { users: this.rooms.getRoomUsers(dto.roomId) });
+    client.emit('room_state', { users: this.rooms.getRoomUsers(dto.roomId) });
 
+    if (reconnected) {
+      client.to(dto.roomId).emit('user_reconnected', user);
+    } else {
       client.to(dto.roomId).emit('user_joined', user);
-    } catch (err) {
-      client.emit('join_error', { message: (err as Error).message });
     }
   }
 
   @UseGuards(WsAuthGuard)
   @SubscribeMessage('move')
   handleMove(@MessageBody() dto: MoveDto, @ConnectedSocket() client: Socket) {
-
+    this.rooms.touchLastSeen(client.id);
     const userId = client.data.userId;
 
     const result = this.rooms.move(client.id, dto.direction);
@@ -87,8 +103,7 @@ export class WsGateway implements OnGatewayConnection, OnGatewayDisconnect {
   handleDisconnect(client: Socket) {
     const info = this.rooms.leave(client.id);
     if (!info) return;
-    this.server.to(info.roomId).emit('user_left', { userId: info.userId });
-
+    this.server.to(info.roomId).emit('user_disconnected', { userId: info.userId });
     this.logger.log(`ws-service user disconnected client: ${client.id}`);
   }
 }

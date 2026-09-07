@@ -1,78 +1,78 @@
-<!DOCTYPE html>
+<!doctype html>
 <html>
-
-<head>
-    <meta charset="UTF-8">
+  <head>
+    <meta charset="UTF-8" />
     <title>janky test client</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.7.5/socket.io.min.js"></script>
     <style>
-        body {
-            font-family: monospace;
-            background: #111;
-            color: #0f0;
-            padding: 10px;
-        }
+      body {
+        font-family: monospace;
+        background: #111;
+        color: #0f0;
+        padding: 10px;
+      }
 
-        input,
-        button {
-            font-family: monospace;
-            padding: 4px;
-            margin: 2px;
-        }
+      input,
+      button {
+        font-family: monospace;
+        padding: 4px;
+        margin: 2px;
+      }
 
-        #canvas {
-            background: #000;
-            border: 1px solid #0f0;
-        }
+      #canvas {
+        background: #000;
+        border: 1px solid #0f0;
+      }
 
-        #log {
-            height: 150px;
-            overflow-y: scroll;
-            background: #000;
-            border: 1px solid #333;
-            padding: 5px;
-            font-size: 11px;
-            white-space: pre-wrap;
-        }
+      #log {
+        height: 150px;
+        overflow-y: scroll;
+        background: #000;
+        border: 1px solid #333;
+        padding: 5px;
+        font-size: 11px;
+        white-space: pre-wrap;
+      }
 
-        .row {
-            margin-bottom: 6px;
-        }
+      .row {
+        margin-bottom: 6px;
+      }
 
-        #chatlog {
-            height: 100px;
-            overflow-y: scroll;
-            background: #000;
-            border: 1px solid #333;
-            padding: 5px;
-        }
+      #chatlog {
+        height: 100px;
+        overflow-y: scroll;
+        background: #000;
+        border: 1px solid #333;
+        padding: 5px;
+      }
     </style>
-</head>
+  </head>
 
-<body>
-
+  <body>
     <div class="row">
-        ws url: <input id="wsUrl" value="ws://localhost:8080" size="20">
-        <button onclick="connect()">connect</button>
-        <span id="status">disconnected</span>
+      ws url: <input id="wsUrl" value="ws://localhost:8080" size="20" />
+      <button onclick="connect()">connect</button>
+      <span id="status">disconnected</span>
     </div>
 
     <div class="row">
-        room: <input id="roomId" value="red">
-        userId: <input id="userId" value="u1">
-        username: <input id="username" value="harsh">
-        <button onclick="joinRoom()">join_room</button>
+      room: <input id="roomId" value="red" /> userId:
+      <input id="userId" value="" /> username:
+      <input id="username" value="" /> authToken:
+      <input id="authToken" value="" />
+      <button onclick="joinRoom()">join_room</button>
     </div>
 
     <div class="row">
-        arrow keys to move (click canvas first) | STEP unit = <span id="scaleInfo">5px/unit</span>
+      arrow keys to move (click canvas first) | STEP unit =
+      <span id="scaleInfo">5px/unit</span>
     </div>
 
     <canvas id="canvas" width="500" height="500" tabindex="0"></canvas>
 
     <div class="row">
-        <input id="chatMsg" size="30" placeholder="chat message">
-        <button onclick="sendChat()">send chat</button>
+      <input id="chatMsg" size="30" placeholder="chat message" />
+      <button onclick="sendChat()">send chat</button>
     </div>
     <div id="chatlog"></div>
 
@@ -80,133 +80,165 @@
     <div id="log"></div>
 
     <script>
-        let socket = null;
-        let users = {}; // userId -> {x,y,username}
-        const SCALE = 5; // px per unit, matches MAP_WIDTH~100 -> 500px canvas
-        const canvas = document.getElementById('canvas');
-        const ctx = canvas.getContext('2d');
+      let socket = null;
+      let users = {}; // userId -> {x,y,username}
+      const SCALE = 5; // px per unit, matches MAP_WIDTH~100 -> 500px canvas
+      const canvas = document.getElementById('canvas');
+      const tokenInput = document.getElementById('authToken');
+      const ctx = canvas.getContext('2d');
+      let token;
 
-        function log(msg) {
-            const el = document.getElementById('log');
-            el.textContent += msg + '\n';
-            el.scrollTop = el.scrollHeight;
-        }
+      tokenInput.addEventListener('change', (event) => {
+        const authToken = event.target.value;
+        token = authToken;
+      });
 
-        function chatLog(user, msg) {
-            const el = document.getElementById('chatlog');
-            el.innerHTML += `<div><b>${user}:</b> ${msg}</div>`;
-            el.scrollTop = el.scrollHeight;
-        }
+      function log(msg) {
+        const el = document.getElementById('log');
+        el.textContent += msg + '\n';
+        el.scrollTop = el.scrollHeight;
+      }
 
-        function connect() {
-            const url = document.getElementById('wsUrl').value;
-            socket = io(url, {
-                transports: ['websocket'],
-                auth: {
-                    token: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIwZGM5OTAwNy03NmYyLTQxZmMtODRmZC01NmE4YmVkOTVlNGMiLCJlbWFpbCI6ImhhcnNoc29uZGFnYXJAd2VldGVjaHNvbHV0aW9uLmNvbSIsInJvbGUiOiJ1c2VyIiwidG9rZW5WZXJzaW9uIjowLCJpYXQiOjE3ODg0MzkzNzMsImV4cCI6MTc4ODQ0MDI3M30.98NK7CX7Wwvk69-s46N-gVsp5L2Fxk4Pm0jzkFAfH8I"
-                }
-            });
+      function chatLog(user, msg) {
+        const el = document.getElementById('chatlog');
+        el.innerHTML += `<div><b>${user}:</b> ${msg}</div>`;
+        el.scrollTop = el.scrollHeight;
+      }
 
-            socket.on('connect', () => {
-                document.getElementById('status').textContent = 'connected: ' + socket.id;
-                log('[connected] ' + socket.id);
-            });
+      function connect() {
+        console.log(token);
 
-            socket.on('disconnect', () => {
-                document.getElementById('status').textContent = 'disconnected';
-                log('[disconnected]');
-            });
-
-            socket.on('room_state', (data) => {
-                log('[room_state] ' + JSON.stringify(data));
-                users = {};
-                data.users.forEach(u => users[u.userId] = u);
-                draw();
-            });
-
-            socket.on('user_joined', (u) => {
-                log('[user_joined] ' + JSON.stringify(u));
-                users[u.userId] = u;
-                draw();
-            });
-
-            socket.on('user_moved', (u) => {
-                log('[user_moved] ' + JSON.stringify(u));
-                if (users[u.userId]) {
-                    users[u.userId].x = u.x;
-                    users[u.userId].y = u.y;
-                    draw();
-                }
-            });
-
-            socket.on('user_left', (u) => {
-                log('[user_left] ' + JSON.stringify(u));
-                delete users[u.userId];
-                draw();
-            });
-
-            socket.on('chat_message', (m) => {
-                log('[chat_message] ' + JSON.stringify(m));
-                chatLog(m.username, m.message);
-            });
-
-            socket.on('join_error', (e) => log('[join_error] ' + JSON.stringify(e)));
-            socket.on('move_error', (e) => log('[move_error] ' + JSON.stringify(e)));
-        }
-
-        function joinRoom() {
-            if (!socket) return log('not connected yet');
-            const payload = {
-                roomId: document.getElementById('roomId').value,
-                userId: document.getElementById('userId').value,
-                username: document.getElementById('username').value,
-            };
-            socket.emit('join_room', payload);
-            log('[sent join_room] ' + JSON.stringify(payload));
-        }
-
-        function sendChat() {
-            if (!socket) return log('not connected yet');
-            const message = document.getElementById('chatMsg').value;
-            socket.emit('chat', { message });
-            document.getElementById('chatMsg').value = '';
-        }
-
-        canvas.addEventListener('keydown', (e) => {
-            const map = { ArrowUp: 'up', ArrowDown: 'down', ArrowLeft: 'left', ArrowRight: 'right' };
-            const dir = map[e.key];
-            if (dir && socket) {
-                e.preventDefault();
-                socket.emit('move', { direction: dir });
-                draw()
-                log('[sent move] ' + dir);
-            }
+        const url = document.getElementById('wsUrl').value;
+        socket = io(url, {
+          transports: ['websocket'],
+          auth: {
+            token,
+          },
         });
 
-        function draw() {
-            ctx.clearRect(0, 0, canvas.width, canvas.height);
-            // origin marker, so (0,0) is visibly distinct from "nothing rendered"
-            ctx.strokeStyle = '#333';
-            ctx.strokeRect(0, 0, 10, 10);
+        socket.on('connect', () => {
+          document.getElementById('status').textContent =
+            'connected: ' + socket.id;
+          log('[connected] ' + socket.id);
+        });
 
-            Object.values(users).forEach(u => {
-                const x = Number(u.x) || 0;
-                const y = Number(u.y) || 0;
-                const px = x * SCALE;
-                const py = y * SCALE;
+        socket.on('disconnect', () => {
+          document.getElementById('status').textContent = 'disconnected';
+          log('[disconnected]');
+        });
 
-                ctx.fillStyle = u.userId === document.getElementById('userId').value ? '#0f0' : '#f80';
-                ctx.beginPath();
-                ctx.arc(px, py, 6, 0, Math.PI * 2);
-                ctx.fill();
+        socket.on('user_disconnected', (u) => {
+          log('[user_disconnected]');
+          delete users[u.userId];
+          draw();
+        });
 
-                ctx.fillStyle = '#fff';
-                ctx.font = '10px monospace';
-                ctx.fillText(`${u.username || u.userId} (${x},${y})`, px + 8, py - 8);
-            });
+        socket.on('user_reconnected', (u) => {
+          log('[user_reconnected]');
+          users[u.userId] = u;
+          draw();
+        });
+
+        socket.on('room_state', (data) => {
+          log('[room_state] ' + JSON.stringify(data));
+          users = {};
+          data.users.forEach((u) => (users[u.userId] = u));
+          draw();
+        });
+
+        socket.on('user_joined', (u) => {
+          log('[user_joined] ' + JSON.stringify(u));
+          users[u.userId] = u;
+          draw();
+        });
+
+        socket.on('user_moved', (u) => {
+          log('[user_moved] ' + JSON.stringify(u));
+          if (users[u.userId]) {
+            users[u.userId].x = u.x;
+            users[u.userId].y = u.y;
+            draw();
+          }
+        });
+
+        socket.on('user_left', (u) => {
+          log('[user_left] ' + JSON.stringify(u));
+          delete users[u.userId];
+          draw();
+        });
+
+        socket.on('chat_message', (m) => {
+          log('[chat_message] ' + JSON.stringify(m));
+          chatLog(m.username, m.message);
+        });
+
+        socket.on('join_error', (e) =>
+          log('[join_error] ' + JSON.stringify(e)),
+        );
+        socket.on('move_error', (e) =>
+          log('[move_error] ' + JSON.stringify(e)),
+        );
+      }
+
+      function joinRoom() {
+        if (!socket) return log('not connected yet');
+        const payload = {
+          roomId: document.getElementById('roomId').value,
+          userId: document.getElementById('userId').value,
+          username: document.getElementById('username').value,
+        };
+        socket.emit('join_room', payload);
+        log('[sent join_room] ' + JSON.stringify(payload));
+      }
+
+      function sendChat() {
+        if (!socket) return log('not connected yet');
+        const message = document.getElementById('chatMsg').value;
+        socket.emit('chat', { message });
+        document.getElementById('chatMsg').value = '';
+      }
+
+      canvas.addEventListener('keydown', (e) => {
+        const map = {
+          ArrowUp: 'up',
+          ArrowDown: 'down',
+          ArrowLeft: 'left',
+          ArrowRight: 'right',
+        };
+        const dir = map[e.key];
+        if (dir && socket) {
+          e.preventDefault();
+          socket.emit('move', { direction: dir });
+          draw();
+          log('[sent move] ' + dir);
         }
+      });
+
+      function draw() {
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        // origin marker, so (0,0) is visibly distinct from "nothing rendered"
+        ctx.strokeStyle = '#333';
+        ctx.strokeRect(0, 0, 10, 10);
+
+        Object.values(users).forEach((u) => {
+          const x = Number(u.x) || 0;
+          const y = Number(u.y) || 0;
+          const px = x * SCALE;
+          const py = y * SCALE;
+
+          ctx.fillStyle =
+            u.userId === document.getElementById('userId').value
+              ? '#0f0'
+              : '#f80';
+          ctx.beginPath();
+          ctx.arc(px, py, 6, 0, Math.PI * 2);
+          ctx.fill();
+
+          ctx.fillStyle = '#fff';
+          ctx.font = '10px monospace';
+          ctx.fillText(`${u.username || u.userId} (${x},${y})`, px + 8, py - 8);
+        });
+      }
     </script>
-
-</body>
-
+  </body>
 </html>

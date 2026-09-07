@@ -1,6 +1,6 @@
 import { Injectable } from "@nestjs/common";
-import { Socket } from "socket.io";
 import { Direction } from "../dto/move-dto";
+import { EventEmitter } from "events";
 
 interface User {
     username: string;
@@ -8,6 +8,7 @@ interface User {
     socketId: string;
     x: number;
     y: number;
+    lastSeenAt?: number;
 }
 interface Room {
     roomId: string;
@@ -19,9 +20,13 @@ interface Room {
 type SocketIndex = Map<string, { userId: string; roomId: string }>;
 
 @Injectable()
-export class RoomsService {
+export class RoomsService extends EventEmitter {
     private rooms = new Map<string, Room>()
     private socketIndex: SocketIndex = new Map();
+    private userRoomIndex = new Map<string, string>();
+    private disconnectTimers = new Map<string, NodeJS.Timeout>()
+
+
     private readonly STEP = 1
     private readonly deltas: Record<Direction, { dx: number; dy: number }> = {
         [Direction.UP]: { dx: 0, dy: -1 },
@@ -30,7 +35,8 @@ export class RoomsService {
         [Direction.RIGHT]: { dx: 1, dy: 0 },
     };
 
-    private readonly MAP_WIDTH = 500;   // pick whatever fits your canvas
+    private readonly GRACE_PERIOD_MS = 15_000;
+    private readonly MAP_WIDTH = 500;
     private readonly MAP_HEIGHT = 500;
 
     private getOrCreateRoom(roomId: string): Room {
@@ -45,8 +51,28 @@ export class RoomsService {
         return this.rooms.get(roomId)!;
     }
 
-    join(roomId: string, username: string, userId: string, socketId: string): User {
+    join(roomId: string, username: string, userId: string, socketId: string): { user: User, reconnected: boolean } {
+        const previousRoomId = this.userRoomIndex.get(userId);
+
+        if (previousRoomId && previousRoomId !== roomId) {
+            this.forceRemove(userId, previousRoomId);
+        }
+
         const room = this.getOrCreateRoom(roomId);
+        const existing = room.users.get(userId);
+        if (existing) {
+            const key = this.timerKey(roomId, userId);
+            const timer = this.disconnectTimers.get(key)
+
+            if (timer) {
+                clearTimeout(timer)
+                this.disconnectTimers.delete(key)
+            }
+            existing.socketId = socketId
+            this.socketIndex.set(socketId, { userId, roomId })
+            this.userRoomIndex.set(userId, roomId);
+            return { user: existing, reconnected: true };
+        }
 
         if (room.maxUsers && room.users.size >= room.maxUsers) {
             throw new Error('Room is full');
@@ -57,28 +83,38 @@ export class RoomsService {
 
         room.users.set(userId, user);
         this.socketIndex.set(socketId, { userId, roomId });
-        return user;
+        this.userRoomIndex.set(userId, roomId);
+
+        return { user, reconnected: false };
     }
 
     leave(socketId: string) {
         const info = this.socketIndex.get(socketId);
         if (!info) return null;
-
-        const room = this.rooms.get(info.roomId)
-        const user = room?.users.get(info.userId);
-        room?.users.delete(info.userId);
         this.socketIndex.delete(socketId);
 
-        if (room && room.users.size === 0) {
-            this.rooms.delete(info.roomId);
-        }
+        const key = this.timerKey(info.roomId, info.userId);
+        const timer = setTimeout(() => {
+            const room = this.rooms.get(info.roomId);
+            room?.users.delete(info.userId);
+            this.disconnectTimers.delete(key);
+            if (room && room.users.size === 0) this.rooms.delete(info.roomId);
+            this.userRoomIndex.delete(info.userId);
+            this.emit('user-timed-out', info)
+        }, this.GRACE_PERIOD_MS);
 
-        return user ? { ...info, username: user.username } : null;
+        this.disconnectTimers.set(key, timer);
+        return info
     }
 
+    private timerKey(roomId: string, userId: string) {
+        return `${roomId}:${userId}`;
+    }
 
     move(socketId: string, direction: Direction): { userId: string; roomId: string; x: number; y: number } | null {
+
         const info = this.socketIndex.get(socketId);
+
         if (!info) return null;
 
         const user = this.rooms.get(info.roomId)?.users.get(info.userId);
@@ -93,6 +129,22 @@ export class RoomsService {
 
     private clamp(v: number, min: number, max: number): number {
         return Math.floor(Math.min(Math.max(v, min), max));
+    }
+
+    private forceRemove(userId: string, roomId: string) {
+        const key = this.timerKey(roomId, userId);
+        const timer = this.disconnectTimers.get(key);
+
+        if (timer) {
+            clearTimeout(timer);
+            this.disconnectTimers.delete(key);
+        }
+
+        const room = this.rooms.get(roomId);
+        room?.users.delete(userId);
+        if (room && room.users.size === 0) this.rooms.delete(roomId);
+
+        this.emit('user-timed-out', { userId, roomId }); // reuse the same event — gateway broadcasts user_left
     }
 
     getUser(roomId: string, userId: string): User | undefined {
@@ -137,6 +189,13 @@ export class RoomsService {
         const y = Math.round((anchor.y + Math.sin(angle) * radius) * 100) / 100;
 
         return { x, y };
+    }
+
+    touchLastSeen(socketId: string) {
+        const info = this.socketIndex.get(socketId);
+        if (!info) return;
+        const user = this.rooms.get(info.roomId)?.users.get(info.userId);
+        if (user) user.lastSeenAt = Date.now();
     }
 
 }
