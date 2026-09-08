@@ -106,8 +106,6 @@
       }
 
       function connect() {
-        console.log(token);
-
         const url = document.getElementById('wsUrl').value;
         socket = io(url, {
           transports: ['websocket'],

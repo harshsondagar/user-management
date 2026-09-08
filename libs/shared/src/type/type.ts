@@ -54,3 +54,10 @@ export interface CronLogContext {
 export interface SystemLogContext {
     type: 'system';
 }
+
+export interface WsLogContext {
+    type: 'WebSocket'
+    socketId: string,
+    userId: string,
+    event: string
+}

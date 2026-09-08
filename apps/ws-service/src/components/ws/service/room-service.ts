@@ -8,7 +8,8 @@ interface User {
     socketId: string;
     x: number;
     y: number;
-    lastSeenAt?: number;
+    lastSeenAt: number;
+    isIdle: boolean;
 }
 interface Room {
     roomId: string;
@@ -25,7 +26,7 @@ export class RoomsService extends EventEmitter {
     private socketIndex: SocketIndex = new Map();
     private userRoomIndex = new Map<string, string>();
     private disconnectTimers = new Map<string, NodeJS.Timeout>()
-
+    private idleWarningTimers = new Map<string, NodeJS.Timeout>();
 
     private readonly STEP = 1
     private readonly deltas: Record<Direction, { dx: number; dy: number }> = {
@@ -38,6 +39,19 @@ export class RoomsService extends EventEmitter {
     private readonly GRACE_PERIOD_MS = 15_000;
     private readonly MAP_WIDTH = 500;
     private readonly MAP_HEIGHT = 500;
+
+
+    private readonly IDLE_WARNING_MS = 60_000
+    private readonly IDLE_DISCONNECT_MS = 30_000
+    private idleSweepInterval: NodeJS.Timeout;
+
+
+
+    constructor() {
+        super();
+        this.idleSweepInterval = setInterval(() => this.runIdleSweep(), 15_000);
+    }
+
 
     private getOrCreateRoom(roomId: string): Room {
         if (!this.rooms.get(roomId)) {
@@ -79,7 +93,7 @@ export class RoomsService extends EventEmitter {
         }
 
         const { x, y } = this.spawnPosition(room);
-        const user: User = { username, userId, socketId, x, y };
+        const user: User = { username, userId, socketId, x, y, lastSeenAt: Date.now(), isIdle: false };
 
         room.users.set(userId, user);
         this.socketIndex.set(socketId, { userId, roomId });
@@ -127,14 +141,21 @@ export class RoomsService extends EventEmitter {
         return { ...info, x: user.x, y: user.y };
     }
 
+
+
     private clamp(v: number, min: number, max: number): number {
         return Math.floor(Math.min(Math.max(v, min), max));
     }
 
     private forceRemove(userId: string, roomId: string) {
+        const warningTimer = this.idleWarningTimers.get(userId);
+        if (warningTimer) {
+            clearTimeout(warningTimer);
+            this.idleWarningTimers.delete(userId);
+        }
+
         const key = this.timerKey(roomId, userId);
         const timer = this.disconnectTimers.get(key);
-
         if (timer) {
             clearTimeout(timer);
             this.disconnectTimers.delete(key);
@@ -144,7 +165,7 @@ export class RoomsService extends EventEmitter {
         room?.users.delete(userId);
         if (room && room.users.size === 0) this.rooms.delete(roomId);
 
-        this.emit('user-timed-out', { userId, roomId }); // reuse the same event — gateway broadcasts user_left
+        this.emit('user-timed-out', { userId, roomId });
     }
 
     getUser(roomId: string, userId: string): User | undefined {
@@ -170,6 +191,15 @@ export class RoomsService extends EventEmitter {
         return this.socketIndex.get(socketId);
     }
 
+    leaveRoom(userId: string, roomId: string): boolean {
+        const room = this.rooms.get(roomId);
+        if (!room || !room.users.has(userId)) return false;
+
+        this.forceRemove(userId, roomId);
+        this.userRoomIndex.delete(userId);
+        return true;
+    }
+
     private randomCoord(min = 0, max = 100): number {
         return Math.round((Math.random() * (max - min) + min) * 100) / 100;
     }
@@ -191,11 +221,58 @@ export class RoomsService extends EventEmitter {
         return { x, y };
     }
 
-    touchLastSeen(socketId: string) {
+    touchLastSeen(socketId: string): void {
         const info = this.socketIndex.get(socketId);
         if (!info) return;
         const user = this.rooms.get(info.roomId)?.users.get(info.userId);
-        if (user) user.lastSeenAt = Date.now();
+        if (!user) return;
+
+        user.lastSeenAt = Date.now();
+
+        if (user.isIdle) {
+            user.isIdle = false;
+            this.emit('user-idle-changed', { roomId: info.roomId, userId: info.userId, isIdle: false });
+
+            const timer = this.idleWarningTimers.get(info.userId);
+            if (timer) {
+                clearTimeout(timer);
+                this.idleWarningTimers.delete(info.userId);
+            }
+        }
+    }
+
+    runIdleSweep(): void {
+        const now = Date.now();
+
+        for (const room of this.rooms.values()) {
+            for (const user of room.users.values()) {
+                const idleFor = now - user.lastSeenAt!;
+
+                if (!user.isIdle && idleFor > this.IDLE_WARNING_MS) {
+                    user.isIdle = true;
+                    this.emit('user-idle-changed', { roomId: room.roomId, userId: user.userId, isIdle: true });
+                    this.startIdleDisconnectTimer(user.userId, room.roomId, user.socketId);
+                }
+            }
+        }
+    }
+
+    private startIdleDisconnectTimer(userId: string, roomId: string, socketId: string): void {
+        const timer = setTimeout(() => {
+            this.idleWarningTimers.delete(userId);
+            // still idle and still the same connection? then time's up
+            const room = this.rooms.get(roomId);
+            const user = room?.users.get(userId);
+            if (user && user.isIdle && user.socketId === socketId) {
+                this.emit('user-idle-kicked', { roomId, userId, socketId });
+            }
+        }, this.IDLE_DISCONNECT_MS);
+
+        this.idleWarningTimers.set(userId, timer);
+    }
+
+    onModuleDestroy() {
+        clearInterval(this.idleSweepInterval);
     }
 
 }

@@ -39,7 +39,6 @@ export class RateLimitInterceptor implements NestInterceptor {
         }
 
         const bucket = clientBuckets.get(event)!
-        console.log(bucket);
 
         if (!bucket.tryConsume()) {
 

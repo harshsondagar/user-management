@@ -9,6 +9,7 @@ import { APP_FILTER, APP_INTERCEPTOR, APP_PIPE } from '@nestjs/core';
 import { WsExceptionFilter } from './components/ws/fillters/ws-exception.filter';
 import { ActivityTrackerInterceptor } from './components/ws/interceptors/activity-tracker.interceptor';
 import { RateLimitInterceptor } from './components/ws/interceptors/rate-limit.interceptor';
+import { IpConnectionLimiter } from './components/ws/rate-limit/ip-connection-limiter.service';
 
 @Module({
   imports: [],
@@ -23,6 +24,7 @@ import { RateLimitInterceptor } from './components/ws/interceptors/rate-limit.in
     RoomsService,
     ChatHandler,
     JwtService,
+    IpConnectionLimiter
   ],
 })
 export class WsServiceModule { }
