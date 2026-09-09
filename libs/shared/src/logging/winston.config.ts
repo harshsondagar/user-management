@@ -67,9 +67,9 @@ export function getWinstonConfig(serviceName: string) {
             format: isProd
                 ? fullFormat // console always shows everything, including bootstrap — useful for live debugging/Docker logs
                 : winston.format.combine(
-                    winston.format.timestamp({ format: 'HH:mm:ss' }),
+                    winston.format.timestamp({ format: 'YYYY-MM-DD HH:mm:ss' }),
                     winston.format.colorize({ all: true }),
-                    nestWinstonModuleUtilities.format.nestLike(serviceName, { prettyPrint: true }),
+                    nestWinstonModuleUtilities.format.nestLike(serviceName, { prettyPrint: true, appName: true }),
                 ),
         }),
     ];

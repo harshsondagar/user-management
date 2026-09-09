@@ -73,7 +73,6 @@ async function main() {
                 userId: user.id,
                 planId: plan.id,
                 status,
-                stripeSubscriptionId: null,
                 currentPeriodEnd: isActive ? randomDate(-30, 30) : randomDate(1, 90), // active: mix of past/future; others: in the past
                 canceledAt: status === SubscriptionStatus.CANCELED ? randomDate(1, 60) : null,
                 createdAt: randomDate(1, 180),

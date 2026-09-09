@@ -201,7 +201,7 @@ export class RoomsService extends EventEmitter {
     }
 
     private randomCoord(min = 0, max = 100): number {
-        return Math.round((Math.random() * (max - min) + min) * 100) / 100;
+        return Math.round(Math.random() * (max - min) + min);
     }
 
     private spawnPosition(room: Room): { x: number; y: number } {
@@ -215,8 +215,8 @@ export class RoomsService extends EventEmitter {
         const angle = Math.random() * 2 * Math.PI;   // random direction
         const radius = 5 + Math.random() * 10;        // 5–15 units away, avoids exact overlap
 
-        const x = Math.round((anchor.x + Math.cos(angle) * radius) * 100) / 100;
-        const y = Math.round((anchor.y + Math.sin(angle) * radius) * 100) / 100;
+        const x = this.clamp(Math.round(anchor.x + Math.cos(angle) * radius), 0, this.MAP_WIDTH);
+        const y = this.clamp(Math.round(anchor.y + Math.sin(angle) * radius), 0, this.MAP_HEIGHT);
 
         return { x, y };
     }
