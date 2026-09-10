@@ -36,7 +36,7 @@
     "test:e2e:api": "jest --config apps/api/test/jest-e2e.json --maxWorkers=4",
     "test:e2e:queue": "jest --config apps/queue-service/test/jest-e2e.json --maxWorkers=4",
     "test:e2e:cross": "jest --config test/e2e-cross-app/jest-e2e.json --runInBand",
-    "test:e2e": "pnpm run apps/task-workspace/test:e2e:infra:up && pnpm run test:e2e:api && pnpm run test:e2e:queue && pnpm run test:e2e:infra:down",
+    "test:e2e": "pnpm run test:e2e:infra:up && pnpm run test:e2e:api && pnpm run test:e2e:queue && pnpm run test:e2e:infra:down",
     "logs:watch": "logdy follow logs/api-combined-*.log logs/api-error-*.log logs/queue-service-combined-*.log logs/queue-service-error-*.log",
     "unit:test": "npx jest room-service.spec.ts"
   },
@@ -68,6 +68,7 @@
     "@nestjs/typeorm": "^11.0.3",
     "@nestjs/websockets": "^11.1.28",
     "@sentry/node": "^10.67.0",
+    "@socket.io/redis-adapter": "^8.3.0",
     "argon2": "^0.45.0",
     "axios": "^1.18.1",
     "bcrypt": "^6.0.0",

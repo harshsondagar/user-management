@@ -10,6 +10,7 @@ import { WsExceptionFilter } from './components/ws/fillters/ws-exception.filter'
 import { ActivityTrackerInterceptor } from './components/ws/interceptors/activity-tracker.interceptor';
 import { RateLimitInterceptor } from './components/ws/interceptors/rate-limit.interceptor';
 import { IpConnectionLimiter } from './components/ws/rate-limit/ip-connection-limiter.service';
+import { redisProvider } from './redis/redis.provider';
 
 @Module({
   imports: [],
@@ -18,6 +19,7 @@ import { IpConnectionLimiter } from './components/ws/rate-limit/ip-connection-li
     { provide: APP_PIPE, useValue: new ValidationPipe({ transform: true, whitelist: true }) },
     { provide: APP_FILTER, useClass: WsExceptionFilter },
     { provide: APP_INTERCEPTOR, useClass: ActivityTrackerInterceptor },
+    redisProvider,
     RateLimitInterceptor,
     WsServiceService,
     WsGateway,

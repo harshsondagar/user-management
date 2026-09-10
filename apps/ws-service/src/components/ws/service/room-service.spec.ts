@@ -132,12 +132,12 @@ describe('RoomsService', () => {
         });
     });
 
-    describe('reconnect via join', () => {
-        it('preserves x/y and returns reconnected: true when rejoining within the grace period', () => {
-            const { user: original } = service.join('room1', 'alice', 'user-1', 'socket-1');
+    describe('reconnect via join', async () => {
+        it('preserves x/y and returns reconnected: true when rejoining within the grace period', async () => {
+            const { user: original } = await service.join('room1', 'alice', 'user-1', 'socket-1');
             service.leave('socket-1');
 
-            const result = service.join('room1', 'alice', 'user-1', 'socket-2');
+            const result = await service.join('room1', 'alice', 'user-1', 'socket-2');
 
             expect(result.reconnected).toBe(true);
             expect(result.user.x).toBe(original.x);
@@ -148,13 +148,13 @@ describe('RoomsService', () => {
             expect(service.getRoomUsers('room1')).toHaveLength(1);
         });
 
-        it('creates a fresh user if rejoining after the grace period has expired', () => {
-            const { user: original } = service.join('room1', 'alice', 'user-1', 'socket-1');
+        it('creates a fresh user if rejoining after the grace period has expired', async () => {
+            const { user: original } = await service.join('room1', 'alice', 'user-1', 'socket-1');
             service.leave('socket-1');
 
             jest.advanceTimersByTime(15_000); // grace period fully elapses, user is gone
 
-            const result = service.join('room1', 'alice', 'user-1', 'socket-2');
+            const result = await service.join('room1', 'alice', 'user-1', 'socket-2');
 
             expect(result.reconnected).toBe(false);
             expect(service.getRoomUsers('room1')).toHaveLength(1);
@@ -164,7 +164,7 @@ describe('RoomsService', () => {
             expect(result.user.userId).toBe('user-1');
         });
 
-        it('is not blocked by a full room when reconnecting to their own slot', () => {
+        it('is not blocked by a full room when reconnecting to their own slot', async () => {
             // Fill the room to maxUsers (10), including user-0 who we'll disconnect
             // and then reconnect.
             for (let i = 0; i < 10; i++) {
@@ -174,17 +174,17 @@ describe('RoomsService', () => {
 
             // user-0 reconnects while the room is still nominally "full" of
             // 10 slots (their own slot just hasn't been vacated yet).
-            const result = service.join('room1', 'user0', 'user-0', 'socket-0-new');
+            const result = await service.join('room1', 'user0', 'user-0', 'socket-0-new');
 
             expect(result.reconnected).toBe(true);
             expect(service.getRoomUsers('room1')).toHaveLength(10);
         });
 
-        it('force-removes stale membership when a user joins a NEW room while still "in" a previous one', () => {
+        it('force-removes stale membership when a user joins a NEW room while still "in" a previous one', async () => {
             service.join('room1', 'alice', 'user-1', 'socket-1');
             // No leave() called - alice jumps straight into room2 (e.g. the client
             // reconnected and the server picked a different room for them).
-            const result = service.join('room2', 'alice', 'user-1', 'socket-2');
+            const result = await service.join('room2', 'alice', 'user-1', 'socket-2');
 
             expect(result.reconnected).toBe(false);
             expect(service.getRoomUsers('room1')).toHaveLength(0);
@@ -394,28 +394,130 @@ describe('RoomsService', () => {
         });
     });
 
-    describe('known bug: spawn positions are not integers', () => {
-        // These are RED right now against the current source - that's
-        // intentional. randomCoord()/spawnPosition() round to 2 decimal places
-        // (e.g. 42.37), but move()'s clamp() floors to a whole number on every
-        // call. That mismatch means a user's x/y silently changes "shape"
-        // (fractional -> integer) the moment they make their first move, even
-        // though nothing about the User type signals that. Fix is in
-        // room-service.ts, not here - once applied, these should go green.
+    describe('spawn positions are integers (regression test for a bug we found)', () => {
+        // These were RED before the randomCoord()/spawnPosition() fix in
+        // room-service.ts (they rounded to 2 decimal places, but move()'s
+        // clamp() floors to whole numbers - an inconsistency between spawn and
+        // movement). Should be GREEN now that the fix is applied. If this ever
+        // goes red again, someone reintroduced the fractional-coordinate bug.
 
-        it('spawns a brand-new user at whole-number x/y coordinates', () => {
-            const { user } = service.join('room1', 'alice', 'user-1', 'socket-1');
+        it('spawns a brand-new user at whole-number x/y coordinates', async () => {
+            const { user } = await service.join('room1', 'alice', 'user-1', 'socket-1');
 
             expect(Number.isInteger(user.x)).toBe(true);
             expect(Number.isInteger(user.y)).toBe(true);
         });
 
-        it('spawns a user near an existing player at whole-number x/y coordinates too', () => {
+        it('spawns a user near an existing player at whole-number x/y coordinates too', async () => {
             service.join('room1', 'alice', 'user-1', 'socket-1');
-            const { user } = service.join('room1', 'bob', 'user-2', 'socket-2');
+            const { user } = await service.join('room1', 'bob', 'user-2', 'socket-2');
 
             expect(Number.isInteger(user.x)).toBe(true);
             expect(Number.isInteger(user.y)).toBe(true);
         });
+    });
+
+    describe('leaveRoom', () => {
+        it('returns false if the room does not exist', () => {
+            expect(service.leaveRoom('user-1', 'nonexistent-room')).toBe(false);
+        });
+
+        it('returns false if the user is not a member of the given room', () => {
+            service.join('room1', 'alice', 'user-1', 'socket-1');
+
+            expect(service.leaveRoom('user-2', 'room1')).toBe(false);
+        });
+
+        it('removes the user, deletes the now-empty room, and emits "user-timed-out"', () => {
+            const emitSpy = jest.spyOn(service, 'emit');
+            service.join('room1', 'alice', 'user-1', 'socket-1');
+
+            const result = service.leaveRoom('user-1', 'room1');
+
+            expect(result).toBe(true);
+            expect(service.getRoomUsers('room1')).toHaveLength(0);
+            expect(service.roomExists('room1')).toBe(false);
+            expect(emitSpy).toHaveBeenCalledWith('user-timed-out', {
+                userId: 'user-1',
+                roomId: 'room1',
+            });
+        });
+
+        it('clears userRoomIndex immediately, unlike the grace-period path', () => {
+            // forceRemove() itself unconditionally calls this.emit('user-timed-out', ...)
+            // at the end - even if the room was already gone. If leaveRoom() did NOT
+            // clear userRoomIndex right away, then joining a brand-new room straight
+            // after would see a stale "previousRoomId" pointing at room1, and join()
+            // would call forceRemove('user-1', 'room1') a second time - a spurious,
+            // redundant emit for a room that's already been cleaned up. This test
+            // proves that doesn't happen.
+            const emitSpy = jest.spyOn(service, 'emit');
+            service.join('room1', 'alice', 'user-1', 'socket-1');
+            service.leaveRoom('user-1', 'room1');
+            emitSpy.mockClear();
+
+            service.join('room2', 'alice', 'user-1', 'socket-2');
+
+            expect(emitSpy).not.toHaveBeenCalledWith(
+                'user-timed-out',
+                expect.anything(),
+            );
+        });
+    });
+
+    describe('findBySocketId', () => {
+        it('returns the user for a known socket', () => {
+            service.join('room1', 'alice', 'user-1', 'socket-1');
+
+            const found = service.findBySocketId('socket-1');
+
+            expect(found?.userId).toBe('user-1');
+            expect(found?.username).toBe('alice');
+        });
+
+        it('returns undefined for an unknown socket', () => {
+            expect(service.findBySocketId('nonexistent-socket')).toBeUndefined();
+        });
+    });
+
+    describe('event emission: two ways to verify (for reference)', () => {
+        // Both tests below check the SAME thing (leave()'s grace-period timeout
+        // emits 'user-timed-out') using two different techniques, so you can
+        // compare them side by side.
+
+        it('approach A: jest.spyOn - checks that emit() was called with these args, regardless of whether anything is listening', () => {
+            const emitSpy = jest.spyOn(service, 'emit');
+            service.join('room1', 'alice', 'user-1', 'socket-1');
+            service.leave('socket-1');
+
+            jest.advanceTimersByTime(15_000);
+
+            expect(emitSpy).toHaveBeenCalledWith('user-timed-out', {
+                userId: 'user-1',
+                roomId: 'room1',
+            });
+        });
+
+        it('approach B: a real listener via .on() - checks what an actual consumer (like WsGateway) would receive', () => {
+            const handler = jest.fn();
+            service.on('user-timed-out', handler);
+
+            service.join('room1', 'alice', 'user-1', 'socket-1');
+            service.leave('socket-1');
+
+            jest.advanceTimersByTime(15_000);
+
+            expect(handler).toHaveBeenCalledWith({ userId: 'user-1', roomId: 'room1' });
+        });
+
+        // Why we mostly used approach A throughout this file: it's less to type
+        // when you're checking several different events across many tests, and
+        // since Node's EventEmitter itself is a battle-tested built-in (not code
+        // you wrote), proving "emit() was called correctly" is functionally
+        // equivalent to proving "a real listener would receive it correctly" -
+        // you're not really testing Node's internals either way. Approach B is
+        // worth reaching for when you want a test to read as close as possible
+        // to how the real gateway will actually consume the service (e.g. if
+        // you're documenting the service's event contract for someone else).
     });
 });

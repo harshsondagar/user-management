@@ -1,6 +1,13 @@
 import * as dotenv from "dotenv"
 import { join, resolve } from "path";
-dotenv.config({ path: resolve(join(process.cwd(), "/apps/ws-service/.env")) })
+
+const envFileName = process.env.ENV_FILE ?? ".env";
+console.log(envFileName);
+
+dotenv.config({
+  path: resolve(join(process.cwd(), `/apps/ws-service/${envFileName}`))
+})
+
 import { ConnectedSocket, MessageBody, OnGatewayConnection, OnGatewayDisconnect, SubscribeMessage, WebSocketGateway, WebSocketServer } from '@nestjs/websockets';
 import { Server, Socket } from 'socket.io';
 import { RoomsService } from './service/room-service';
@@ -18,26 +25,24 @@ import { LeaveRoomDto } from "./dto/leave-room.dto";
 import { ReauthDto } from "./dto/reauth.dto";
 import { LogContextInterceptor } from "./interceptors/log-context.interceptor";
 
-
 const allowedOrigins = process.env.WS_ALLOWED_ORIGINS?.split(',') ?? [
   'http://localhost:3000',
   'http://localhost:5173',
 ];
 
 @UseInterceptors(LogContextInterceptor, RateLimitInterceptor, ActivityTrackerInterceptor)
-@WebSocketGateway(8080, {
+@WebSocketGateway(Number(process.env.WS_PORT) || 8080, {
   cors: { origin: allowedOrigins, credentials: true },
   pingInterval: 10000,  // server pings every 10s
   pingTimeout: 5000,
   maxHttpBufferSize: 1e4,
 })
-
-
 export class WsGateway implements OnGatewayConnection, OnGatewayDisconnect, BeforeApplicationShutdown {
   private readonly logger = new Logger(WsGateway.name)
 
   private tokenTimers = new Map<string, { warning: NodeJS.Timeout; expiry: NodeJS.Timeout }>();
   private readonly WARNING_BEFORE_EXPIRY_MS = 30_000;
+  private
 
   @WebSocketServer()
   server!: Server;
@@ -84,7 +89,6 @@ export class WsGateway implements OnGatewayConnection, OnGatewayDisconnect, Befo
     }
 
   }
-
 
   handleConnection(client: Socket) {
 
@@ -171,8 +175,8 @@ export class WsGateway implements OnGatewayConnection, OnGatewayDisconnect, Befo
 
   @UseGuards(WsAuthGuard)
   @SubscribeMessage('join_room')
-  handleJoin(@MessageBody() dto: JoinRoomDto, @ConnectedSocket() client: Socket) {
-    const { user, reconnected } = this.rooms.join(
+  async handleJoin(@MessageBody() dto: JoinRoomDto, @ConnectedSocket() client: Socket) {
+    const { user, reconnected } = await this.rooms.join(
       dto.roomId,
       client.data.username,
       client.data.userId,
@@ -180,8 +184,8 @@ export class WsGateway implements OnGatewayConnection, OnGatewayDisconnect, Befo
     )
 
     client.join(dto.roomId);
-
-    client.emit('room_state', { users: this.rooms.getRoomUsers(dto.roomId) });
+    const users = await this.rooms.getGlobalRoomUsers(dto.roomId);
+    client.emit('room_state', { users });
 
     if (reconnected) {
       client.to(dto.roomId).emit('user_reconnected', user);

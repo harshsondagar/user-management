@@ -1,6 +1,9 @@
-import { Injectable } from "@nestjs/common";
+import { Inject, Injectable } from "@nestjs/common";
 import { Direction } from "../dto/move-dto";
 import { EventEmitter } from "events";
+import Redis from "ioredis";
+import { REDIS_CLIENT } from "../../../redis/redis.provider";
+import { promises } from "dns";
 
 interface User {
     username: string;
@@ -47,7 +50,7 @@ export class RoomsService extends EventEmitter {
 
 
 
-    constructor() {
+    constructor(@Inject(REDIS_CLIENT) private readonly redis: Redis) {
         super();
         this.idleSweepInterval = setInterval(() => this.runIdleSweep(), 15_000);
     }
@@ -65,7 +68,11 @@ export class RoomsService extends EventEmitter {
         return this.rooms.get(roomId)!;
     }
 
-    join(roomId: string, username: string, userId: string, socketId: string): { user: User, reconnected: boolean } {
+    private roomUsersKey(roomId: string): string {
+        return `room:${roomId}:users`;
+    }
+
+    async join(roomId: string, username: string, userId: string, socketId: string): Promise<{ user: User, reconnected: boolean }> {
         const previousRoomId = this.userRoomIndex.get(userId);
 
         if (previousRoomId && previousRoomId !== roomId) {
@@ -98,6 +105,8 @@ export class RoomsService extends EventEmitter {
         room.users.set(userId, user);
         this.socketIndex.set(socketId, { userId, roomId });
         this.userRoomIndex.set(userId, roomId);
+
+        // await this.redis.hset(this.roomUsersKey(roomId), userId, JSON.stringify({ username, x, y }));
 
         return { user, reconnected: false };
     }
@@ -147,7 +156,7 @@ export class RoomsService extends EventEmitter {
         return Math.floor(Math.min(Math.max(v, min), max));
     }
 
-    private forceRemove(userId: string, roomId: string) {
+    private async forceRemove(userId: string, roomId: string) {
         const warningTimer = this.idleWarningTimers.get(userId);
         if (warningTimer) {
             clearTimeout(warningTimer);
@@ -164,6 +173,8 @@ export class RoomsService extends EventEmitter {
         const room = this.rooms.get(roomId);
         room?.users.delete(userId);
         if (room && room.users.size === 0) this.rooms.delete(roomId);
+        await this.redis.hdel(this.roomUsersKey(roomId), userId);
+
 
         this.emit('user-timed-out', { userId, roomId });
     }
@@ -239,6 +250,14 @@ export class RoomsService extends EventEmitter {
                 this.idleWarningTimers.delete(info.userId);
             }
         }
+    }
+
+    async getGlobalRoomUsers(roomId: string): Promise<Array<{ userId: string; username: string; x: number; y: number }>> {
+        const raw = await this.redis.hgetall(this.roomUsersKey(roomId));
+        return Object.entries(raw).map(([userId, json]) => ({
+            userId,
+            ...JSON.parse(json),
+        }));
     }
 
     runIdleSweep(): void {

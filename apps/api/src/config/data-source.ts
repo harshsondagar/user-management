@@ -31,6 +31,7 @@ config({
     path: resolve(__dirname, isTest ? '../test/.env.test' : '../../.env'),
 });
 
+
 export const dataSource: DataSource = new DataSource({
     type: 'postgres',
     host: isTest ? (process.env.TEST_POSTGRES_HOST || 'localhost') : (process.env.DB_HOST || 'localhost'),
