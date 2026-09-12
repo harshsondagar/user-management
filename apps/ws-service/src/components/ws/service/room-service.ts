@@ -3,7 +3,6 @@ import { Direction } from "../dto/move-dto";
 import { EventEmitter } from "events";
 import Redis from "ioredis";
 import { REDIS_CLIENT } from "../../../redis/redis.provider";
-import { promises } from "dns";
 
 interface User {
     username: string;
@@ -14,6 +13,7 @@ interface User {
     lastSeenAt: number;
     isIdle: boolean;
 }
+
 interface Room {
     roomId: string;
     users: Map<string, User>;
@@ -106,7 +106,7 @@ export class RoomsService extends EventEmitter {
         this.socketIndex.set(socketId, { userId, roomId });
         this.userRoomIndex.set(userId, roomId);
 
-        // await this.redis.hset(this.roomUsersKey(roomId), userId, JSON.stringify({ username, x, y }));
+        await this.redis.hset(this.roomUsersKey(roomId), userId, JSON.stringify({ username, x, y }));
 
         return { user, reconnected: false };
     }
@@ -174,7 +174,6 @@ export class RoomsService extends EventEmitter {
         room?.users.delete(userId);
         if (room && room.users.size === 0) this.rooms.delete(roomId);
         await this.redis.hdel(this.roomUsersKey(roomId), userId);
-
 
         this.emit('user-timed-out', { userId, roomId });
     }

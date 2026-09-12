@@ -46,6 +46,15 @@ export interface JobLogContext {
     finishedAt: string
 }
 
+export interface PendingChatMessage {
+    id: string;
+    roomId: string;
+    userId: string;
+    content: string;
+    sentAt: string; // ISO string - Dates don't survive JSON.stringify as Dates
+}
+
+
 export interface CronLogContext {
     type: 'cron';
     jobName: string;

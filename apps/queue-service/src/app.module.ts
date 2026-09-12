@@ -13,14 +13,18 @@ import configuration from "./config/configuration";
 import { AppController } from "../app.controller";
 import { DatagovDebugController } from "./data-gov/datagov.controller";
 import { InternalDlqController } from "./dlq/internal-dlq.controller";
-import { AttachUserContextInterceptor, RequestContextMiddleware, testEnv } from "@app/shared";
+import { AttachUserContextInterceptor, ChatMessage, RequestContextMiddleware, testEnv } from "@app/shared";
 import { APP_INTERCEPTOR } from "@nestjs/core";
 import { LogCleanupService } from "@app/shared";
-
+import { ChatFlushService } from "./chats/chat-flush.service";
+import roomdbConfig from "./config/roomdb.config";
 const workerId = process.env.JEST_WORKER_ID!
 
 const isTestEnv = process.env.NODE_ENV === 'test' || workerId;
 const tEnv = isTestEnv ? testEnv() : null;
+
+
+
 
 @Module({
     imports: [
@@ -28,8 +32,8 @@ const tEnv = isTestEnv ? testEnv() : null;
             isGlobal: true,
             envFilePath: isTestEnv
                 ? 'apps/api/test/.env.test'
-                : 'apps/queue-service/.env',
-            load: [configuration]
+                : ['apps/queue-service/.env', 'apps/queue-service/.env.cp.api'],
+            load: [configuration, roomdbConfig]
         }),
         ScheduleModule.forRoot(),
         TypeOrmModule.forRootAsync({
@@ -49,6 +53,32 @@ const tEnv = isTestEnv ? testEnv() : null;
                 retryDelay: 3000
             }),
         }),
+        TypeOrmModule.forRootAsync({
+            name: 'roomsDb',
+            imports: [ConfigModule],
+            inject: [ConfigService],
+            useFactory: (config: ConfigService) => {
+                const configPort = config.get<string | number>('roomdb.port');
+                const parsedPort = typeof configPort === 'string' ? parseInt(configPort, 10) : configPort;
+                console.log(config.get<string>('roomdb.database'));
+
+                return {
+                    type: 'postgres',
+                    // FIXED: Changed 'roomsDatabase' lookup to match the 'roomdb' namespace exported in roomdb.config
+                    host: tEnv?.postgresHost ?? config.get<string>('roomdb.host'),
+                    port: tEnv?.postgresPort ?? parsedPort,
+                    username: tEnv?.postgresUser ?? config.get<string>('roomdb.username'),
+                    password: tEnv?.postgresPassword ?? config.get<string>('roomdb.password'),
+                    database: tEnv?.dbName ?? config.get<string>('roomdb.database'),
+
+                    // FIXED CRITICAL CRASH: Changed to true so background worker layers find entity definitions instantly
+                    autoLoadEntities: true,
+                    entities: [ChatMessage],
+                    synchronize: false,
+                };
+            },
+        }),
+
         MongooseModule.forRootAsync({
             imports: [ConfigModule],
             inject: [ConfigService],
@@ -79,6 +109,7 @@ const tEnv = isTestEnv ? testEnv() : null;
     ],
     controllers: [AppController, DatagovDebugController, InternalDlqController],
     providers: [
+        ChatFlushService,
         { provide: APP_INTERCEPTOR, useClass: AttachUserContextInterceptor },
         { provide: LogCleanupService, useFactory: () => new LogCleanupService("queue-service") }
     ],

@@ -85,6 +85,8 @@ export class UserService {
         });
 
         const otp = this.otpService.generateOtp();
+        console.log(otp);
+
         await this.otpService.storeOtp(user.email, otp);
         await this.mailProducer.addVerificationMailJob(user.email, user.firstName!, otp);
 

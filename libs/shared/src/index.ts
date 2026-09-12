@@ -12,7 +12,11 @@ export * from './logging/job-context.util';
 export * from './logging/cron-context.util';
 export * from './logging/log-cleanup.service';
 export * from "./test-utils/test-env"
-
+export * from "./entity/room-entity";
+export * from "./entity/room.invite-entity";
+export * from "./entity/room.ban-entity";
+export * from "./entity/room-invite-link-entity";
+export * from "./entity/chat-message-entity";
 
 
 

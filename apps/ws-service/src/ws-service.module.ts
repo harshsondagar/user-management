@@ -11,6 +11,7 @@ import { ActivityTrackerInterceptor } from './components/ws/interceptors/activit
 import { RateLimitInterceptor } from './components/ws/interceptors/rate-limit.interceptor';
 import { IpConnectionLimiter } from './components/ws/rate-limit/ip-connection-limiter.service';
 import { redisProvider } from './redis/redis.provider';
+import { ChatPersistenceQueue } from './components/ws/chats/chat-persistence-queue';
 
 @Module({
   imports: [],
@@ -19,6 +20,7 @@ import { redisProvider } from './redis/redis.provider';
     { provide: APP_PIPE, useValue: new ValidationPipe({ transform: true, whitelist: true }) },
     { provide: APP_FILTER, useClass: WsExceptionFilter },
     { provide: APP_INTERCEPTOR, useClass: ActivityTrackerInterceptor },
+    ChatPersistenceQueue,
     redisProvider,
     RateLimitInterceptor,
     WsServiceService,
