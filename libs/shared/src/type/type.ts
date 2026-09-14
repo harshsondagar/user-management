@@ -1,3 +1,5 @@
+import { ChatAttachment, ChatMessageStatus, ChatMessageType } from "../entity/chat-message-entity";
+
 export enum MailJobName {
     VERIFY_EMAIL = 'verify-email',
     WELCOME = 'welcome',
@@ -50,10 +52,12 @@ export interface PendingChatMessage {
     id: string;
     roomId: string;
     userId: string;
-    content: string;
-    sentAt: string; // ISO string - Dates don't survive JSON.stringify as Dates
+    content: string | null;
+    type: ChatMessageType;
+    status: ChatMessageStatus
+    attachment?: ChatAttachment | null;
+    sentAt: string; // ISO
 }
-
 
 export interface CronLogContext {
     type: 'cron';

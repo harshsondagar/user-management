@@ -13,11 +13,13 @@ import configuration from "./config/configuration";
 import { AppController } from "../app.controller";
 import { DatagovDebugController } from "./data-gov/datagov.controller";
 import { InternalDlqController } from "./dlq/internal-dlq.controller";
-import { AttachUserContextInterceptor, ChatMessage, RequestContextMiddleware, testEnv } from "@app/shared";
+import { AttachUserContextInterceptor, ChatMessage, RequestContextMiddleware, SharedModule, testEnv } from "@app/shared";
 import { APP_INTERCEPTOR } from "@nestjs/core";
 import { LogCleanupService } from "@app/shared";
 import { ChatFlushService } from "./chats/chat-flush.service";
 import roomdbConfig from "./config/roomdb.config";
+import { IMAGE_PROCESSING_QUEUE } from "../../../libs/shared/src/queue.constants";
+import { ImageProcessingModule } from "./image/image-processing.module";
 const workerId = process.env.JEST_WORKER_ID!
 
 const isTestEnv = process.env.NODE_ENV === 'test' || workerId;
@@ -101,11 +103,14 @@ const tEnv = isTestEnv ? testEnv() : null;
         BullModule.registerQueue(
             { name: `scrape-gov-data` },
             { name: 'send-mail' },
+            { name: IMAGE_PROCESSING_QUEUE }
         ),
         MailModule,
         SyncModule,
         DlqModule,
-        DatagovModule
+        DatagovModule,
+        ImageProcessingModule,
+        SharedModule
     ],
     controllers: [AppController, DatagovDebugController, InternalDlqController],
     providers: [

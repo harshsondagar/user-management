@@ -17,6 +17,10 @@ export * from "./entity/room.invite-entity";
 export * from "./entity/room.ban-entity";
 export * from "./entity/room-invite-link-entity";
 export * from "./entity/chat-message-entity";
+export * from "./minio/minio.service"
+export * from "./queue.constants"
+export * from './redis/redis.provider';
+export * from './redis/redis.module';
 
 
 

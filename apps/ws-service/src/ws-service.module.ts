@@ -12,9 +12,17 @@ import { RateLimitInterceptor } from './components/ws/interceptors/rate-limit.in
 import { IpConnectionLimiter } from './components/ws/rate-limit/ip-connection-limiter.service';
 import { redisProvider } from './redis/redis.provider';
 import { ChatPersistenceQueue } from './components/ws/chats/chat-persistence-queue';
+import { ChatImageReadySubscriber } from './chat-image-ready.subscriber';
+import { MinioService } from '@app/shared';
+import { ConfigModule } from '@nestjs/config';
+import configuration from './components/ws/config/configuration';
 
 @Module({
-  imports: [],
+  imports: [ConfigModule.forRoot({
+    isGlobal: true,
+    envFilePath: ".env",
+    load: [configuration]
+  }),],
   controllers: [WsServiceController],
   providers: [
     { provide: APP_PIPE, useValue: new ValidationPipe({ transform: true, whitelist: true }) },
@@ -28,7 +36,9 @@ import { ChatPersistenceQueue } from './components/ws/chats/chat-persistence-que
     RoomsService,
     ChatHandler,
     JwtService,
-    IpConnectionLimiter
+    IpConnectionLimiter,
+    ChatImageReadySubscriber,
+    MinioService
   ],
 })
 export class WsServiceModule { }

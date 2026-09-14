@@ -17,7 +17,7 @@ export class ChatPersistenceQueue {
     // already rendered live against the same message coming back from
     // chat-history later, instead of showing it twice.
     async enqueue(id: string, roomId: string, userId: string, content: string, sentAt: Date): Promise<void> {
-        const message: PendingChatMessage = {
+        const message: any = {
             id,
             roomId,
             userId,

@@ -72,6 +72,9 @@ export class ChatFlushService implements OnModuleInit {
             roomId: m.roomId,
             userId: m.userId,
             content: m.content,
+            type: m.type,
+            status: m.status ?? 'sent',
+            attachment: m.attachment ?? null,
             sentAt: new Date(m.sentAt),
         }));
 
