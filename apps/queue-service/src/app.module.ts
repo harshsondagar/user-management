@@ -27,6 +27,10 @@ const tEnv = isTestEnv ? testEnv() : null;
 
 
 
+const workerId = process.env.JEST_WORKER_ID!
+
+const isTestEnv = process.env.NODE_ENV === 'test' || workerId;
+const tEnv = isTestEnv ? testEnv() : null;
 
 @Module({
     imports: [
