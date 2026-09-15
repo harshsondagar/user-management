@@ -1,6 +1,7 @@
 import { Column, CreateDateColumn, DeleteDateColumn, Entity, Index, ManyToMany, OneToMany, PrimaryGeneratedColumn, UpdateDateColumn } from "typeorm";
 import { Task } from "../../task/entity/task-entity";
 import { Followers } from "./userfollowers-entity";
+import { Profile } from "../../profile/entity/profile-entity";
 
 export enum UserRole {
     USER = 'user',
@@ -86,6 +87,9 @@ export class User {
         nullable: false
     })
     timezone!: string;
+
+    @OneToMany(() => Profile, (profile) => profile.user)
+    profiles!: Profile[];
 }
 
 

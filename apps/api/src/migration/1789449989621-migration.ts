@@ -1,10 +1,16 @@
 import { MigrationInterface, QueryRunner } from "typeorm";
 
-export class Migration1789189673027 implements MigrationInterface {
-    name = 'Migration1789189673027'
+export class Migration1789449989621 implements MigrationInterface {
+    name = 'Migration1789449989621'
 
     public async up(queryRunner: QueryRunner): Promise<void> {
         await queryRunner.query(`CREATE TABLE "tasks" ("id" uuid NOT NULL DEFAULT uuid_generate_v4(), "name" character varying(100) NOT NULL, "description" character varying NOT NULL, "userId" uuid NOT NULL, "isCompleted" "public"."tasks_iscompleted_enum" NOT NULL DEFAULT 'pending', "createdAt" TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now(), "updatedAt" TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now(), "deletedAt" TIMESTAMP WITH TIME ZONE, CONSTRAINT "PK_8d12ff38fcc62aaba2cab748772" PRIMARY KEY ("id"))`);
+        await queryRunner.query(`CREATE TABLE "watch_history" ("id" uuid NOT NULL DEFAULT gen_random_uuid(), "profile_id" uuid NOT NULL, "content_id" uuid NOT NULL, "progress_seconds" integer NOT NULL DEFAULT '0', "duration_seconds" integer, "completed" boolean NOT NULL DEFAULT false, "last_watched_at" TIMESTAMP WITH TIME ZONE NOT NULL, "created_at" TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now(), "updated_at" TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now(), CONSTRAINT "uq_watch_history_profile_content" UNIQUE ("profile_id", "content_id"), CONSTRAINT "PK_4a7d6381618ede4bcde39b5a708" PRIMARY KEY ("id"))`);
+        await queryRunner.query(`CREATE INDEX "idx_watch_history_profile_id" ON "watch_history" ("profile_id") `);
+        await queryRunner.query(`CREATE TABLE "watchlist_items" ("id" uuid NOT NULL DEFAULT gen_random_uuid(), "profile_id" uuid NOT NULL, "content_id" uuid NOT NULL, "added_at" TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now(), CONSTRAINT "uq_watchlist_profile_content" UNIQUE ("profile_id", "content_id"), CONSTRAINT "PK_0a02323c5cc02e094871f24062b" PRIMARY KEY ("id"))`);
+        await queryRunner.query(`CREATE INDEX "idx_watchlist_profile_id" ON "watchlist_items" ("profile_id") `);
+        await queryRunner.query(`CREATE TABLE "profiles" ("id" uuid NOT NULL DEFAULT gen_random_uuid(), "user_id" uuid NOT NULL, "profile_name" character varying(50) NOT NULL, "avatar_url" text, "is_kids_profile" boolean NOT NULL DEFAULT false, "maturity_level" smallint NOT NULL DEFAULT '5', "language" character varying(10) NOT NULL DEFAULT 'en', "subtitle_language" character varying(10), "ui_theme" character varying(20) NOT NULL DEFAULT 'dark', "pin_hash" character varying, "pin_enabled" boolean NOT NULL DEFAULT false, "pin_failed_attempts" smallint NOT NULL DEFAULT '0', "pin_locked_until" TIMESTAMP WITH TIME ZONE, "is_default" boolean NOT NULL DEFAULT false, "created_at" TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now(), "updated_at" TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now(), "deleted_at" TIMESTAMP WITH TIME ZONE, CONSTRAINT "uq_profiles_user_id_profile_name" UNIQUE ("user_id", "profile_name"), CONSTRAINT "PK_8e520eb4da7dc01d0e190447c8e" PRIMARY KEY ("id"))`);
+        await queryRunner.query(`CREATE INDEX "idx_profiles_user_id" ON "profiles" ("user_id") `);
         await queryRunner.query(`CREATE TABLE "users" ("id" uuid NOT NULL DEFAULT uuid_generate_v4(), "firstName" character varying(100), "lastName" character varying(100), "email" character varying(255) NOT NULL, "passwordHash" character varying NOT NULL, "role" "public"."users_role_enum" NOT NULL DEFAULT 'user', "isEmailVerified" boolean NOT NULL DEFAULT false, "failedLoginAttempts" integer NOT NULL DEFAULT '0', "tokenVersion" integer NOT NULL DEFAULT '0', "lockedUntil" TIMESTAMP WITH TIME ZONE, "isAdmin" boolean NOT NULL DEFAULT false, "profileVisibility" "public"."users_profilevisibility_enum" NOT NULL DEFAULT 'private', "resetToken" character varying, "resetTokenExpiry" TIMESTAMP WITH TIME ZONE, "createdAt" TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now(), "updatedAt" TIMESTAMP WITH TIME ZONE DEFAULT now(), "deletedAt" TIMESTAMP, "stripeCustomerId" character varying, "timezone" character varying NOT NULL DEFAULT 'UTC', CONSTRAINT "UQ_ab9126a074980674ba95d4cd358" UNIQUE ("stripeCustomerId"), CONSTRAINT "PK_a3ffb1c0c8416b9fc6f907b7433" PRIMARY KEY ("id"))`);
         await queryRunner.query(`CREATE UNIQUE INDEX "IDX_97672ac88f789774dd47f7c8be" ON "users" ("email") `);
         await queryRunner.query(`CREATE TABLE "followers" ("id" uuid NOT NULL DEFAULT uuid_generate_v4(), "followerId" uuid NOT NULL, "followingId" uuid NOT NULL, "status" "public"."followers_status_enum" NOT NULL DEFAULT 'pending', "createdAt" TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now(), CONSTRAINT "UQ_451bb9eb792c3023a164cf14e0a" UNIQUE ("followerId"), CONSTRAINT "UQ_5e34418be6d904b779ca96cf932" UNIQUE ("followingId"), CONSTRAINT "UQ_1485f24f1f66ac91ea2c5517ebd" UNIQUE ("followerId", "followingId"), CONSTRAINT "PK_c90cfc5b18edd29bd15ba95c1a4" PRIMARY KEY ("id"))`);
@@ -30,10 +36,17 @@ export class Migration1789189673027 implements MigrationInterface {
         await queryRunner.query(`CREATE INDEX "IDX_da7923626f057e69c600bb2063" ON "RefreshToken" ("familyId") `);
         await queryRunner.query(`CREATE TABLE "room_bans" ("id" uuid NOT NULL DEFAULT uuid_generate_v4(), "roomId" uuid NOT NULL, "bannedUserId" uuid NOT NULL, "bannedBy" uuid NOT NULL, "reason" character varying, "createdAt" TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now(), CONSTRAINT "UQ_9193f02b634fa7cf5b3392cfa92" UNIQUE ("roomId", "bannedUserId"), CONSTRAINT "PK_f9d925f0f4d6ce338e967a299e0" PRIMARY KEY ("id"))`);
         await queryRunner.query(`CREATE INDEX "IDX_48b35727d6ed87561a4e4181bc" ON "room_bans" ("bannedUserId") `);
+        await queryRunner.query(`CREATE TABLE "room_invite_links" ("id" uuid NOT NULL DEFAULT uuid_generate_v4(), "roomId" uuid NOT NULL, "token" character varying(20) NOT NULL, "createdBy" uuid NOT NULL, "maxUses" integer, "useCount" integer NOT NULL DEFAULT '0', "expiresAt" TIMESTAMP WITH TIME ZONE, "isActive" boolean NOT NULL DEFAULT true, "createdAt" TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now(), CONSTRAINT "PK_22266e86d3bf9f57d3e2680f2bf" PRIMARY KEY ("id"))`);
+        await queryRunner.query(`CREATE UNIQUE INDEX "IDX_651816264af8480acac4300db2" ON "room_invite_links" ("token") `);
         await queryRunner.query(`CREATE TABLE "rooms" ("id" uuid NOT NULL DEFAULT uuid_generate_v4(), "name" character varying(100) NOT NULL, "code" character varying(10) NOT NULL, "ownerId" uuid NOT NULL, "isPrivate" boolean NOT NULL DEFAULT false, "maxUsers" integer NOT NULL DEFAULT '10', "createdAt" TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now(), "updatedAt" TIMESTAMP WITH TIME ZONE DEFAULT now(), CONSTRAINT "PK_0368a2d7c215f2d0458a54933f2" PRIMARY KEY ("id"))`);
         await queryRunner.query(`CREATE UNIQUE INDEX "IDX_368d83b661b9670e7be1bbb9cd" ON "rooms" ("code") `);
         await queryRunner.query(`CREATE TABLE "room_invites" ("id" uuid NOT NULL DEFAULT uuid_generate_v4(), "roomId" uuid NOT NULL, "invitedUserId" uuid NOT NULL, "invitedBy" uuid NOT NULL, "createdAt" TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now(), CONSTRAINT "UQ_c558b6ef9102def15ecc2ff1b7b" UNIQUE ("roomId", "invitedUserId"), CONSTRAINT "PK_32aa9769cd1747d1d451c8719a2" PRIMARY KEY ("id"))`);
         await queryRunner.query(`CREATE INDEX "IDX_d4dadaae2be9109c52be4370fa" ON "room_invites" ("invitedUserId") `);
+        await queryRunner.query(`CREATE TABLE "chat_messages" ("id" uuid NOT NULL, "roomId" uuid NOT NULL, "userId" uuid NOT NULL, "content" character varying(2000), "type" "public"."chat_messages_type_enum" NOT NULL DEFAULT 'text', "status" "public"."chat_messages_status_enum" NOT NULL DEFAULT 'sent', "attachment" jsonb, "sentAt" TIMESTAMP WITH TIME ZONE NOT NULL, "createdAt" TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now(), CONSTRAINT "PK_40c55ee0e571e268b0d3cd37d10" PRIMARY KEY ("id"))`);
+        await queryRunner.query(`CREATE INDEX "IDX_9fa0373c1451ad384fc6a74aa8" ON "chat_messages" ("roomId") `);
+        await queryRunner.query(`ALTER TABLE "watch_history" ADD CONSTRAINT "FK_42e23cf9852981b38e9bbaa96a2" FOREIGN KEY ("profile_id") REFERENCES "profiles"("id") ON DELETE CASCADE ON UPDATE NO ACTION`);
+        await queryRunner.query(`ALTER TABLE "watchlist_items" ADD CONSTRAINT "FK_06b4cbb683b730a8649447216fd" FOREIGN KEY ("profile_id") REFERENCES "profiles"("id") ON DELETE CASCADE ON UPDATE NO ACTION`);
+        await queryRunner.query(`ALTER TABLE "profiles" ADD CONSTRAINT "FK_9e432b7df0d182f8d292902d1a2" FOREIGN KEY ("user_id") REFERENCES "users"("id") ON DELETE CASCADE ON UPDATE NO ACTION`);
         await queryRunner.query(`ALTER TABLE "followers" ADD CONSTRAINT "FK_451bb9eb792c3023a164cf14e0a" FOREIGN KEY ("followerId") REFERENCES "users"("id") ON DELETE CASCADE ON UPDATE NO ACTION`);
         await queryRunner.query(`ALTER TABLE "followers" ADD CONSTRAINT "FK_5e34418be6d904b779ca96cf932" FOREIGN KEY ("followingId") REFERENCES "users"("id") ON DELETE CASCADE ON UPDATE NO ACTION`);
         await queryRunner.query(`ALTER TABLE "plan_entitlements" ADD CONSTRAINT "FK_b77a22e02b7e33336ea05ac35a7" FOREIGN KEY ("planId") REFERENCES "plans"("id") ON DELETE CASCADE ON UPDATE NO ACTION`);
@@ -42,11 +55,13 @@ export class Migration1789189673027 implements MigrationInterface {
         await queryRunner.query(`ALTER TABLE "user_subscriptions" ADD CONSTRAINT "FK_55c9f77733123bd2ead29886017" FOREIGN KEY ("planId") REFERENCES "plans"("id") ON DELETE RESTRICT ON UPDATE NO ACTION`);
         await queryRunner.query(`ALTER TABLE "payments" ADD CONSTRAINT "FK_ae2c8a68a95c06497086c055887" FOREIGN KEY ("userSubscriptionId") REFERENCES "user_subscriptions"("id") ON DELETE CASCADE ON UPDATE NO ACTION`);
         await queryRunner.query(`ALTER TABLE "room_bans" ADD CONSTRAINT "FK_4ddcc53b3247c634c352603dc0c" FOREIGN KEY ("roomId") REFERENCES "rooms"("id") ON DELETE CASCADE ON UPDATE NO ACTION`);
+        await queryRunner.query(`ALTER TABLE "room_invite_links" ADD CONSTRAINT "FK_a3f681ce88de0823c54437f4428" FOREIGN KEY ("roomId") REFERENCES "rooms"("id") ON DELETE CASCADE ON UPDATE NO ACTION`);
         await queryRunner.query(`ALTER TABLE "room_invites" ADD CONSTRAINT "FK_51aeff9d8a7322307a021fe8173" FOREIGN KEY ("roomId") REFERENCES "rooms"("id") ON DELETE CASCADE ON UPDATE NO ACTION`);
     }
 
     public async down(queryRunner: QueryRunner): Promise<void> {
         await queryRunner.query(`ALTER TABLE "room_invites" DROP CONSTRAINT "FK_51aeff9d8a7322307a021fe8173"`);
+        await queryRunner.query(`ALTER TABLE "room_invite_links" DROP CONSTRAINT "FK_a3f681ce88de0823c54437f4428"`);
         await queryRunner.query(`ALTER TABLE "room_bans" DROP CONSTRAINT "FK_4ddcc53b3247c634c352603dc0c"`);
         await queryRunner.query(`ALTER TABLE "payments" DROP CONSTRAINT "FK_ae2c8a68a95c06497086c055887"`);
         await queryRunner.query(`ALTER TABLE "user_subscriptions" DROP CONSTRAINT "FK_55c9f77733123bd2ead29886017"`);
@@ -55,10 +70,17 @@ export class Migration1789189673027 implements MigrationInterface {
         await queryRunner.query(`ALTER TABLE "plan_entitlements" DROP CONSTRAINT "FK_b77a22e02b7e33336ea05ac35a7"`);
         await queryRunner.query(`ALTER TABLE "followers" DROP CONSTRAINT "FK_5e34418be6d904b779ca96cf932"`);
         await queryRunner.query(`ALTER TABLE "followers" DROP CONSTRAINT "FK_451bb9eb792c3023a164cf14e0a"`);
+        await queryRunner.query(`ALTER TABLE "profiles" DROP CONSTRAINT "FK_9e432b7df0d182f8d292902d1a2"`);
+        await queryRunner.query(`ALTER TABLE "watchlist_items" DROP CONSTRAINT "FK_06b4cbb683b730a8649447216fd"`);
+        await queryRunner.query(`ALTER TABLE "watch_history" DROP CONSTRAINT "FK_42e23cf9852981b38e9bbaa96a2"`);
+        await queryRunner.query(`DROP INDEX "public"."IDX_9fa0373c1451ad384fc6a74aa8"`);
+        await queryRunner.query(`DROP TABLE "chat_messages"`);
         await queryRunner.query(`DROP INDEX "public"."IDX_d4dadaae2be9109c52be4370fa"`);
         await queryRunner.query(`DROP TABLE "room_invites"`);
         await queryRunner.query(`DROP INDEX "public"."IDX_368d83b661b9670e7be1bbb9cd"`);
         await queryRunner.query(`DROP TABLE "rooms"`);
+        await queryRunner.query(`DROP INDEX "public"."IDX_651816264af8480acac4300db2"`);
+        await queryRunner.query(`DROP TABLE "room_invite_links"`);
         await queryRunner.query(`DROP INDEX "public"."IDX_48b35727d6ed87561a4e4181bc"`);
         await queryRunner.query(`DROP TABLE "room_bans"`);
         await queryRunner.query(`DROP INDEX "public"."IDX_da7923626f057e69c600bb2063"`);
@@ -84,6 +106,12 @@ export class Migration1789189673027 implements MigrationInterface {
         await queryRunner.query(`DROP TABLE "followers"`);
         await queryRunner.query(`DROP INDEX "public"."IDX_97672ac88f789774dd47f7c8be"`);
         await queryRunner.query(`DROP TABLE "users"`);
+        await queryRunner.query(`DROP INDEX "public"."idx_profiles_user_id"`);
+        await queryRunner.query(`DROP TABLE "profiles"`);
+        await queryRunner.query(`DROP INDEX "public"."idx_watchlist_profile_id"`);
+        await queryRunner.query(`DROP TABLE "watchlist_items"`);
+        await queryRunner.query(`DROP INDEX "public"."idx_watch_history_profile_id"`);
+        await queryRunner.query(`DROP TABLE "watch_history"`);
         await queryRunner.query(`DROP TABLE "tasks"`);
     }
 

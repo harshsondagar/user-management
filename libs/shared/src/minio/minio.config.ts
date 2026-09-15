@@ -3,9 +3,6 @@ import { join } from "path";
 dotenv.config({ path: join(process.cwd(), 'lib/.env') });
 import { registerAs } from '@nestjs/config';
 
-console.log(">>>", process.env.MINIO_ENDPOINT);
-console.log(">>>", join(process.cwd(), 'lib/.env'));
-
 
 
 export default registerAs('minio', () => ({
