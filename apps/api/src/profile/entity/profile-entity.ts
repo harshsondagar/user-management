@@ -44,7 +44,7 @@ export class Profile {
     profileName!: string;
 
     @Column({ name: 'avatar_url', type: 'text', nullable: true })
-    avatarUrl!: string | null;
+    avatarUrl?: string | null;
 
     @Column({ name: 'is_kids_profile', type: 'boolean', default: false })
     isKidsProfile!: boolean;
@@ -65,13 +65,13 @@ export class Profile {
         length: 10,
         nullable: true,
     })
-    subtitleLanguage!: string | null;
+    subtitleLanguage?: string | null;
 
     @Column({ name: 'ui_theme', type: 'varchar', length: 20, default: 'dark' })
     uiTheme!: string;
 
     @Column({ name: 'pin_hash', type: 'varchar', nullable: true, select: false })
-    pinHash!: string | null;
+    pinHash?: string | null;
 
     @Column({ name: 'pin_enabled', type: 'boolean', default: false })
     pinEnabled!: boolean;
@@ -80,7 +80,7 @@ export class Profile {
     pinFailedAttempts!: number;
 
     @Column({ name: 'pin_locked_until', type: 'timestamptz', nullable: true })
-    pinLockedUntil!: Date | null;
+    pinLockedUntil?: Date | null;
 
     @Column({ name: 'is_default', type: 'boolean', default: false })
     isDefault!: boolean;
@@ -98,5 +98,5 @@ export class Profile {
     updatedAt!: Date;
 
     @DeleteDateColumn({ name: 'deleted_at', type: 'timestamptz', nullable: true })
-    deletedAt!: Date | null;
+    deletedAt?: Date | null;
 }

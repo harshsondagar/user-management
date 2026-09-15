@@ -97,9 +97,6 @@ export class UploadService {
             throw new NotFoundException('Message or original image not found');
         }
 
-        // TODO: verify userId is actually a member of row[0].roomId before
-        // handing out a signed URL — same membership check we deferred earlier.
-
         const url = await this.minio.getPresignedGetUrl(row[0].originalKey, 300); // 5 min, just for this view
         return { url };
     }

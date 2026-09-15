@@ -106,7 +106,7 @@ const tEnv = isTestEnv ? testEnv() : null;
         password: tEnv?.postgresPassword ?? config.get<string>('database.password'),
         database: tEnv?.dbName ?? config.get<string>('database.name'),
         autoLoadEntities: true,
-        entities: ['src/**/*.entity.ts'],
+        entities: ['src/**/*-entity.ts'],
         synchronize: false,
         retryAttempts: 10,
         retryDelay: 3000
