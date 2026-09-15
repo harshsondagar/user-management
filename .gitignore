@@ -1,7 +1,9 @@
-# compiled output
+# Compiled Output
 /dist
 /node_modules
 /build
+libs/shared/dist/
+/log
 
 # Logs
 logs
@@ -19,7 +21,7 @@ lerna-debug.log*
 /coverage
 /.nyc_output
 
-# IDEs and editors
+# IDEs and Editors
 /.idea
 .project
 .classpath
@@ -35,22 +37,39 @@ lerna-debug.log*
 !.vscode/launch.json
 !.vscode/extensions.json
 
-# dotenv environment variable files
+# --- Environment Variable Isolation Rules ---
+
+# Root Level Env Rules
 .env
+.env.test
 .env.development.local
 .env.test.local
 .env.production.local
 .env.local
 
-# temp directory
+# App-Level Secret Configurations
+apps/api/.env
+apps/queue-service/.env
+
+# App-Level E2E Test Environments
+apps/api/test/.env.test
+apps/queue-service/test/.env.test
+
+# Blueprint / Templates Configuration (Always Track These)
+!apps/api/.env.example   
+!apps/queue-service/.env.example
+
+# ---------------------------------------------
+
+# Temp Directory
 .temp
 .tmp
 
-# Runtime data
+# Runtime Data
 pids
 *.pid
 *.seed
 *.pid.lock
 
-# Diagnostic reports (https://nodejs.org/api/report.html)
+# Diagnostic Reports (https://nodejs.org)
 report.[0-9]*.[0-9]*.[0-9]*.[0-9]*.json

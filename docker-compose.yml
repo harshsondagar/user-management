@@ -1,0 +1,9 @@
+services:
+  duckdb:
+    image: davidgasquez/duckdb
+    volumes:
+      - ./logs:/logs:ro
+      - ./duckdb-data:/data
+    entrypoint: ["duckdb", "/data/my_logs.duckdb"]
+    stdin_open: true
+    tty: true
