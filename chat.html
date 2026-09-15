@@ -1,0 +1,531 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <title>Image chat test client (janky)</title>
+    <script src="https://cdn.socket.io/4.7.5/socket.io.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/blurhash@2.0.5/dist/index.umd.js"></script>
+    <style>
+      * {
+        box-sizing: border-box;
+      }
+      body {
+        font-family: -apple-system, sans-serif;
+        background: #1a1a1a;
+        color: #e5e5e5;
+        margin: 0;
+        display: flex;
+        height: 100vh;
+      }
+      #config {
+        width: 280px;
+        padding: 16px;
+        background: #222;
+        border-right: 1px solid #333;
+        overflow-y: auto;
+        flex-shrink: 0;
+      }
+      #config h3 {
+        margin-top: 0;
+        font-size: 14px;
+        color: #999;
+      }
+      #config label {
+        display: block;
+        font-size: 11px;
+        color: #888;
+        margin-top: 10px;
+      }
+      #config input,
+      #config textarea {
+        width: 100%;
+        background: #111;
+        border: 1px solid #333;
+        color: #eee;
+        padding: 6px;
+        font-size: 12px;
+        border-radius: 4px;
+        margin-top: 2px;
+        font-family: monospace;
+      }
+      #config textarea {
+        height: 60px;
+        resize: vertical;
+      }
+      #connectBtn {
+        width: 100%;
+        margin-top: 12px;
+        padding: 8px;
+        background: #2d6cdf;
+        border: none;
+        color: white;
+        border-radius: 4px;
+        cursor: pointer;
+        font-size: 13px;
+      }
+      #connectBtn:hover {
+        background: #3a7ae0;
+      }
+      #status {
+        margin-top: 10px;
+        font-size: 11px;
+        padding: 6px;
+        border-radius: 4px;
+      }
+      .status-ok {
+        background: #1f3d1f;
+        color: #7fd47f;
+      }
+      .status-err {
+        background: #3d1f1f;
+        color: #d47f7f;
+      }
+      .status-idle {
+        background: #333;
+        color: #999;
+      }
+
+      #main {
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+      }
+      #log {
+        flex: 1;
+        overflow-y: auto;
+        padding: 16px;
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+      }
+      .bubble {
+        max-width: 320px;
+        background: #2a2a2a;
+        border-radius: 12px;
+        padding: 8px;
+        align-self: flex-start;
+      }
+      .bubble .meta {
+        font-size: 10px;
+        color: #777;
+        margin-bottom: 4px;
+        font-family: monospace;
+      }
+      .imgwrap {
+        position: relative;
+        border-radius: 8px;
+        overflow: hidden;
+        background: #000;
+        min-height: 120px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+      }
+      .imgwrap canvas,
+      .imgwrap img {
+        display: block;
+        width: 100%;
+        max-height: 400px;
+        object-fit: contain;
+      }
+      .imgwrap img {
+        position: absolute;
+        top: 0;
+        left: 0;
+        opacity: 0;
+        transition: opacity 0.4s ease;
+      }
+      .imgwrap img.loaded {
+        opacity: 1;
+      }
+      .badge {
+        position: absolute;
+        top: 6px;
+        right: 6px;
+        font-size: 10px;
+        padding: 2px 6px;
+        border-radius: 4px;
+        background: rgba(0, 0, 0, 0.6);
+      }
+      .badge.processing {
+        color: #e0c060;
+      }
+      .badge.ready {
+        color: #7fd47f;
+      }
+      .placeholder-text {
+        position: absolute;
+        color: #999;
+        font-size: 11px;
+        font-family: monospace;
+      }
+      .sysline {
+        font-size: 11px;
+        color: #666;
+        font-family: monospace;
+        align-self: center;
+      }
+
+      #composer {
+        display: flex;
+        gap: 8px;
+        padding: 12px 16px;
+        border-top: 1px solid #333;
+        background: #202020;
+      }
+      #fileInput {
+        display: none;
+      }
+      #pickBtn,
+      #sendBtn {
+        padding: 8px 14px;
+        background: #333;
+        border: 1px solid #444;
+        color: #eee;
+        border-radius: 6px;
+        cursor: pointer;
+        font-size: 13px;
+      }
+      #sendBtn {
+        background: #2d6cdf;
+        border: none;
+      }
+      #sendBtn:disabled {
+        background: #444;
+        cursor: not-allowed;
+      }
+      #preview {
+        font-size: 12px;
+        color: #999;
+        align-self: center;
+        flex: 1;
+        overflow: hidden;
+        text-overflow: ellipsis;
+      }
+
+      #lightbox {
+        display: none;
+        position: fixed;
+        inset: 0;
+        background: rgba(0, 0, 0, 0.9);
+        align-items: center;
+        justify-content: center;
+        z-index: 100;
+        cursor: zoom-out;
+      }
+      #lightbox img {
+        max-width: 90%;
+        max-height: 90%;
+      }
+      .original-btn {
+        position: absolute;
+        bottom: 6px;
+        right: 6px;
+        font-size: 10px;
+        padding: 3px 8px;
+        border-radius: 4px;
+        background: rgba(0, 0, 0, 0.65);
+        color: #9ec5ff;
+        border: 1px solid #444;
+        cursor: pointer;
+      }
+      .original-btn:hover {
+        background: rgba(0, 0, 0, 0.85);
+      }
+    </style>
+  </head>
+  <body>
+    <div id="config">
+      <h3>Connection config</h3>
+      <label>API base</label>
+      <input id="apiBase" value="http://localhost:3000" />
+      <label>WS url</label>
+      <input id="wsUrl" value="http://localhost:8080" />
+      <label>JWT token</label>
+      <textarea id="token" placeholder="paste bearer token"></textarea>
+      <label>Room ID</label>
+      <input id="roomId" placeholder="8b2cda54-f721-419b-9807-6b4d32a101f8" />
+      <button id="connectBtn">Connect + join room</button>
+      <div id="status" class="status-idle">not connected</div>
+    </div>
+
+    <div id="main">
+      <div id="log"></div>
+      <div id="composer">
+        <input
+          type="file"
+          id="fileInput"
+          accept="image/jpeg,image/png,image/webp,image/gif"
+        />
+        <button id="pickBtn">Choose image</button>
+        <button id="view-original">view original</button>
+        <div id="preview">no file selected</div>
+        <button id="sendBtn" disabled>Send</button>
+      </div>
+    </div>
+
+    <div id="lightbox"><img id="lightboxImg" /></div>
+
+    <script>
+      const $ = (id) => document.getElementById(id);
+      let socket = null;
+      let selectedFile = null;
+
+      function setStatus(text, cls) {
+        const el = $('status');
+        el.textContent = text;
+        el.className = 'status-' + cls;
+      }
+
+      function log(html) {
+        const div = document.createElement('div');
+        div.className = 'sysline';
+        div.textContent = html;
+        $('log').appendChild(div);
+        $('log').scrollTop = $('log').scrollHeight;
+      }
+
+      function renderBlurhashCanvas(hash, w, h) {
+        const canvas = document.createElement('canvas');
+        canvas.width = 32;
+        canvas.height = 32;
+        try {
+          const pixels = blurhash.decode(hash, 32, 32);
+          const ctx = canvas.getContext('2d');
+          const imgData = ctx.createImageData(32, 32);
+          imgData.data.set(pixels);
+          ctx.putImageData(imgData, 0, 0);
+        } catch (e) {
+          // if blurhash decode fails for any reason, just leave a flat dark canvas
+        }
+        return canvas;
+      }
+
+      function addBubble(messageId) {
+        const bubble = document.createElement('div');
+        bubble.className = 'bubble';
+        bubble.id = 'msg-' + messageId;
+        bubble.innerHTML = `
+    <div class="meta">${messageId}</div>
+    <div class="imgwrap" id="imgwrap-${messageId}">
+      <div class="placeholder-text">uploading...</div>
+      <span class="badge processing">processing</span>
+    </div>
+  `;
+        $('log').appendChild(bubble);
+        $('log').scrollTop = $('log').scrollHeight;
+        return bubble;
+      }
+
+      function markProcessing(messageId) {
+        const wrap = $('imgwrap-' + messageId);
+        if (!wrap) return;
+        wrap.querySelector('.placeholder-text').textContent =
+          'processing (waiting for queue-service)...';
+      }
+
+      function markReady(messageId, data) {
+        const wrap = $('imgwrap-' + messageId);
+        if (!wrap) return;
+
+        wrap.innerHTML = '';
+
+        if (data.blurhash) {
+          const canvas = renderBlurhashCanvas(
+            data.blurhash,
+            data.width,
+            data.height,
+          );
+          wrap.appendChild(canvas);
+        }
+
+        const img = document.createElement('img');
+        img.src = data.thumbUrl;
+        img.onload = () => img.classList.add('loaded');
+        img.onclick = () => openLightbox(data.previewUrl || data.thumbUrl);
+        img.style.cursor = 'zoom-in';
+        wrap.appendChild(img);
+
+        const badge = document.createElement('span');
+        badge.className = 'badge ready';
+        badge.textContent = 'ready';
+        wrap.appendChild(badge);
+
+        // New: button to fetch and view the full-resolution original
+        const originalBtn = document.createElement('button');
+        originalBtn.className = 'original-btn';
+        originalBtn.textContent = 'View original';
+        originalBtn.onclick = (e) => {
+          console.log('came ehre');
+
+          e.stopPropagation(); // don't also trigger the img's click-to-preview
+          openOriginal(messageId);
+        };
+        wrap.appendChild(originalBtn);
+      }
+
+      async function openOriginal(messageId) {
+        console.log(messageId);
+
+        const apiBase = $('apiBase').value.trim();
+        const token = $('token').value.trim();
+
+        const res = await fetch(`${apiBase}/uploads/${messageId}/original`, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        const json = await res.json();
+        if (res.ok) {
+          openLightbox(json.data.url);
+        } else {
+          log('failed to get original: ' + JSON.stringify(json));
+        }
+      }
+
+      function openLightbox(url) {
+        $('lightboxImg').src = url;
+        $('lightbox').style.display = 'flex';
+      }
+      $('lightbox').onclick = () => {
+        $('lightbox').style.display = 'none';
+      };
+
+      $('pickBtn').onclick = () => $('fileInput').click();
+
+      $('fileInput').onchange = () => {
+        selectedFile = $('fileInput').files[0] || null;
+        $('preview').textContent = selectedFile
+          ? `${selectedFile.name} (${(selectedFile.size / 1024).toFixed(1)} KB, ${selectedFile.type})`
+          : 'no file selected';
+        $('sendBtn').disabled = !selectedFile || !socket?.connected;
+      };
+
+      $('connectBtn').onclick = () => {
+        const wsUrl = $('wsUrl').value.trim();
+        const token = $('token').value.trim();
+        const roomId = $('roomId').value.trim();
+
+        if (!token || !roomId) {
+          setStatus('need token + roomId', 'err');
+          return;
+        }
+
+        if (socket) socket.disconnect();
+
+        socket = io(wsUrl, { auth: { token }, transports: ['websocket'] });
+
+        socket.on('connect', () => {
+          setStatus('connected, joining room...', 'ok');
+          socket.emit('join_room', { roomId });
+          $('sendBtn').disabled = !selectedFile;
+        });
+
+        socket.on('room_state', (data) => {
+          setStatus(`in room (${data.users?.length ?? 0} users)`, 'ok');
+          log('joined room, users: ' + JSON.stringify(data.users));
+        });
+
+        socket.on('user_joined', (data) =>
+          log('user_joined: ' + JSON.stringify(data)),
+        );
+        socket.on('user_left', (data) =>
+          log('user_left: ' + JSON.stringify(data)),
+        );
+
+        socket.on('image_ready', (data) => {
+          log('image_ready received: ' + data.messageId);
+          if (!$('msg-' + data.messageId)) addBubble(data.messageId);
+          markReady(data.messageId, data);
+        });
+
+        socket.on('auth_error', (data) => {
+          setStatus('auth error: ' + data.message, 'err');
+        });
+
+        socket.on('disconnect', (reason) => {
+          setStatus('disconnected: ' + reason, 'err');
+          $('sendBtn').disabled = true;
+        });
+
+        socket.on('connect_error', (err) => {
+          setStatus('connect error: ' + err.message, 'err');
+        });
+      };
+
+      $('sendBtn').onclick = async () => {
+        if (!selectedFile) return;
+        const apiBase = $('apiBase').value.trim();
+        const token = $('token').value.trim();
+        const roomId = $('roomId').value.trim();
+
+        $('sendBtn').disabled = true;
+        let messageId = null;
+
+        try {
+          // 1. presign
+          const presignRes = await fetch(`${apiBase}/uploads/presign`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              Authorization: `Bearer ${token}`,
+            },
+            body: JSON.stringify({
+              roomId,
+              mimeType: selectedFile.type,
+              fileSize: selectedFile.size,
+            }),
+          });
+          const presignJson = await presignRes.json();
+          if (!presignRes.ok)
+            throw new Error('presign failed: ' + JSON.stringify(presignJson));
+          const { uploadUrl, objectKey } = presignJson.data;
+          log('presigned: ' + objectKey);
+
+          // 2. PUT to MinIO directly
+          const putRes = await fetch(uploadUrl, {
+            method: 'PUT',
+            headers: { 'Content-Type': selectedFile.type },
+            body: selectedFile,
+          });
+          if (!putRes.ok)
+            throw new Error('PUT to MinIO failed: ' + putRes.status);
+          log('uploaded to MinIO');
+
+          // 3. confirm
+          const confirmRes = await fetch(`${apiBase}/uploads/confirm`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              Authorization: `Bearer ${token}`,
+            },
+            body: JSON.stringify({
+              roomId,
+              objectKey,
+              mimeType: selectedFile.type,
+            }),
+          });
+          const confirmJson = await confirmRes.json();
+          if (!confirmRes.ok)
+            throw new Error('confirm failed: ' + JSON.stringify(confirmJson));
+          messageId = confirmJson.data.messageId;
+          log(
+            'confirmed: ' +
+              messageId +
+              ' (status: ' +
+              confirmJson.data.status +
+              ')',
+          );
+
+          addBubble(messageId);
+        } catch (err) {
+          log('ERROR: ' + err.message);
+          if (messageId) markProcessing(messageId);
+        } finally {
+          selectedFile = null;
+          $('fileInput').value = '';
+          $('preview').textContent = 'no file selected';
+          $('sendBtn').disabled = true;
+        }
+      };
+    </script>
+  </body>
+</html>

@@ -1,3 +1,5 @@
+import { ChatAttachment, ChatMessageStatus, ChatMessageType } from "../entity/chat-message-entity";
+
 export enum MailJobName {
     VERIFY_EMAIL = 'verify-email',
     WELCOME = 'welcome',
@@ -46,6 +48,17 @@ export interface JobLogContext {
     finishedAt: string
 }
 
+export interface PendingChatMessage {
+    id: string;
+    roomId: string;
+    userId: string;
+    content: string | null;
+    type: ChatMessageType;
+    status: ChatMessageStatus
+    attachment?: ChatAttachment | null;
+    sentAt: string; // ISO
+}
+
 export interface CronLogContext {
     type: 'cron';
     jobName: string;
@@ -53,4 +66,11 @@ export interface CronLogContext {
 
 export interface SystemLogContext {
     type: 'system';
+}
+
+export interface WsLogContext {
+    type: 'WebSocket'
+    socketId: string,
+    userId: string,
+    event: string
 }

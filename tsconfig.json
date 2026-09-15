@@ -21,15 +21,20 @@
     "skipLibCheck": true,
     "strictNullChecks": true,
     "forceConsistentCasingInFileNames": true,
+    "useDefineForClassFields": false,
     "noImplicitAny": false,
     "strictBindCallApply": false,
     "noFallthroughCasesInSwitch": false,
-     "typeRoots": [
+    "typeRoots": [
       "./node_modules/@types"
     ],
     "paths": {
-      "@app/shared": ["./libs/shared/src/index.ts"],
-      "@app/shared/*": ["./libs/shared/src/*"]
+      "@app/shared": [
+        "./libs/shared/src/index.ts"
+      ],
+      "@app/shared/*": [
+        "./libs/shared/src/*"
+      ]
     },
   }
 }

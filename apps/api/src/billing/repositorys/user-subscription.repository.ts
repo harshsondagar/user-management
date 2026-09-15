@@ -56,7 +56,6 @@ export class UserSubscriptionRepository extends BaseRepository<UserSubscription>
                     userId,
                     planId: newPlanId,
                     status: SubscriptionStatus.ACTIVE,
-                    stripeSubscriptionId: opts.stripeSubscriptionId,
                     currentPeriodEnd: opts.currentPeriodEnd,
                 })
                 .returning('*')

@@ -34,6 +34,8 @@ import { BillingModule } from "./billing/billing.module";
 import { WebhookModule } from "./webhooks/stripe-webhook.module";
 import { join } from "path";
 import { ServeStaticModule } from "@nestjs/serve-static"
+import { RoomModule } from './room/room.module';
+import { UploadModule } from "./upload/upload.module";
 
 const isTestEnv = process.env.NODE_ENV === 'test' || !!process.env.JEST_WORKER_ID;
 const tEnv = isTestEnv ? testEnv() : null;
@@ -114,9 +116,11 @@ const tEnv = isTestEnv ? testEnv() : null;
     TaskModule, MailModule,
     OtpModule, ReportModule,
     BillingModule,
+    UploadModule,
     SyncModule,
     ScrapModuleModule,
-    DlqModule
+    DlqModule,
+    RoomModule
   ],
   controllers: [],
   providers: [AppService, {

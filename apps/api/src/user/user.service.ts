@@ -13,6 +13,7 @@ import { MailProducer } from '../mail/mail-producer';
 import { Plan } from '../billing/entities/plan-entity';
 import { InjectRepository } from '@nestjs/typeorm';
 import { SubscriptionStatus, UserSubscription } from '../billing/entities/user-subscription-entity';
+import { UserSubscriptionRepository } from '../billing/repositorys/user-subscription.repository';
 
 const ARGON2_OPTIONS: argon2.HashOptions = {
     type: argon2.argon2id,
@@ -29,7 +30,7 @@ export class UserService {
         private readonly userRepository: UserRepository,
         private readonly followerRepository: FollowerRepository,
         @InjectRepository(Plan) private readonly planRepo: Repository<Plan>,
-        @InjectRepository(UserSubscription) private readonly userSubscriptionRepo: Repository<UserSubscription>,
+        private readonly userSubscriptionRepo: UserSubscriptionRepository,
         private readonly otpService: OtpService,
         private readonly cache: SafeCacheService,
         private readonly mailProducer: MailProducer,
@@ -84,6 +85,8 @@ export class UserService {
         });
 
         const otp = this.otpService.generateOtp();
+        console.log(otp);
+
         await this.otpService.storeOtp(user.email, otp);
         await this.mailProducer.addVerificationMailJob(user.email, user.firstName!, otp);
 
@@ -453,13 +456,10 @@ export class UserService {
         const freePlan = await this.planRepo.findOne({ where: { code: 'free' } });
         if (!freePlan) throw new Error('Free plan not seeded — cannot complete registration');
 
-        await this.userSubscriptionRepo.save(
-            this.userSubscriptionRepo.create({
-                userId,
-                planId: freePlan.id,
-                status: SubscriptionStatus.ACTIVE,
-                stripeSubscriptionId: null, // free plan has no real Stripe subscription
-            }),
-        );
+        await this.userSubscriptionRepo.create({
+            userId,
+            planId: freePlan.id,
+            status: SubscriptionStatus.ACTIVE,
+        });
     }
 }
