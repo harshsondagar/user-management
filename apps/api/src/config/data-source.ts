@@ -24,6 +24,9 @@ import { DataSource } from 'typeorm';
 
 const isTest = process.env.NODE_ENV === 'test';
 
+console.log(path.join(__dirname, '../**/**/*-entity.ts'));
+
+
 config({
     path: resolve(__dirname, isTest ? '../test/.env.test' : '../../.env'),
 });

@@ -10,7 +10,7 @@ import {
     Unique,
 } from 'typeorm';
 import { Content } from './conetnt-entity';
-import { Episode } from './Episode-entity';
+import { Episode } from './episode-entity';
 
 @Entity('seasons')
 @Unique('uq_seasons_series_id_season_number', ['seriesId', 'seasonNumber'])

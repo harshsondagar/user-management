@@ -36,6 +36,7 @@ import { join } from "path";
 import { ServeStaticModule } from "@nestjs/serve-static"
 import { RoomModule } from './room/room.module';
 import { UploadModule } from "./upload/upload.module";
+import { ProfilesModule } from "./profile/profile.module";
 
 const isTestEnv = process.env.NODE_ENV === 'test' || !!process.env.JEST_WORKER_ID;
 const tEnv = isTestEnv ? testEnv() : null;
@@ -106,7 +107,7 @@ const tEnv = isTestEnv ? testEnv() : null;
         password: tEnv?.postgresPassword ?? config.get<string>('database.password'),
         database: tEnv?.dbName ?? config.get<string>('database.name'),
         autoLoadEntities: true,
-        entities: ['src/**/*-entity.ts'],
+        entities: ['src/**/**/*-entity.ts'],
         synchronize: false,
         retryAttempts: 10,
         retryDelay: 3000
@@ -114,7 +115,7 @@ const tEnv = isTestEnv ? testEnv() : null;
     }),
     UserModule, AuthModule,
     TaskModule, MailModule,
-    OtpModule, ReportModule,
+    OtpModule, ReportModule, ProfilesModule,
     BillingModule,
     UploadModule,
     SyncModule,
