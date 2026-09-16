@@ -25,6 +25,8 @@ import { MailProducer } from '../mail/mail-producer';
 import { RenewalToken } from './entities/renewalToken-entity';
 import { BullModule } from '@nestjs/bullmq';
 import { BillingViewController } from './billing-view.controller';
+import { PlanStreamingPolicy } from './entities/plan-streaming-policy-entity';
+import { PlanStreamingPolicyRepository } from './repositorys/plans-streaming-policy.repository';
 
 @Global()
 @Module({
@@ -38,7 +40,8 @@ import { BillingViewController } from './billing-view.controller';
             UsageCounter,
             Payment,
             User,
-            RenewalToken
+            RenewalToken,
+            PlanStreamingPolicy
         ]),
         BullModule.registerQueue({
             name: 'send-mail'
@@ -69,6 +72,7 @@ import { BillingViewController } from './billing-view.controller';
         PaymentRepository,
         SubscriptionExpiryJob,
         RenewalTokenRepository,
+        PlanStreamingPolicyRepository,
         MailProducer
     ],
     controllers: [BillingController, BillingViewController],

@@ -15,7 +15,7 @@ import { Content } from '../../profile/entity/conetnt-entity'; // adjust to your
 @Unique('uq_watchlist_profile_content', ['profileId', 'contentId'])
 export class WatchlistItem {
 
-    @PrimaryColumn('uuid', { default: () => 'gen_random_uuid()' })
+    @PrimaryColumn('uuid')
     id!: string;
 
     @Index('idx_watchlist_profile_id')

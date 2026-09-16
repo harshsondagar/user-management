@@ -24,9 +24,6 @@ export class PlanEntitlement {
     @JoinColumn({ name: 'featureId' })
     feature!: Feature;
 
-    @Column({ type: 'jsonb', nullable: true })
-    config?: Record<string, any> | null;
-
     @Column({ type: 'int' })
     valueLimit!: number;
 

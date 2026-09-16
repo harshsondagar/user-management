@@ -5,12 +5,13 @@ import {
     ForbiddenException,
     BadRequestException,
 } from '@nestjs/common';
-import { QueryFailedError } from 'typeorm';
+import { EntityManager, QueryFailedError } from 'typeorm';
 import * as bcrypt from 'bcrypt';
 import { ProfileRepository } from './reposetory/profile.repo';
 import { Profile } from './entity/profile-entity';
 import { CreateProfileDto } from './dto/create.profile.dto';
 import { UpdateProfileDto } from './dto/update.profile.dto';
+import { randomUUID } from 'node:crypto';
 
 const MAX_PROFILES_PER_USER = 5;
 const PIN_MAX_FAILED_ATTEMPTS = 5;
@@ -251,5 +252,40 @@ export class ProfilesService {
         }
         throw new ForbiddenException('Incorrect PIN');
     }
+
+    async createPrimaryProfile(
+        userId: string,
+        profileName: string,
+        manager?: EntityManager,
+    ): Promise<Profile> {
+
+        const values = {
+            userId,
+            profileName: profileName.trim(),
+            avatarUrl: null,
+            isKidsProfile: false,
+            maturityLevel: 5,
+            language: 'en',
+            subtitleLanguage: null,
+            uiTheme: 'dark',
+            pinHash: null,
+            pinEnabled: false,
+            pinFailedAttempts: 0,
+            pinLockedUntil: null,
+            isPrimary: true,
+            isDefault: true,
+        };
+
+        if (manager) {
+            const rawRepo = manager.getRepository(Profile);
+            const profile = rawRepo.create({ id: randomUUID(), ...values });
+
+            return rawRepo.save(profile);
+        }
+
+        const profile = await this.profileRepository.create(values);
+        return this.profileRepository.save(profile);
+    }
+
 }
 

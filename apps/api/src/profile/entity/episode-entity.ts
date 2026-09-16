@@ -19,7 +19,7 @@ import { Season } from './season-entity';
 @Entity('episodes')
 @Unique('uq_episodes_season_id_episode_number', ['seasonId', 'episodeNumber'])
 export class Episode {
-    @PrimaryColumn('uuid', { default: () => 'gen_random_uuid()' })
+    @PrimaryColumn('uuid')
     id!: string;
 
     @Index('idx_episodes_season_id')

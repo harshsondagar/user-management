@@ -82,6 +82,9 @@ export class Profile {
     @Column({ name: 'pin_locked_until', type: 'timestamptz', nullable: true })
     pinLockedUntil?: Date | null;
 
+    @Column({ name: 'is_primary', type: 'boolean', default: false })
+    isPrimary!: boolean;
+
     @Column({ name: 'is_default', type: 'boolean', default: false })
     isDefault!: boolean;
 

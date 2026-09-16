@@ -14,6 +14,7 @@ import { Plan } from '../billing/entities/plan-entity';
 import { InjectRepository } from '@nestjs/typeorm';
 import { SubscriptionStatus, UserSubscription } from '../billing/entities/user-subscription-entity';
 import { UserSubscriptionRepository } from '../billing/repositorys/user-subscription.repository';
+import { ProfilesService } from '../profile/profile.service';
 
 const ARGON2_OPTIONS: argon2.HashOptions = {
     type: argon2.argon2id,
@@ -35,6 +36,7 @@ export class UserService {
         private readonly cache: SafeCacheService,
         private readonly mailProducer: MailProducer,
         private readonly dataSource: DataSource,
+        private readonly profilesService: ProfilesService
     ) { }
 
     async findByEMailWithPassword(email: string) {
@@ -81,9 +83,14 @@ export class UserService {
             });
             await manager.save(UserSubscription, subscription);
 
+
+            await this.profilesService.createPrimaryProfile(
+                savedUser.id,
+                savedUser.firstName ?? 'Me',
+                manager,
+            );
             return savedUser;
         });
-
         const otp = this.otpService.generateOtp();
         console.log(otp);
 

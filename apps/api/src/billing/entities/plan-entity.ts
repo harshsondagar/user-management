@@ -1,5 +1,6 @@
-import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, UpdateDateColumn, OneToMany } from 'typeorm';
+import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, UpdateDateColumn, OneToMany, OneToOne } from 'typeorm';
 import { PlanEntitlement } from './plan-entitlement-entity';
+import { PlanStreamingPolicy } from './plan-streaming-policy-entity';
 
 @Entity('plans')
 export class Plan {
@@ -20,6 +21,9 @@ export class Plan {
 
     @OneToMany(() => PlanEntitlement, (entitlement) => entitlement.plan)
     entitlements!: PlanEntitlement[];
+
+    @OneToOne(() => PlanStreamingPolicy, (policy) => policy.plan)
+    streamingPolicy?: PlanStreamingPolicy
 
     @Column({ type: 'int', default: 0 })
     rank!: number;

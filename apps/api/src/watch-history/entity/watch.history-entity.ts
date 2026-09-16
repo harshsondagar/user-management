@@ -32,7 +32,7 @@ import { Episode } from '../../profile/entity/episode-entity';
 )
 @Unique(['profileId', 'contentId'])
 export class WatchHistory {
-    @PrimaryColumn('uuid', { default: () => 'gen_random_uuid()' })
+    @PrimaryColumn('uuid')
     id!: string;
 
     @Index('idx_watch_history_profile_id')
