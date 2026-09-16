@@ -8,7 +8,8 @@ import {
     Index,
     Unique,
 } from 'typeorm';
-import { Profile } from './profile-entity';
+import { Profile } from '../../profile/entity/profile-entity';
+import { Content } from '../../profile/entity/conetnt-entity'; // adjust to your actual path
 
 @Entity('watchlist_items')
 @Unique('uq_watchlist_profile_content', ['profileId', 'contentId'])
@@ -30,6 +31,13 @@ export class WatchlistItem {
 
     @Column({ name: 'content_id', type: 'uuid' })
     contentId!: string;
+
+    @ManyToOne(() => Content, {
+        onDelete: 'CASCADE',
+        nullable: false,
+    })
+    @JoinColumn({ name: 'content_id' })
+    content!: Content;
 
     @CreateDateColumn({ name: 'added_at', type: 'timestamptz' })
     addedAt!: Date;

@@ -29,6 +29,11 @@ export class BillingSeedService implements OnApplicationBootstrap {
                 name: 'Scrape Requests',
                 description: 'Number of data.gov.in sync jobs a user can trigger'
             },
+            {
+                key: 'playback',
+                name: 'Media Playback',
+                description: 'Allows users to stream movie and series video assets based on active plans'
+            }
         ]
 
         for (const f of features) {
@@ -43,8 +48,10 @@ export class BillingSeedService implements OnApplicationBootstrap {
     private async seedPlans() {
         const plans = [
             { code: 'free', name: 'Free', stripePriceId: null, isActive: true, amount: 0, rank: 0 },
-            { code: 'pro', name: 'Pro', stripePriceId: process.env.STRIPE_PRICE_ID_PRO ?? null, isActive: true, amount: 990, rank: 1 },
-            { code: 'enterprise', name: 'Enterprise', stripePriceId: process.env.STRIPE_PRICE_ID_ENTERPRISE ?? null, isActive: true, amount: 2990, rank: 2 },
+            // { code: 'pro', name: 'Pro', stripePriceId: process.env.STRIPE_PRICE_ID_PRO ?? null, isActive: false, amount: 990, rank: 1 },
+            // { code: 'enterprise', name: 'Enterprise', stripePriceId: process.env.STRIPE_PRICE_ID_ENTERPRISE ?? null, isActive: false, amount: 2990, rank: 2 },
+            { code: 'fan', name: 'Fan', stripePriceId: process.env.STRIPE_PRICE_ID_FAN ?? null, isActive: true, amount: 990, rank: 1 },
+            { code: 'mega-fan', name: 'Mega_Fan', stripePriceId: process.env.STRIPE_PRICE_ID_MEGAFAN ?? null, isActive: true, amount: 2990, rank: 2 },
         ];
 
         for (const p of plans) {
@@ -57,13 +64,31 @@ export class BillingSeedService implements OnApplicationBootstrap {
 
     }
     private async seedEntitlements() {
-        const scrapeFeature = await this.featureRepo.findOne({ where: { key: 'scrape_requests' } });
+        const scrapeFeature = await this.featureRepo.findOne({ where: { key: 'playback' } });
         if (!scrapeFeature) return;
 
         const entitlements = [
             { planCode: 'free', valueLimit: 1, period: EntitlementPeriod.DAILY },
-            { planCode: 'pro', valueLimit: 10, period: EntitlementPeriod.DAILY },
-            { planCode: 'enterprise', valueLimit: 100, period: EntitlementPeriod.DAILY },
+            // { planCode: 'pro', valueLimit: 10, period: EntitlementPeriod.DAILY },
+            // { planCode: 'enterprise', valueLimit: 100, period: EntitlementPeriod.DAILY },
+            {
+                planCode: 'fan', valueLimit: 2, period: EntitlementPeriod.LIFETIME, config: {
+                    "videoQuality": "1080p",
+                    "audioQuality": ["Stereo"],
+                    "maxConcurrentStreams": 2,
+                    "maxConcurrentDownload": 2,
+                    "allowedDevices": ["mobile", "smart_tv",],
+                }
+            },
+            {
+                planCode: 'mega-fan', valueLimit: 2, period: EntitlementPeriod.LIFETIME, config: {
+                    "videoQuality": "4K UHD",
+                    "audioQuality": "Dolby Atmos",
+                    "allowedDevices": ["mobile", "computers", "smart_tv", "tablet"],
+                    "maxConcurrentStreams": 5,
+                    "maxConcurrentDownload": 3,
+                }
+            },
         ];
 
         for (const e of entitlements) {
@@ -80,6 +105,7 @@ export class BillingSeedService implements OnApplicationBootstrap {
                     featureId: scrapeFeature.id,
                     valueLimit: e.valueLimit,
                     period: e.period,
+                    config: e.config
                 });
                 this.logger.log(`Seeded entitlement: ${e.planCode} → ${e.valueLimit}/${e.period}`);
             }

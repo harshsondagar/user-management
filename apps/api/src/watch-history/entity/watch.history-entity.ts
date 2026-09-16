@@ -8,10 +8,11 @@ import {
     UpdateDateColumn,
     Index,
     Check,
+    Unique,
 } from 'typeorm';
-import { Profile } from './profile-entity';
-import { Content } from './conetnt-entity';
-import { Episode } from './episode-entity';
+import { Profile } from '../../profile/entity/profile-entity';
+import { Content } from '../../profile/entity/conetnt-entity';
+import { Episode } from '../../profile/entity/episode-entity';
 /**
  * Exactly one of (content_id, episode_id) is set per row:
  *   - content_id -> a MOVIE's own progress
@@ -29,6 +30,7 @@ import { Episode } from './episode-entity';
     'chk_watch_history_exactly_one_target',
     `("content_id" IS NOT NULL AND "episode_id" IS NULL) OR ("content_id" IS NULL AND "episode_id" IS NOT NULL)`,
 )
+@Unique(['profileId', 'contentId'])
 export class WatchHistory {
     @PrimaryColumn('uuid', { default: () => 'gen_random_uuid()' })
     id!: string;

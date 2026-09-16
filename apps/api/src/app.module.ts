@@ -37,6 +37,8 @@ import { ServeStaticModule } from "@nestjs/serve-static"
 import { RoomModule } from './room/room.module';
 import { UploadModule } from "./upload/upload.module";
 import { ProfilesModule } from "./profile/profile.module";
+import { WatchHistoryModule } from "./watch-history/watch.history.module";
+import { WatchlistModule } from "./watch-list/watch-list.module";
 
 const isTestEnv = process.env.NODE_ENV === 'test' || !!process.env.JEST_WORKER_ID;
 const tEnv = isTestEnv ? testEnv() : null;
@@ -116,7 +118,7 @@ const tEnv = isTestEnv ? testEnv() : null;
     UserModule, AuthModule,
     TaskModule, MailModule,
     OtpModule, ReportModule, ProfilesModule,
-    BillingModule,
+    BillingModule, WatchHistoryModule, WatchlistModule,
     UploadModule,
     SyncModule,
     ScrapModuleModule,

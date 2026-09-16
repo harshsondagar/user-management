@@ -12,8 +12,8 @@ import {
     Unique,
 } from 'typeorm';
 import { User } from '../../user/entity/user-entity';
-import { WatchHistory } from './watch.history-entity';
-import { WatchlistItem } from './watchlist.items-entity';
+import { WatchHistory } from '../../watch-history/entity/watch.history-entity';
+import { WatchlistItem } from '../../watch-list/entity/watchlist.items-entity';
 
 export enum MaturityLevel {
     KIDS = 1,
