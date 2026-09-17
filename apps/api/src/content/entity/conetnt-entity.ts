@@ -59,6 +59,9 @@ export class Content {
     @Column({ name: 'duration_seconds', type: 'integer', nullable: true })
     durationSeconds?: number | null; // MOVIE only
 
+    @Column({ name: 'video_url', type: 'text', nullable: true })
+    videoUrl?: string | null
+
     @Column({
         type: 'enum',
         enum: ContentAccessType,

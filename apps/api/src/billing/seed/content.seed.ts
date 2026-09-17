@@ -16,28 +16,33 @@
  * (adjust to however you already invoke `dataSource` for migrations)
  */
 
-import { dataSource } from '../../config/data-source';  // adjust to your actual data-source.ts path
+import { dataSource } from '../../config/data-source'; // adjust to your actual data-source.ts path
 import { In } from 'typeorm';
-import { Content, ContentType } from "../../profile/entity/conetnt-entity"
-
-import { MaturityLevel } from '../../profile/entity/profile-entity';
-import { Season } from '../../profile/entity/season-entity';
-import { Episode } from '../../profile/entity/episode-entity';
-
+import {
+    Content,
+    ContentType,
+    ContentAccessType,
+    ContentStatus,
+} from "../../content/entity/conetnt-entity"
+import { Season } from '../../content/entity/season-entity'; // adjust path
+import { Episode } from '../../content/entity/episode-entity'; // adjust path
+import { MaturityLevel } from '../../profile/entity/profile-entity'; // adjust path - shared 1-5 scale lives here, not on content-entity
+import { randomUUID, UUID } from 'crypto';
 // Real, license-clear sample videos - safe to use as throwaway seed data.
 const SAMPLE_VIDEOS = [
-    'https://archive.org',
-    'https://archive.org',
-    'https://test-videos.co.uk',
-    'https://test-videos.co.uk',
-    'https://lorem.video',
-    'https://lorem.video',
-    'https://archive.org',
-    'https://archive.org',
+    'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4',
+    'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ElephantsDream.mp4',
+    'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerBlazes.mp4',
+    'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerEscapes.mp4',
+    'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerFun.mp4',
+    'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerJoyrides.mp4',
+    'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/Sintel.mp4',
+    'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/TearsOfSteel.mp4',
 ];
 
-
 function samplePoster(seed: string): string {
+    // Deterministic fake poster art - same seed always returns the same
+    // image, so re-running this script gives visually stable results.
     return `https://picsum.photos/seed/${encodeURIComponent(seed)}/400/600`;
 }
 
@@ -51,73 +56,90 @@ function nextSampleVideoUrl(): string {
     videoCursor += 1;
     return url;
 }
-
 const MOVIE_SEEDS: Array<{
+    id: string;
     title: string;
     synopsis: string;
     releaseYear: number;
     maturityLevel: MaturityLevel;
     durationSeconds: number;
+    accessType: ContentAccessType;
 }> = [
         {
+            id: '9acdf475-0c45-4dc9-8b5c-d25db84d2c31',
             title: 'Silent Horizon',
             synopsis: 'A lone astronaut drifts toward a signal that shouldn\u2019t exist.',
             releaseYear: 2023,
             maturityLevel: MaturityLevel.TEEN,
             durationSeconds: 6300, // 105 min
+            accessType: ContentAccessType.PREMIUM,
         },
         {
+            id: '99413bc8-c28d-4695-b77c-32152cf2ef61',
             title: 'Paper Lanterns',
             synopsis: 'Three childhood friends reunite for one last summer festival.',
             releaseYear: 2021,
             maturityLevel: MaturityLevel.OLDER_KIDS,
             durationSeconds: 5700, // 95 min
+            accessType: ContentAccessType.FREE,
         },
         {
+            id: '17f20d27-868b-4dd8-8915-1fe022eddad8',
             title: 'Iron Tide',
             synopsis: 'A dockworker uncovers a smuggling ring tied to her own family.',
             releaseYear: 2024,
             maturityLevel: MaturityLevel.MATURE_TEEN,
             durationSeconds: 7200, // 120 min
+            accessType: ContentAccessType.PREMIUM,
         },
         {
+            id: 'a7a9b833-dd43-418b-a212-53a711442361',
             title: 'Little Rocket',
             synopsis: 'A backyard-built rocket, a curious kid, and one very patient dog.',
             releaseYear: 2020,
             maturityLevel: MaturityLevel.KIDS,
             durationSeconds: 4800, // 80 min
+            accessType: ContentAccessType.FREE,
         },
     ];
 
 const SERIES_SEEDS: Array<{
+    id: string;
     title: string;
     synopsis: string;
     releaseYear: number;
     maturityLevel: MaturityLevel;
+    accessType: ContentAccessType;
     seasons: Array<{ seasonNumber: number; episodeCount: number }>;
 }> = [
         {
+            id: 'a99d2493-8992-46ee-bfe3-ceb5d2d9bb39',
             title: 'The Long Signal',
             synopsis: 'A deep-space listening post picks up something that keeps repeating.',
             releaseYear: 2022,
             maturityLevel: MaturityLevel.MATURE_TEEN,
+            accessType: ContentAccessType.PREMIUM,
             seasons: [
                 { seasonNumber: 1, episodeCount: 6 },
                 { seasonNumber: 2, episodeCount: 6 },
             ],
         },
         {
+            id: '3ecc97c7-75cf-4a07-ab2e-83b194c52ea0',
             title: 'Kettle & Stone',
             synopsis: 'A small-town tea house becomes the unlikely center of a family feud.',
             releaseYear: 2023,
             maturityLevel: MaturityLevel.TEEN,
+            accessType: ContentAccessType.PREMIUM,
             seasons: [{ seasonNumber: 1, episodeCount: 8 }],
         },
         {
+            id: 'a181bab0-df9f-4d7f-9cc0-6efc634108a0',
             title: 'Bramblewood Academy',
             synopsis: 'Magic school shenanigans for the under-10 crowd.',
             releaseYear: 2019,
             maturityLevel: MaturityLevel.KIDS,
+            accessType: ContentAccessType.FREE,
             seasons: [
                 { seasonNumber: 1, episodeCount: 10 },
                 { seasonNumber: 2, episodeCount: 10 },
@@ -129,6 +151,7 @@ async function seedMovies(dsContentRepo: ReturnType<typeof dataSource.getReposit
     const created: Content[] = [];
     for (const movie of MOVIE_SEEDS) {
         const content = dsContentRepo.create({
+            id: movie.id,
             type: ContentType.MOVIE,
             title: movie.title,
             synopsis: movie.synopsis,
@@ -137,6 +160,9 @@ async function seedMovies(dsContentRepo: ReturnType<typeof dataSource.getReposit
             backdropUrl: sampleBackdrop(movie.title),
             maturityLevel: movie.maturityLevel,
             durationSeconds: movie.durationSeconds,
+            videoUrl: nextSampleVideoUrl(),
+            accessType: movie.accessType,
+            status: ContentStatus.PUBLISHED, // without this, browse() would never see any seeded row - it filters on PUBLISHED
             // TODO: replace with the real MinIO-hosted URL once the
             // upload -> transcode queue -> worker pipeline exists.
             // See seed script header for what "real" pipeline means here.
@@ -154,6 +180,7 @@ async function seedSeries(
     for (const series of SERIES_SEEDS) {
         const content = await dsContentRepo.save(
             dsContentRepo.create({
+                id: series.id,
                 type: ContentType.SERIES,
                 title: series.title,
                 synopsis: series.synopsis,
@@ -162,12 +189,15 @@ async function seedSeries(
                 backdropUrl: sampleBackdrop(series.title),
                 maturityLevel: series.maturityLevel,
                 durationSeconds: null, // duration lives per-episode for series
+                accessType: series.accessType,
+                status: ContentStatus.PUBLISHED,
             }),
         );
 
         for (const seasonSeed of series.seasons) {
             const season = await dsSeasonRepo.save(
                 dsSeasonRepo.create({
+                    id: randomUUID(),
                     seriesId: content.id,
                     seasonNumber: seasonSeed.seasonNumber,
                     title: `Season ${seasonSeed.seasonNumber}`,
@@ -177,6 +207,7 @@ async function seedSeries(
             for (let ep = 1; ep <= seasonSeed.episodeCount; ep++) {
                 await dsEpisodeRepo.save(
                     dsEpisodeRepo.create({
+                        id: randomUUID(),
                         seasonId: season.id,
                         episodeNumber: ep,
                         title: `Episode ${ep}`,

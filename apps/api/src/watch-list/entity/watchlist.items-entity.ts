@@ -9,7 +9,7 @@ import {
     Unique,
 } from 'typeorm';
 import { Profile } from '../../profile/entity/profile-entity';
-import { Content } from '../../profile/entity/conetnt-entity'; // adjust to your actual path
+import { Content } from '../../content/entity/conetnt-entity'; // adjust to your actual path
 
 @Entity('watchlist_items')
 @Unique('uq_watchlist_profile_content', ['profileId', 'contentId'])

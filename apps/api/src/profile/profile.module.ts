@@ -4,9 +4,9 @@ import { Profile } from './entity/profile-entity';
 import { ProfilesService } from './profile.service';
 import { ProfilesController } from './profile.controller';
 import { ProfileRepository } from './reposetory/profile.repo';
-import { Content } from './entity/conetnt-entity';
-import { Episode } from './entity/episode-entity';
-import { Season } from './entity/season-entity';
+import { Content } from '../content/entity/conetnt-entity';
+import { Episode } from '../content/entity/episode-entity';
+import { Season } from '../content/entity/season-entity';
 import { WatchHistory } from '../watch-history/entity/watch.history-entity';
 import { WatchlistItem } from '../watch-list/entity/watchlist.items-entity';
 

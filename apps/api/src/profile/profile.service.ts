@@ -279,7 +279,6 @@ export class ProfilesService {
         if (manager) {
             const rawRepo = manager.getRepository(Profile);
             const profile = rawRepo.create({ id: randomUUID(), ...values });
-
             return rawRepo.save(profile);
         }
 

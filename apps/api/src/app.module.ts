@@ -39,6 +39,7 @@ import { UploadModule } from "./upload/upload.module";
 import { ProfilesModule } from "./profile/profile.module";
 import { WatchHistoryModule } from "./watch-history/watch.history.module";
 import { WatchlistModule } from "./watch-list/watch-list.module";
+import { ContentModule } from "./content/content.module";
 
 const isTestEnv = process.env.NODE_ENV === 'test' || !!process.env.JEST_WORKER_ID;
 const tEnv = isTestEnv ? testEnv() : null;
@@ -119,7 +120,7 @@ const tEnv = isTestEnv ? testEnv() : null;
     TaskModule, MailModule,
     OtpModule, ReportModule, ProfilesModule,
     BillingModule, WatchHistoryModule, WatchlistModule,
-    UploadModule,
+    UploadModule, ContentModule,
     SyncModule,
     ScrapModuleModule,
     DlqModule,

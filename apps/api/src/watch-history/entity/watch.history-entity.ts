@@ -11,8 +11,8 @@ import {
     Unique,
 } from 'typeorm';
 import { Profile } from '../../profile/entity/profile-entity';
-import { Content } from '../../profile/entity/conetnt-entity';
-import { Episode } from '../../profile/entity/episode-entity';
+import { Content } from '../../content/entity/conetnt-entity';
+import { Episode } from '../../content/entity/episode-entity';
 /**
  * Exactly one of (content_id, episode_id) is set per row:
  *   - content_id -> a MOVIE's own progress
