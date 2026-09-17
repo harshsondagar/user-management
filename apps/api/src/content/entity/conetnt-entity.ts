@@ -15,19 +15,21 @@ export enum ContentType {
     SERIES = 'SERIES',
 }
 
-/**
- * The root "title" row - a movie OR a series shell. This is what
- * watchlist_items.content_id points to (you bookmark a title, not an
- * episode), and what a MOVIE's own watch_history row points to.
- *
- * `duration_seconds` only applies when type = MOVIE; leave null for
- * SERIES (duration lives per-episode instead). Not DB-enforced with a
- * CHECK because it's a soft convention, not a security boundary - add
- * one later if bad data actually shows up.
- */
+export enum ContentAccessType {
+    FREE = 'free',
+    PREMIUM = 'premium',
+}
+
+export enum ContentStatus {
+    DRAFT = 'draft',
+    PUBLISHED = 'published',
+    ARCHIVED = 'archived', // Use this to hide it from everyone
+}
+
+
 @Entity('content')
 export class Content {
-    @PrimaryColumn('uuid', { default: () => 'gen_random_uuid()' })
+    @PrimaryColumn('uuid')
     id!: string;
 
     @Index('idx_content_type')
@@ -48,8 +50,8 @@ export class Content {
 
     @Column({ name: 'backdrop_url', type: 'text', nullable: true })
     backdropUrl?: string | null;
-
     // Same 1-5 ordinal scale as profiles.maturity_level, so filtering is:
+
     // WHERE content.maturity_level <= profile.maturity_level
     @Column({ name: 'maturity_level', type: 'smallint' })
     maturityLevel!: number;
@@ -57,8 +59,25 @@ export class Content {
     @Column({ name: 'duration_seconds', type: 'integer', nullable: true })
     durationSeconds?: number | null; // MOVIE only
 
+    @Column({ name: 'video_url', type: 'text', nullable: true })
+    videoUrl?: string | null
+
+    @Column({
+        type: 'enum',
+        enum: ContentAccessType,
+        default: ContentAccessType.PREMIUM,
+    })
+    accessType!: ContentAccessType;
+
     @OneToMany(() => Season, (season) => season.series)
     seasons!: Season[]; // SERIES only
+
+    @Column({
+        type: 'enum',
+        enum: ContentStatus,
+        default: ContentStatus.DRAFT, // Safer to default to draft until an admin publishes it
+    })
+    status!: ContentStatus
 
     @CreateDateColumn({ name: 'created_at', type: 'timestamptz' })
     createdAt!: Date;

@@ -25,6 +25,8 @@ export class BillingService {
         planName: string;
     }> {
         const chosenPlan = await this.planRepo.findOne({ where: { id: planId, isActive: true } });
+        console.log(chosenPlan);
+
         if (!chosenPlan) {
             throw new NotFoundException(`Plan with ID ${planId} does not exist`);
         }

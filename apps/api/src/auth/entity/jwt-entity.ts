@@ -43,4 +43,7 @@ export class RefreshToken {
 
     @UpdateDateColumn({ type: 'timestamptz', nullable: true })
     declare updatedAt: Date
+
+    @Column({ name: "active_profile_id", type: 'uuid', nullable: true })
+    declare active_profile_id: string
 }

@@ -37,6 +37,9 @@ import { ServeStaticModule } from "@nestjs/serve-static"
 import { RoomModule } from './room/room.module';
 import { UploadModule } from "./upload/upload.module";
 import { ProfilesModule } from "./profile/profile.module";
+import { WatchHistoryModule } from "./watch-history/watch.history.module";
+import { WatchlistModule } from "./watch-list/watch-list.module";
+import { ContentModule } from "./content/content.module";
 
 const isTestEnv = process.env.NODE_ENV === 'test' || !!process.env.JEST_WORKER_ID;
 const tEnv = isTestEnv ? testEnv() : null;
@@ -64,38 +67,11 @@ const tEnv = isTestEnv ? testEnv() : null;
         },
       }),
     }),
-
-    // BullModule.forRootAsync({
-    //   inject: [ConfigService],
-    //   useFactory: (config: ConfigService) => ({
-    //     connection: {
-    //       host: config.getOrThrow<string>('redis.host'),
-    //       port: config.getOrThrow<number>('redis.port'),
-    //     },
-    //   }),
-    // }),
     BullBoardModule.forRoot({
       route: '/admin/queues',
       adapter: ExpressAdapter,
     }),
     AppThrottleModule, HealthModule, RedisCacheModule, WebhookModule,
-    // TypeOrmModule.forRootAsync({
-    //   imports: [ConfigModule],
-    //   inject: [ConfigService],
-    //   useFactory: (config: ConfigService) => ({
-    //     type: 'postgres',
-    //     host: config.get<string>('database.host'),
-    //     port: config.get<number>('database.port'),
-    //     username: config.get<string>('database.username'),
-    //     password: config.get<string>('database.password'),
-    //     database: config.get<string>('database.name'),
-    //     autoLoadEntities: true,
-    //     entities: ['src/**/*.entity.ts'],
-    //     synchronize: false,
-    //     retryAttempts: 10,
-    //     retryDelay: 3000
-    //   }),
-    // }),
     TypeOrmModule.forRootAsync({
       imports: [ConfigModule],
       inject: [ConfigService],
@@ -116,8 +92,8 @@ const tEnv = isTestEnv ? testEnv() : null;
     UserModule, AuthModule,
     TaskModule, MailModule,
     OtpModule, ReportModule, ProfilesModule,
-    BillingModule,
-    UploadModule,
+    BillingModule, WatchHistoryModule, WatchlistModule,
+    UploadModule, ContentModule,
     SyncModule,
     ScrapModuleModule,
     DlqModule,

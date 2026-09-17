@@ -9,6 +9,7 @@ import {
     UseGuards,
     HttpCode,
     HttpStatus,
+    BadRequestException,
 } from '@nestjs/common';
 import { CreateProfileDto } from './dto/create.profile.dto';
 import { UpdateProfileDto } from './dto/update.profile.dto';
@@ -17,12 +18,17 @@ import { JwtGuard } from '../auth/gurads/jwt.guard';
 import { currentUser } from '../common/decorator/currentUser-decorator';
 import { User } from '../user/entity/user-entity';
 import { ProfilesService } from './profile.service';
+import { SelectProfileDto } from './dto/select.profile.dto';
+import { AuthService } from '../auth/auth.service';
 
 
 @UseGuards(JwtGuard)
 @Controller('profiles')
 export class ProfilesController {
-    constructor(private readonly profilesService: ProfilesService) { }
+    constructor(
+        private readonly profilesService: ProfilesService,
+        private readonly authService: AuthService
+    ) { }
 
     @Get()
     findAll(@currentUser() user: User) {
@@ -31,8 +37,6 @@ export class ProfilesController {
 
     @Get(':id')
     findOne(@currentUser() user: User, @Param('id') id: string) {
-        console.log(id);
-
         return this.profilesService.findOneForUser(user.id, id);
     }
 
@@ -80,5 +84,29 @@ export class ProfilesController {
         @Body() dto: VerifyPinDto,
     ) {
         return this.profilesService.verifyPin(user.id, id, dto.pin);
+    }
+
+    @Post(':id/select')
+    @HttpCode(HttpStatus.OK)
+    async selectProfile(
+        @currentUser() user: User,
+        @Param('id') profileId: string,
+        @Body() dto: SelectProfileDto,
+    ) {
+        const profile = await this.profilesService.findOneForUser(user.id, profileId);
+
+        if (profile.pinEnabled) {
+            if (!dto.pin) {
+                throw new BadRequestException('This profile requires a PIN to select');
+            }
+            await this.profilesService.verifyPin(user.id, profileId, dto.pin);
+        }
+
+        const { accessToken } = await this.authService.issueAccessTokenWithActiveProfile(
+            user,
+            profileId,
+        );
+
+        return { accessToken, profile };
     }
 }

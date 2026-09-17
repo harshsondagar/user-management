@@ -27,6 +27,7 @@ import { RefreshToken } from './entity/jwt-entity';
       provide: APP_GUARD, useClass: JwtGuard
     },
   ],
-  controllers: [AuthController], exports: [AuthService],
+  controllers: [AuthController],
+  exports: [AuthService],
 })
 export class AuthModule { }

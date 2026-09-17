@@ -12,8 +12,8 @@ import {
     Unique,
 } from 'typeorm';
 import { User } from '../../user/entity/user-entity';
-import { WatchHistory } from './watch.history-entity';
-import { WatchlistItem } from './watchlist.items-entity';
+import { WatchHistory } from '../../watch-history/entity/watch.history-entity';
+import { WatchlistItem } from '../../watch-list/entity/watchlist.items-entity';
 
 export enum MaturityLevel {
     KIDS = 1,
@@ -81,6 +81,9 @@ export class Profile {
 
     @Column({ name: 'pin_locked_until', type: 'timestamptz', nullable: true })
     pinLockedUntil?: Date | null;
+
+    @Column({ name: 'is_primary', type: 'boolean', default: false })
+    isPrimary!: boolean;
 
     @Column({ name: 'is_default', type: 'boolean', default: false })
     isDefault!: boolean;
