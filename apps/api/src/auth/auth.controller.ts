@@ -56,7 +56,7 @@ export class AuthController {
 
 
     @Public()
-    @Throttle({ default: { limit: 5, ttl: 60000 } })
+    @StrictThrottle()
     @Post('register')
     @ApiWrappedResponse(RegisterResponseDTO)
     async register(@Body() body: RegisterDTO) {

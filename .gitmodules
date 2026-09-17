@@ -1,0 +1,3 @@
+[submodule "libs/nestjs-redis"]
+	path = libs/nestjs-redis
+	url = https://github.com/harshsondagar/nestjs-redis-module

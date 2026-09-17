@@ -1,4 +1,7 @@
 import 'dotenv/config';
+
+console.log(process.env.ROOM_DB_PASSWORD);
+
 export default () => ({
     nodeEnv: process.env.NODE_ENV || 'development',
     port: parseInt(process.env.PORT || '3000', 10),
@@ -39,4 +42,12 @@ export default () => ({
     internal: {
         secret: process.env.INTERNAL_SERVICE_SECRET!,
     },
+    roomdb: {
+        host: process.env.ROOM_DB_HOST,
+        port: process.env.ROOM_DB_PORT,
+        username: process.env.ROOM_DB_USERNAME,
+        password: process.env.ROOM_DB_PASSWORD!,
+        database: process.env.ROOM_DB_NAME,
+    },
+
 });

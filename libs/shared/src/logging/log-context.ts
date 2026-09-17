@@ -1,7 +1,7 @@
 import { AsyncLocalStorage } from 'async_hooks';
-import { CronLogContext, HttpLogContext, JobLogContext, SystemLogContext } from '../type/type';
+import { CronLogContext, HttpLogContext, JobLogContext, SystemLogContext, WsLogContext } from '../type/type';
 
-export type LogContext = HttpLogContext | JobLogContext | CronLogContext | SystemLogContext;
+export type LogContext = HttpLogContext | JobLogContext | CronLogContext | SystemLogContext | WsLogContext;
 
 class LogContextStore {
     private readonly storage = new AsyncLocalStorage<LogContext>();

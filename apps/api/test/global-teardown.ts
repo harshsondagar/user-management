@@ -24,8 +24,6 @@ export default async function globalTeardown() {
 
     await client.connect();
 
-
-
     for (let i = 1; i <= WORKER_COUNT; i++) {
         const dbName = `test_db_${i}`
 

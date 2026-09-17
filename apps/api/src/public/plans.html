@@ -1,0 +1,146 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Choose a plan</title>
+    <style>
+      body {
+        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+        background: #0f1115;
+        color: #e5e7eb;
+        min-height: 100vh;
+        margin: 0;
+        padding: 48px 16px;
+      }
+      h1 {
+        text-align: center;
+        margin-bottom: 32px;
+      }
+      .grid {
+        display: flex;
+        gap: 20px;
+        justify-content: center;
+        flex-wrap: wrap;
+        max-width: 900px;
+        margin: 0 auto;
+      }
+      .plan-card {
+        background: #171a21;
+        border: 1px solid #262b36;
+        border-radius: 10px;
+        padding: 28px;
+        width: 240px;
+        text-align: center;
+      }
+      .plan-card.current {
+        border-color: #4ade80;
+      }
+      .plan-name {
+        font-size: 18px;
+        font-weight: 600;
+        margin: 0 0 8px 0;
+      }
+      .plan-price {
+        font-size: 28px;
+        font-weight: 700;
+        margin: 0 0 20px 0;
+      }
+      .plan-price span {
+        font-size: 13px;
+        font-weight: 400;
+        color: #9ca3af;
+      }
+      button {
+        width: 100%;
+        padding: 12px;
+        border-radius: 6px;
+        border: none;
+        font-size: 14px;
+        font-weight: 600;
+        cursor: pointer;
+        background: #f9fafb;
+        color: #111827;
+      }
+      button:disabled {
+        opacity: 0.4;
+        cursor: not-allowed;
+      }
+      .badge {
+        display: inline-block;
+        font-size: 11px;
+        padding: 4px 10px;
+        border-radius: 20px;
+        background: #1f2937;
+        color: #9ca3af;
+        margin-bottom: 12px;
+      }
+      #message {
+        text-align: center;
+        margin-top: 24px;
+        color: #f87171;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>Choose a plan</h1>
+    <div class="grid" id="grid"></div>
+    <div id="message"></div>
+
+    <script>
+      const API_BASE = 'http://localhost:3000';
+      const jwt = localStorage.getItem('jwt');
+
+      async function loadPlans() {
+        if (!jwt) {
+          document.getElementById('message').textContent =
+            'Not logged in — set localStorage.jwt first.';
+          return;
+        }
+
+        const res = await fetch(`${API_BASE}/payments/plans`, {
+          headers: { Authorization: `Bearer ${jwt}` },
+        });
+        const json = await res.json();
+        if (!res.ok) {
+          document.getElementById('message').textContent =
+            json.message || 'Could not load plans.';
+          return;
+        }
+
+        const plans = json.data ?? json;
+        const grid = document.getElementById('grid');
+
+        plans.forEach((plan) => {
+          const card = document.createElement('div');
+          card.className = 'plan-card' + (plan.isCurrent ? ' current' : '');
+
+          const badge = plan.isCurrent
+            ? 'Current plan'
+            : plan.isDowngrade
+              ? 'Downgrade unavailable'
+              : '';
+
+          card.innerHTML = `
+          ${badge ? `<div class="badge">${badge}</div>` : ''}
+          <p class="plan-name">${plan.name}</p>
+          <p class="plan-price">${(plan.amount / 100).toFixed(2)} <span>${plan.currency.toUpperCase()}/mo</span></p>
+          <button ${plan.isCurrent || plan.isDowngrade ? 'disabled' : ''}>
+            ${plan.isCurrent ? 'Active' : plan.isDowngrade ? 'Unavailable' : 'Select'}
+          </button>
+        `;
+
+          if (!plan.isCurrent && !plan.isDowngrade) {
+            card.querySelector('button').addEventListener('click', () => {
+              window.location.href = `checkout.html?planId=${plan.id}`;
+            });
+          }
+
+          grid.appendChild(card);
+        });
+      }
+
+      loadPlans();
+    </script>
+  </body>
+</html>

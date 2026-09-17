@@ -30,7 +30,16 @@ import { DlqModule } from "./dlq/dlq.module";
 import { AttachUserContextInterceptor, RequestContextMiddleware } from "@app/shared";
 import { LogCleanupService } from "@app/shared";
 import { testEnv } from "@app/shared";
-
+import { BillingModule } from "./billing/billing.module";
+import { WebhookModule } from "./webhooks/stripe-webhook.module";
+import { join } from "path";
+import { ServeStaticModule } from "@nestjs/serve-static"
+import { RoomModule } from './room/room.module';
+import { UploadModule } from "./upload/upload.module";
+import { ProfilesModule } from "./profile/profile.module";
+import { WatchHistoryModule } from "./watch-history/watch.history.module";
+import { WatchlistModule } from "./watch-list/watch-list.module";
+import { ContentModule } from "./content/content.module";
 
 const isTestEnv = process.env.NODE_ENV === 'test' || !!process.env.JEST_WORKER_ID;
 const tEnv = isTestEnv ? testEnv() : null;
@@ -38,79 +47,57 @@ const tEnv = isTestEnv ? testEnv() : null;
 
 
 @Module({
-  imports: [ScheduleModule.forRoot(),
-  ConfigModule.forRoot({
-    isGlobal: true,
-    envFilePath: isTestEnv
-      ? 'apps/api/test/.env.test'
-      : 'apps/api/.env',
-    load: [configuration]
-  }),
-  BullModule.forRootAsync({
-    inject: [ConfigService],
-    useFactory: (config: ConfigService) => ({
-      connection: {
-        host: tEnv?.redisHost ?? config.getOrThrow<string>('redis.host'),
-        port: tEnv ? tEnv.redisPort : config.getOrThrow<number>('redis.port'),
-        db: tEnv ? tEnv.redisDb : config.get<number>('redis.db', 0),
-      },
+  imports: [
+    ServeStaticModule.forRoot({ rootPath: join(__dirname, 'public') }),
+    ScheduleModule.forRoot(),
+    ConfigModule.forRoot({
+      isGlobal: true,
+      envFilePath: isTestEnv
+        ? 'apps/api/test/.env.test'
+        : 'apps/api/.env',
+      load: [configuration]
     }),
-  }),
-  // BullModule.forRootAsync({
-  //   inject: [ConfigService],
-  //   useFactory: (config: ConfigService) => ({
-  //     connection: {
-  //       host: config.getOrThrow<string>('redis.host'),
-  //       port: config.getOrThrow<number>('redis.port'),
-  //     },
-  //   }),
-  // }),
-  BullBoardModule.forRoot({
-    route: '/admin/queues',
-    adapter: ExpressAdapter,
-  }),
-    AppThrottleModule, HealthModule, RedisCacheModule,
-  // TypeOrmModule.forRootAsync({
-  //   imports: [ConfigModule],
-  //   inject: [ConfigService],
-  //   useFactory: (config: ConfigService) => ({
-  //     type: 'postgres',
-  //     host: config.get<string>('database.host'),
-  //     port: config.get<number>('database.port'),
-  //     username: config.get<string>('database.username'),
-  //     password: config.get<string>('database.password'),
-  //     database: config.get<string>('database.name'),
-  //     autoLoadEntities: true,
-  //     entities: ['src/**/*.entity.ts'],
-  //     synchronize: false,
-  //     retryAttempts: 10,
-  //     retryDelay: 3000
-  //   }),
-  // }),
-  TypeOrmModule.forRootAsync({
-    imports: [ConfigModule],
-    inject: [ConfigService],
-    useFactory: (config: ConfigService) => ({
-      type: 'postgres',
-      host: tEnv?.postgresHost ?? config.get<string>('database.host'),
-      port: tEnv ? tEnv.postgresPort : config.get<number>('database.port'),
-      username: tEnv?.postgresUser ?? config.get<string>('database.username'),
-      password: tEnv?.postgresPassword ?? config.get<string>('database.password'),
-      database: tEnv?.dbName ?? config.get<string>('database.name'),
-      autoLoadEntities: true,
-      entities: ['src/**/*.entity.ts'],
-      synchronize: false,
-      retryAttempts: 10,
-      retryDelay: 3000
+    BullModule.forRootAsync({
+      inject: [ConfigService],
+      useFactory: (config: ConfigService) => ({
+        connection: {
+          host: tEnv?.redisHost ?? config.getOrThrow<string>('redis.host'),
+          port: tEnv ? tEnv.redisPort : config.getOrThrow<number>('redis.port'),
+          db: tEnv ? tEnv.redisDb : config.get<number>('redis.db', 0),
+        },
+      }),
     }),
-  }),
+    BullBoardModule.forRoot({
+      route: '/admin/queues',
+      adapter: ExpressAdapter,
+    }),
+    AppThrottleModule, HealthModule, RedisCacheModule, WebhookModule,
+    TypeOrmModule.forRootAsync({
+      imports: [ConfigModule],
+      inject: [ConfigService],
+      useFactory: (config: ConfigService) => ({
+        type: 'postgres',
+        host: tEnv?.postgresHost ?? config.get<string>('database.host'),
+        port: tEnv ? tEnv.postgresPort : config.get<number>('database.port'),
+        username: tEnv?.postgresUser ?? config.get<string>('database.username'),
+        password: tEnv?.postgresPassword ?? config.get<string>('database.password'),
+        database: tEnv?.dbName ?? config.get<string>('database.name'),
+        autoLoadEntities: true,
+        entities: ['src/**/**/*-entity.ts'],
+        synchronize: false,
+        retryAttempts: 10,
+        retryDelay: 3000
+      }),
+    }),
     UserModule, AuthModule,
     TaskModule, MailModule,
-    OtpModule, ReportModule,
-    // DatagovModule,
+    OtpModule, ReportModule, ProfilesModule,
+    BillingModule, WatchHistoryModule, WatchlistModule,
+    UploadModule, ContentModule,
     SyncModule,
     ScrapModuleModule,
-    DlqModule
+    DlqModule,
+    RoomModule
   ],
   controllers: [],
   providers: [AppService, {

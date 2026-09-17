@@ -1,6 +1,7 @@
 import { Column, CreateDateColumn, DeleteDateColumn, Entity, Index, ManyToMany, OneToMany, PrimaryGeneratedColumn, UpdateDateColumn } from "typeorm";
 import { Task } from "../../task/entity/task-entity";
 import { Followers } from "./userfollowers-entity";
+import { Profile } from "../../profile/entity/profile-entity";
 
 export enum UserRole {
     USER = 'user',
@@ -76,6 +77,19 @@ export class User {
 
     @DeleteDateColumn()
     declare deletedAt: Date;
+
+    @Column({ type: 'varchar', nullable: true, unique: true })
+    declare stripeCustomerId: string | null;
+
+    @Column({
+        type: 'varchar',
+        default: 'UTC',
+        nullable: false
+    })
+    timezone!: string;
+
+    @OneToMany(() => Profile, (profile) => profile.user)
+    profiles!: Profile[];
 }
 
 

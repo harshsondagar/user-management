@@ -1,5 +1,5 @@
 import { BadRequestException, ConflictException, ForbiddenException, HttpException, HttpStatus, Inject, Injectable, NotFoundException, UnauthorizedException } from '@nestjs/common';
-import { FindOptionsWhere } from 'typeorm';
+import { DataSource, FindOptionsWhere, Repository } from 'typeorm';
 import { ProfileType, User, UserRole } from './entity/user-entity';
 import { registerBody } from '../types';
 import { UpdateUserDTO } from './dto/UpdateUserDTO';
@@ -10,6 +10,11 @@ import { OtpService } from '../common/otp/opt.service';
 import { UserRepository } from './user.repository';
 import { FollowerRepository } from './follower.repository';
 import { MailProducer } from '../mail/mail-producer';
+import { Plan } from '../billing/entities/plan-entity';
+import { InjectRepository } from '@nestjs/typeorm';
+import { SubscriptionStatus, UserSubscription } from '../billing/entities/user-subscription-entity';
+import { UserSubscriptionRepository } from '../billing/repositorys/user-subscription.repository';
+import { ProfilesService } from '../profile/profile.service';
 
 const ARGON2_OPTIONS: argon2.HashOptions = {
     type: argon2.argon2id,
@@ -25,9 +30,13 @@ export class UserService {
     constructor(
         private readonly userRepository: UserRepository,
         private readonly followerRepository: FollowerRepository,
+        @InjectRepository(Plan) private readonly planRepo: Repository<Plan>,
+        private readonly userSubscriptionRepo: UserSubscriptionRepository,
         private readonly otpService: OtpService,
         private readonly cache: SafeCacheService,
-        private readonly mailProducer: MailProducer
+        private readonly mailProducer: MailProducer,
+        private readonly dataSource: DataSource,
+        private readonly profilesService: ProfilesService
     ) { }
 
     async findByEMailWithPassword(email: string) {
@@ -49,11 +58,6 @@ export class UserService {
     async create(body: registerBody) {
         const existing = await this.userRepository.findOne({ where: { email: body.email } });
 
-        if (existing && !existing.isEmailVerified) {
-            throw new UnauthorizedException('Please verify your email.');
-
-        }
-
         if (existing && existing.isEmailVerified) {
             throw new ConflictException('An account with this email already exists.');
         }
@@ -63,15 +67,38 @@ export class UserService {
             return { message: 'Registered. Please verify your email.', email: body.email };
         }
 
-        const user = await this.userRepository.create(body);
+        const user = await this.dataSource.transaction(async (manager) => {
+            const newUser = manager.create(User, body);
+            const savedUser = await manager.save(User, newUser);
 
+            const freePlan = await manager.findOne(Plan, { where: { code: 'free' } });
+            if (!freePlan) throw new Error('Free plan not seeded — cannot complete registration');
+
+            const subscription = manager.create(UserSubscription, {
+                userId: savedUser.id,
+                planId: freePlan.id,
+                status: SubscriptionStatus.ACTIVE,
+                stripeSubscriptionId: null,
+                currentPeriodEnd: new Date('9999-12-31'),
+            });
+            await manager.save(UserSubscription, subscription);
+
+
+            await this.profilesService.createPrimaryProfile(
+                savedUser.id,
+                savedUser.firstName ?? 'Me',
+                manager,
+            );
+            return savedUser;
+        });
         const otp = this.otpService.generateOtp();
+        console.log(otp);
+
         await this.otpService.storeOtp(user.email, otp);
         await this.mailProducer.addVerificationMailJob(user.email, user.firstName!, otp);
 
         return { message: 'Registered. Please verify your email.', email: user.email };
     }
-
     async registerFailedLogin(user: User) {
 
         const attempts = user.failedLoginAttempts + 1
@@ -296,7 +323,6 @@ export class UserService {
     }
 
     async getFollowers(userId: string) {
-
         const cacheKey = `follower:${userId}`
 
         const cached = await this.cache.get(cacheKey)
@@ -431,5 +457,16 @@ export class UserService {
     private stripPrivateFields(user: User) {
         const { passwordHash, failedLoginAttempts, lockedUntil, tokenVersion, ...safeUser } = user as any
         return safeUser
+    }
+
+    private async assignFreePlan(userId: string) {
+        const freePlan = await this.planRepo.findOne({ where: { code: 'free' } });
+        if (!freePlan) throw new Error('Free plan not seeded — cannot complete registration');
+
+        await this.userSubscriptionRepo.create({
+            userId,
+            planId: freePlan.id,
+            status: SubscriptionStatus.ACTIVE,
+        });
     }
 }

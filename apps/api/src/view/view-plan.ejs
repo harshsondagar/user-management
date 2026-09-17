@@ -1,0 +1,489 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Plans — Scrape Rate Limits & Access</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&family=Inter:wght@400;500;600&display=swap" rel="stylesheet" />
+<style>
+  :root {
+    --bg: #0a0f1a;
+    --panel: #101827;
+    --panel-2: #141d2f;
+    --line: #212d42;
+    --text: #e7ecf3;
+    --muted: #8a96ab;
+    --cyan: #2dd4c8;
+    --amber: #f0b429;
+    --violet: #9b7bf0;
+    --danger: #ef4444;
+    --mono: 'JetBrains Mono', monospace;
+    --display: 'Space Grotesk', sans-serif;
+    --body: 'Inter', sans-serif;
+  }
+
+  * { box-sizing: border-box; }
+
+  body {
+    margin: 0;
+    background:
+      radial-gradient(ellipse 900px 500px at 15% -10%, rgba(45,212,200,0.10), transparent 60%),
+      radial-gradient(ellipse 900px 500px at 85% 0%, rgba(155,123,240,0.10), transparent 60%),
+      var(--bg);
+    color: var(--text);
+    font-family: var(--body);
+    -webkit-font-smoothing: antialiased;
+    padding: 64px 24px 96px;
+  }
+
+  .wrap { max-width: 1180px; margin: 0 auto; }
+
+  /* ---------- Header ---------- */
+  .eyebrow {
+    font-family: var(--mono);
+    font-size: 12px;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--cyan);
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    justify-content: center;
+    margin-bottom: 18px;
+  }
+  .eyebrow .dot {
+    width: 6px; height: 6px; border-radius: 50%;
+    background: var(--cyan);
+    box-shadow: 0 0 0 3px rgba(45,212,200,0.15);
+    animation: pulse 2.2s ease-in-out infinite;
+  }
+  @keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.35; }
+  }
+
+  h1.headline {
+    font-family: var(--display);
+    font-weight: 700;
+    text-align: center;
+    font-size: clamp(32px, 5vw, 52px);
+    line-height: 1.08;
+    margin: 0 auto 16px;
+    max-width: 720px;
+    letter-spacing: -0.01em;
+  }
+  h1.headline span { color: var(--cyan); }
+
+  p.subhead {
+    text-align: center;
+    color: var(--muted);
+    font-size: 16px;
+    max-width: 560px;
+    margin: 0 auto 44px;
+    line-height: 1.6;
+  }
+
+  /* ---------- Billing toggle ---------- */
+  .toggle-row {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 14px;
+    margin-bottom: 56px;
+    font-family: var(--mono);
+    font-size: 13px;
+    color: var(--muted);
+  }
+  .toggle-row .save-badge {
+    font-size: 11px;
+    background: rgba(45,212,200,0.12);
+    color: var(--cyan);
+    border: 1px solid rgba(45,212,200,0.35);
+    padding: 2px 8px;
+    border-radius: 20px;
+  }
+  .switch {
+    position: relative;
+    width: 46px; height: 26px;
+    background: var(--panel-2);
+    border: 1px solid var(--line);
+    border-radius: 20px;
+    cursor: pointer;
+  }
+  .switch::after {
+    content: "";
+    position: absolute;
+    top: 2px; left: 2px;
+    width: 20px; height: 20px;
+    border-radius: 50%;
+    background: var(--cyan);
+    transition: transform 0.2s ease;
+  }
+  .switch.on::after { transform: translateX(20px); }
+  .toggle-row .label.active { color: var(--text); }
+
+  /* ---------- Cards grid ---------- */
+  .grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 22px;
+    align-items: stretch;
+  }
+  @media (max-width: 920px) {
+    .grid { grid-template-columns: 1fr; max-width: 440px; margin: 0 auto; }
+  }
+
+  .card {
+    background: linear-gradient(180deg, var(--panel) 0%, var(--panel-2) 100%);
+    border: 1px solid var(--line);
+    border-radius: 16px;
+    padding: 28px 26px 30px;
+    display: flex;
+    flex-direction: column;
+    position: relative;
+    transition: transform 0.25s ease, border-color 0.25s ease;
+  }
+  .card:hover { transform: translateY(-4px); }
+
+  .card.current { border-color: var(--cyan); }
+  .card.pro {
+    border-color: rgba(240,180,41,0.35);
+  }
+  .card.enterprise {
+    border-color: rgba(155,123,240,0.4);
+    background: linear-gradient(180deg, #141024 0%, #0f0c1c 100%);
+    transform: scale(1.02);
+    box-shadow: 0 0 60px -20px rgba(155,123,240,0.35);
+  }
+  .card.enterprise:hover { transform: scale(1.02) translateY(-4px); }
+
+  .badge-top {
+    position: absolute;
+    top: -12px; left: 26px;
+    font-family: var(--mono);
+    font-size: 11px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    padding: 4px 10px;
+    border-radius: 20px;
+  }
+  .badge-top.pro { background: var(--amber); color: #221a02; }
+  .badge-top.enterprise { background: var(--violet); color: #150c2b; }
+
+  .plan-name {
+    font-family: var(--display);
+    font-size: 22px;
+    font-weight: 600;
+    margin: 6px 0 4px;
+  }
+  .plan-tag {
+    color: var(--muted);
+    font-size: 13.5px;
+    margin: 0 0 22px;
+    line-height: 1.5;
+    min-height: 40px;
+  }
+
+  .price-row {
+    display: flex;
+    align-items: baseline;
+    gap: 6px;
+    margin-bottom: 4px;
+  }
+  .price {
+    font-family: var(--display);
+    font-size: 40px;
+    font-weight: 700;
+  }
+  .price-period {
+    color: var(--muted);
+    font-size: 13px;
+    font-family: var(--mono);
+  }
+  .price-annual-note {
+    font-size: 12px;
+    color: var(--muted);
+    font-family: var(--mono);
+    margin-bottom: 22px;
+    visibility: hidden;
+    height: 16px;
+  }
+  .price-annual-note.show { visibility: visible; }
+
+  /* ---------- Rate-limit dial: the signature element ----------
+     A 10x10 grid of dots = 100 "scrape slots" per day.
+     Each plan lights up exactly as many dots as its daily scrape limit,
+     so the three tiers are visually, proportionally comparable at a glance. */
+  .dial {
+    margin: 4px 0 22px;
+    padding: 14px 14px 12px;
+    background: rgba(255,255,255,0.02);
+    border: 1px solid var(--line);
+    border-radius: 10px;
+  }
+  .dial-label {
+    display: flex;
+    justify-content: space-between;
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--muted);
+    margin-bottom: 8px;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+  }
+  .dial-label b { color: var(--text); font-weight: 600; }
+  .dots {
+    display: grid;
+    grid-template-columns: repeat(10, 1fr);
+    gap: 3px;
+  }
+  .dots i {
+    display: block;
+    width: 100%;
+    padding-top: 100%;
+    border-radius: 2px;
+    background: rgba(255,255,255,0.06);
+  }
+  .dots i.lit.free { background: var(--cyan); }
+  .dots i.lit.pro { background: var(--amber); }
+  .dots i.lit.enterprise { background: var(--violet); }
+
+  .divider { height: 1px; background: var(--line); margin: 4px 0 20px; }
+
+  .features {
+    list-style: none;
+    margin: 0 0 26px;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    flex: 1;
+  }
+  .features li {
+    display: flex;
+    gap: 10px;
+    font-size: 14px;
+    line-height: 1.5;
+    color: #cfd7e3;
+  }
+  .features li .ico {
+    flex-shrink: 0;
+    width: 16px; height: 16px;
+    margin-top: 2px;
+  }
+  .features li.locked { color: var(--muted); }
+  .features li.locked .ico { opacity: 0.4; }
+
+  .cta {
+    display: block;
+    text-align: center;
+    text-decoration: none;
+    font-family: var(--mono);
+    font-size: 13.5px;
+    font-weight: 500;
+    letter-spacing: 0.02em;
+    padding: 13px 18px;
+    border-radius: 9px;
+    border: 1px solid var(--line);
+    color: var(--text);
+    background: transparent;
+    cursor: pointer;
+    transition: all 0.2s ease;
+  }
+  .cta:hover { border-color: var(--cyan); color: var(--cyan); }
+  .cta.primary.pro-cta {
+    background: var(--amber);
+    border-color: var(--amber);
+    color: #221a02;
+  }
+  .cta.primary.pro-cta:hover { filter: brightness(1.08); color: #221a02; }
+  .cta.primary.ent-cta {
+    background: var(--violet);
+    border-color: var(--violet);
+    color: #150c2b;
+  }
+  .cta.primary.ent-cta:hover { filter: brightness(1.1); color: #150c2b; }
+  .cta.current-cta {
+    background: transparent;
+    border-color: var(--cyan);
+    color: var(--cyan);
+    cursor: default;
+  }
+
+  /* ---------- Footnote strip ---------- */
+  .footnote {
+    margin-top: 46px;
+    text-align: center;
+    font-family: var(--mono);
+    font-size: 12.5px;
+    color: var(--muted);
+    line-height: 1.8;
+  }
+  .footnote a { color: var(--cyan); text-decoration: none; }
+  .footnote a:hover { text-decoration: underline; }
+</style>
+</head>
+<body>
+  <div class="wrap">
+
+    <div class="eyebrow"><span class="dot"></span> Scrape Ops — Plans &amp; Rate Limits</div>
+    <h1 class="headline">Every plan is a <span>rate limit</span>, not a feature wall</h1>
+    <p class="subhead">Pick how much daily throughput you need. Upgrades don't just raise a number — they unlock what you're allowed to do with the data once it's yours.</p>
+
+    <div class="toggle-row">
+      <span class="label <%= (typeof billing === 'undefined' || billing !== 'annual') ? 'active' : '' %>">Monthly</span>
+      <div class="switch <%= (typeof billing !== 'undefined' && billing === 'annual') ? 'on' : '' %>" id="billingSwitch" role="button" aria-label="Toggle annual billing"></div>
+      <span class="label <%= (typeof billing !== 'undefined' && billing === 'annual') ? 'active' : '' %>">Annual <span class="save-badge">save ~17%</span></span>
+    </div>
+
+    <div class="grid">
+
+      <!-- ============ FREE ============ -->
+      <div class="card <%= (typeof currentPlan !== 'undefined' && currentPlan === 'free') ? 'current' : '' %>">
+        <div class="plan-name">Free</div>
+        <p class="plan-tag">For trying the scraper out and eyeballing a single day's pull.</p>
+
+        <div class="price-row">
+          <span class="price">$0</span>
+          <span class="price-period">/ forever</span>
+        </div>
+        <div class="price-annual-note">&nbsp;</div>
+
+        <div class="dial">
+          <div class="dial-label"><span>Daily scrape slots</span><b>1 / day</b></div>
+          <div class="dots" id="dots-free"></div>
+        </div>
+
+        <div class="divider"></div>
+
+        <ul class="features">
+          <li><span class="ico">✅</span> 1 scrape job per day</li>
+          <li><span class="ico">✅</span> View data from your latest scrape only</li>
+          <li><span class="ico">✅</span> Up to 100 records per scrape</li>
+          <li><span class="ico">✅</span> 24-hour data retention</li>
+          <li class="locked"><span class="ico">—</span> No export (CSV / JSON / TXT)</li>
+          <li class="locked"><span class="ico">—</span> No filtering or editing of results</li>
+          <li class="locked"><span class="ico">—</span> No scrape history</li>
+        </ul>
+
+        <% if (typeof currentPlan !== 'undefined' && currentPlan === 'free') { %>
+          <span class="cta current-cta">Current plan</span>
+        <% } else { %>
+          <a href="/plans/select?plan=free" class="cta">Start free</a>
+        <% } %>
+      </div>
+
+      <!-- ============ PRO ============ -->
+      <div class="card pro <%= (typeof currentPlan !== 'undefined' && currentPlan === 'pro') ? 'current' : '' %>">
+        <div class="badge-top pro">Most picked</div>
+        <div class="plan-name">Pro</div>
+        <p class="plan-tag">For regular scraping with room to clean, filter, and take the data with you.</p>
+
+        <div class="price-row">
+          <span class="price"><%= (typeof billing !== 'undefined' && billing === 'annual') ? '$25' : '$29' %></span>
+          <span class="price-period">/ month</span>
+        </div>
+        <div class="price-annual-note <%= (typeof billing !== 'undefined' && billing === 'annual') ? 'show' : '' %>">billed annually at $300/yr</div>
+
+        <div class="dial">
+          <div class="dial-label"><span>Daily scrape slots</span><b>10 / day</b></div>
+          <div class="dots" id="dots-pro"></div>
+        </div>
+
+        <div class="divider"></div>
+
+        <ul class="features">
+          <li><span class="ico">✅</span> 10 scrape jobs per day</li>
+          <li><span class="ico">✅</span> Up to 1,000 records per scrape</li>
+          <li><span class="ico">✅</span> Full 30-day scrape history</li>
+          <li><span class="ico">✅</span> Filter, sort, and edit scraped data</li>
+          <li><span class="ico">✅</span> Export to CSV</li>
+          <li><span class="ico">✅</span> Email support</li>
+          <li class="locked"><span class="ico">—</span> No JSON / TXT export</li>
+        </ul>
+
+        <% if (typeof currentPlan !== 'undefined' && currentPlan === 'pro') { %>
+          <span class="cta current-cta">Current plan</span>
+        <% } else { %>
+          <a href="/plans/select?plan=pro" class="cta primary pro-cta">Upgrade to Pro</a>
+        <% } %>
+      </div>
+
+      <!-- ============ ENTERPRISE ============ -->
+      <div class="card enterprise <%= (typeof currentPlan !== 'undefined' && currentPlan === 'enterprise') ? 'current' : '' %>">
+        <div class="badge-top enterprise">Unlimited access</div>
+        <div class="plan-name">Enterprise</div>
+        <p class="plan-tag">For teams running scraping as infrastructure, not a one-off task.</p>
+
+        <div class="price-row">
+          <span class="price"><%= (typeof billing !== 'undefined' && billing === 'annual') ? '$83' : '$99' %></span>
+          <span class="price-period">/ month</span>
+        </div>
+        <div class="price-annual-note <%= (typeof billing !== 'undefined' && billing === 'annual') ? 'show' : '' %>">billed annually at $1,000/yr</div>
+
+        <div class="dial">
+          <div class="dial-label"><span>Daily scrape slots</span><b>100 / day</b></div>
+          <div class="dots" id="dots-enterprise"></div>
+        </div>
+
+        <div class="divider"></div>
+
+        <ul class="features">
+          <li><span class="ico">✅</span> 100 scrape jobs per day</li>
+          <li><span class="ico">✅</span> Unlimited records per scrape</li>
+          <li><span class="ico">✅</span> Unlimited data retention &amp; full history</li>
+          <li><span class="ico">✅</span> Filter, sort, and edit scraped data</li>
+          <li><span class="ico">✅</span> Export to CSV, JSON &amp; TXT</li>
+          <li><span class="ico">✅</span> REST API access &amp; webhooks</li>
+          <li><span class="ico">✅</span> Scheduled / recurring scrape jobs</li>
+          <li><span class="ico">✅</span> Team seats with role-based access</li>
+          <li><span class="ico">✅</span> Priority support with SLA</li>
+        </ul>
+
+        <% if (typeof currentPlan !== 'undefined' && currentPlan === 'enterprise') { %>
+          <span class="cta current-cta">Current plan</span>
+        <% } else { %>
+          <a href="/plans/select?plan=enterprise" class="cta primary ent-cta">Contact sales</a>
+        <% } %>
+      </div>
+
+    </div>
+
+    <div class="footnote">
+      Scrape slots reset daily at 00:00 UTC · Need a custom limit above 100/day? <a href="/contact">Talk to us</a>
+    </div>
+
+  </div>
+
+<script>
+  // Build the 100-dot rate-limit dial for each plan and light up the
+  // number of dots matching that plan's daily scrape allowance.
+  function buildDial(id, litCount, tierClass) {
+    const container = document.getElementById(id);
+    if (!container) return;
+    let html = '';
+    for (let i = 0; i < 100; i++) {
+      html += `<i class="${i < litCount ? 'lit ' + tierClass : ''}"></i>`;
+    }
+    container.innerHTML = html;
+  }
+  buildDial('dots-free', 1, 'free');
+  buildDial('dots-pro', 10, 'pro');
+  buildDial('dots-enterprise', 100, 'enterprise');
+
+  // Billing toggle — swaps ?billing=monthly|annual and lets the server
+  // re-render prices via the `billing` local (or do it client-side if preferred).
+  const sw = document.getElementById('billingSwitch');
+  if (sw) {
+    sw.addEventListener('click', () => {
+      const url = new URL(window.location.href);
+      const isAnnual = url.searchParams.get('billing') === 'annual';
+      url.searchParams.set('billing', isAnnual ? 'monthly' : 'annual');
+      window.location.href = url.toString();
+    });
+  }
+</script>
+</body>
+</html>

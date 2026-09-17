@@ -12,4 +12,5 @@ export interface JwtRefreshPayload {
     email: string;
     role: string;
     tokenVersion: number;
+    activeProfileId?: string;
 }
