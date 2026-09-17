@@ -67,38 +67,11 @@ const tEnv = isTestEnv ? testEnv() : null;
         },
       }),
     }),
-
-    // BullModule.forRootAsync({
-    //   inject: [ConfigService],
-    //   useFactory: (config: ConfigService) => ({
-    //     connection: {
-    //       host: config.getOrThrow<string>('redis.host'),
-    //       port: config.getOrThrow<number>('redis.port'),
-    //     },
-    //   }),
-    // }),
     BullBoardModule.forRoot({
       route: '/admin/queues',
       adapter: ExpressAdapter,
     }),
     AppThrottleModule, HealthModule, RedisCacheModule, WebhookModule,
-    // TypeOrmModule.forRootAsync({
-    //   imports: [ConfigModule],
-    //   inject: [ConfigService],
-    //   useFactory: (config: ConfigService) => ({
-    //     type: 'postgres',
-    //     host: config.get<string>('database.host'),
-    //     port: config.get<number>('database.port'),
-    //     username: config.get<string>('database.username'),
-    //     password: config.get<string>('database.password'),
-    //     database: config.get<string>('database.name'),
-    //     autoLoadEntities: true,
-    //     entities: ['src/**/*.entity.ts'],
-    //     synchronize: false,
-    //     retryAttempts: 10,
-    //     retryDelay: 3000
-    //   }),
-    // }),
     TypeOrmModule.forRootAsync({
       imports: [ConfigModule],
       inject: [ConfigService],
