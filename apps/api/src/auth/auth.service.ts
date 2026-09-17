@@ -133,6 +133,7 @@ export class AuthService {
     }
 
     async issueTokenPair(user: User, familyId: string, active_profile_id?: string, userAgent?: string, ipAddress?: string, existingAbsoluteExpiry?: Date): Promise<Tokens> {
+
         const accessToken = await this.jwtService.signAsync({
             sub: user.id,
             email: user.email,
