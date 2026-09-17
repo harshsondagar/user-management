@@ -8,6 +8,9 @@ importers:
 
   .:
     dependencies:
+      '@app/redis':
+        specifier: workspace:*
+        version: link:libs/nestjs-redis
       '@app/shared':
         specifier: workspace:*
         version: link:libs/shared

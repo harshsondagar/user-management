@@ -34,7 +34,8 @@
       ],
       "@app/shared/*": [
         "./libs/shared/src/*"
-      ]
+      ],
+        "@app/redis": ["./libs/nestjs-redis/src/index.ts"]
     },
   }
 }

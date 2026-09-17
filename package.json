@@ -42,6 +42,7 @@
   },
   "dependencies": {
     "@app/shared": "workspace:*",
+    "@app/redis": "workspace:*",
     "@bull-board/api": "8.5.0",
     "@bull-board/express": "8.5.0",
     "@bull-board/nestjs": "8.5.0",
