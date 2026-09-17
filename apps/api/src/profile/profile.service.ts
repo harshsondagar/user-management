@@ -17,6 +17,7 @@ const MAX_PROFILES_PER_USER = 5;
 const PIN_MAX_FAILED_ATTEMPTS = 5;
 const PIN_LOCKOUT_MINUTES = 5;
 const PIN_HASH_ROUNDS = 10;
+const KIDS_PROFILE_MAX_MATURITY_LEVEL = 2;
 
 function isUniqueViolation(err: unknown, constraint: string): boolean {
     return (
@@ -76,6 +77,8 @@ export class ProfilesService {
     }
 
     async create(userId: string, dto: CreateProfileDto): Promise<Profile> {
+        this.assertKidsProfileMaturityIsSafe(dto.isKidsProfile, dto.maturityLevel);
+
         // Fast, friendly pre-check only - NOT the source of truth. The DB
         // trigger (migration 1700000000000) is, because count-then-insert
         // has a race window under concurrent requests. This just avoids a
@@ -133,6 +136,9 @@ export class ProfilesService {
         if (dto.subtitleLanguage !== undefined)
             patch.subtitleLanguage = dto.subtitleLanguage;
         if (dto.uiTheme !== undefined) patch.uiTheme = dto.uiTheme;
+        const resultingIsKids = patch.isKidsProfile ?? profile.isKidsProfile;
+        const resultingMaturity = patch.maturityLevel ?? profile.maturityLevel;
+        this.assertKidsProfileMaturityIsSafe(resultingIsKids, resultingMaturity);
 
         try {
             await this.profileRepository.updateBy({ id: profile.id }, patch);
@@ -284,6 +290,17 @@ export class ProfilesService {
 
         const profile = await this.profileRepository.create(values);
         return this.profileRepository.save(profile);
+    }
+
+    assertKidsProfileMaturityIsSafe(
+        isKidsProfile: boolean | undefined,
+        maturityLevel: number | undefined,
+    ): void {
+        if (isKidsProfile && maturityLevel !== undefined && maturityLevel > KIDS_PROFILE_MAX_MATURITY_LEVEL) {
+            throw new BadRequestException(
+                `A kids profile cannot have maturityLevel above ${KIDS_PROFILE_MAX_MATURITY_LEVEL}`,
+            );
+        }
     }
 
 }
