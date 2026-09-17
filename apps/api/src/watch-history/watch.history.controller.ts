@@ -14,8 +14,9 @@ import { UpsertProgressDto } from './dto/upsert.progress.dto';
 import { JwtGuard } from '../auth/gurads/jwt.guard';
 import { currentUser } from '../common/decorator/currentUser-decorator';
 import { User } from '../user/entity/user-entity';
+import { ActiveProfileGuard } from '../profile/guard/active.profile-gaurd';
 
-@UseGuards(JwtGuard)
+@UseGuards(JwtGuard, ActiveProfileGuard)
 @Controller('/profiles/:profileId/watch-history')
 export class WatchHistoryController {
     constructor(private readonly watchHistoryService: WatchHistoryService) { }

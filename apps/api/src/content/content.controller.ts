@@ -5,8 +5,9 @@ import { ContentAccessGuard } from './gaurd/content.access-gaurd';
 import { JwtGuard } from '../auth/gurads/jwt.guard';
 import { currentUser } from '../common/decorator/currentUser-decorator';
 import { User } from '../user/entity/user-entity';
+import { ActiveProfileGuard } from '../profile/guard/active.profile-gaurd';
 
-@UseGuards(JwtGuard)
+@UseGuards(JwtGuard, ActiveProfileGuard)
 @Controller('profiles/:profileId/content')
 export class ContentController {
     constructor(private readonly contentService: ContentService) { }

@@ -7,6 +7,9 @@ import { JwtAccessPayload } from "../types";
 import { User } from "../user/entity/user-entity";
 
 
+export type AuthenticatedUser = User & { activeProfileId?: string };
+
+
 @Injectable()
 export class JwtStrategy extends PassportStrategy(Strategy, 'jwt') {
     constructor(
@@ -20,7 +23,7 @@ export class JwtStrategy extends PassportStrategy(Strategy, 'jwt') {
         })
     }
 
-    async validate(payload: JwtAccessPayload): Promise<User> {
+    async validate(payload: JwtAccessPayload): Promise<AuthenticatedUser> {
 
         const user = await this.userService.findById(payload.sub)
 
@@ -36,6 +39,8 @@ export class JwtStrategy extends PassportStrategy(Strategy, 'jwt') {
             throw new UnauthorizedException("Account is temporarily block")
         }
 
-        return user
+        // Only real change: activeProfileId from the token payload rides
+        // along on req.user from here on - everything above is untouched.
+        return Object.assign(user, { activeProfileId: payload.activeProfileId });
     }
 }

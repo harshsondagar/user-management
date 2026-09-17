@@ -18,6 +18,7 @@ import { RefreshTokenRepository } from './refreshTokenRepository';
 import { MailProducer } from '../mail/mail-producer';
 import { CACHE_MANAGER } from '@nestjs/cache-manager';
 import type { Cache } from 'cache-manager';
+import { RefreshToken } from './entity/jwt-entity';
 
 interface Tokens {
     accessToken: string;
@@ -131,12 +132,14 @@ export class AuthService {
         return this.issueTokenPair(user, familyId, userAgent, ipAddress)
     }
 
-    async issueTokenPair(user: User, familyId: string, userAgent?: string, ipAddress?: string, existingAbsoluteExpiry?: Date): Promise<Tokens> {
+    async issueTokenPair(user: User, familyId: string, active_profile_id?: string, userAgent?: string, ipAddress?: string, existingAbsoluteExpiry?: Date): Promise<Tokens> {
         const accessToken = await this.jwtService.signAsync({
             sub: user.id,
             email: user.email,
             role: user.role,
-            tokenVersion: user.tokenVersion
+            tokenVersion: user.tokenVersion,
+            activeProfileId: active_profile_id,
+
         }, {
             secret: this.configService.get<string>('jwt.accessSecret'),
             expiresIn: this.configService.get<number>('jwt.accessExpiresIn')
@@ -172,6 +175,31 @@ export class AuthService {
         return { accessToken, refreshToken, refreshTokenExpiresAt: expireAt };
 
     }
+    async issueAccessTokenWithActiveProfile(
+        user: User,
+        profileId: string,
+    ): Promise<{ accessToken: string }> {
+        const patch: Partial<RefreshToken> = {};
+
+        if (profileId) patch.active_profile_id = profileId
+        const res = await this.refreshTokenRepository.updateBy({ userId: user.id }, patch)
+
+        const accessToken = await this.jwtService.signAsync(
+            {
+                sub: user.id,
+                email: user.email,
+                role: user.role,
+                tokenVersion: user.tokenVersion,
+                activeProfileId: profileId,
+            },
+            {
+                secret: this.configService.get<string>('jwt.accessSecret'),
+                expiresIn: this.configService.get<number>('jwt.accessExpiresIn'),
+            },
+        );
+        return { accessToken };
+    }
+
 
     async removeAllSession(id: string) {
         const res = await this.refreshTokenRepository.update(id, { revoked: true })
@@ -201,7 +229,6 @@ export class AuthService {
         }
 
 
-
         if (stored.expireAt < new Date()) {
             throw new UnauthorizedException("token is expired")
         }
@@ -217,7 +244,7 @@ export class AuthService {
         }
 
         await this.refreshTokenRepository.update(stored.id, { revoked: true })
-        return this.issueTokenPair(user, stored.familyId, userAgent, ipAddress, stored.absoluteExpiry)
+        return this.issueTokenPair(user, stored.familyId, stored.active_profile_id, userAgent, ipAddress, stored.absoluteExpiry)
 
     }
 

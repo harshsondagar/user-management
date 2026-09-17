@@ -9,9 +9,12 @@ import { Episode } from '../content/entity/episode-entity';
 import { Season } from '../content/entity/season-entity';
 import { WatchHistory } from '../watch-history/entity/watch.history-entity';
 import { WatchlistItem } from '../watch-list/entity/watchlist.items-entity';
+import { AuthService } from '../auth/auth.service';
+import { AuthModule } from '../auth/auth.module';
+import { UserModule } from '../user/user.module';
 
 @Module({
-    imports: [TypeOrmModule.forFeature([Profile, Content, Episode, Season, WatchHistory, WatchlistItem])],
+    imports: [AuthModule, UserModule, TypeOrmModule.forFeature([Profile, Content, Episode, Season, WatchHistory, WatchlistItem])],
     controllers: [ProfilesController],
     providers: [ProfilesService, ProfileRepository],
     exports: [ProfilesService],
