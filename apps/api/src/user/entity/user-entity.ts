@@ -2,6 +2,7 @@ import { Column, CreateDateColumn, DeleteDateColumn, Entity, Index, ManyToMany, 
 import { Task } from "../../task/entity/task-entity";
 import { Followers } from "./userfollowers-entity";
 import { Profile } from "../../profile/entity/profile-entity";
+import { Member } from "../../organization/entities/members-entity";
 
 export enum UserRole {
     USER = 'user',
@@ -90,6 +91,9 @@ export class User {
 
     @OneToMany(() => Profile, (profile) => profile.user)
     profiles!: Profile[];
+
+    @OneToMany(() => Member, (member) => member.user)
+    member!: Member[]
 }
 
 

@@ -9,6 +9,7 @@
     "build:api": "nest build api",
     "build:queue": "nest build queue-service",
     "build:shared": "tsc -p libs/shared/tsconfig.lib.json",
+    "build:redis": "tsc -p libs/nestjs-redis/tsconfig.lib.json",
     "start": "nest start api",
     "start:dev": "nest start api --watch",
     "start:debug": "nest start api --debug --watch",
@@ -42,6 +43,7 @@
   },
   "dependencies": {
     "@app/shared": "workspace:*",
+    "@app/redis": "workspace:*",
     "@bull-board/api": "8.5.0",
     "@bull-board/express": "8.5.0",
     "@bull-board/nestjs": "8.5.0",

@@ -1,14 +1,13 @@
-import { CACHE_MANAGER } from "@nestjs/cache-manager";
-import { Inject, Injectable } from "@nestjs/common";
+import { Injectable } from "@nestjs/common";
 import crypto from "crypto"
-import type { Cache } from "cache-manager";
+import { RedisService } from "@app/redis";
 
 @Injectable()
 export class OtpService {
     private readonly OTP_TTL_MS = 10 * 60 * 1000; // 10 minutes
     private readonly MAX_ATTEMPTS = 5;
 
-    constructor(@Inject(CACHE_MANAGER) private readonly cache: Cache) { }
+    constructor(private readonly cache: RedisService) { }
 
     private hashOtp(otp: string) {
         return crypto.createHash('sha256').update(otp).digest('hex')
@@ -26,13 +25,14 @@ export class OtpService {
     }
 
     async verifyOtp(email: string, otp: string): Promise<{ valid: boolean, reason?: string }> {
-        const stored = await this.cache.get<string>(`otp:${email}`);
+        const stored = await this.cache.get(`otp:${email}`);
 
         if (!stored) {
             return { valid: false, reason: 'OTP_EXPIRED_OR_NOT_FOUND' };
         }
 
-        const attempts = (await this.cache.get<number>(`otp-attempts:${email}`)) ?? 0;
+        const rawAttempts = (await this.cache.get(`otp-attempts:${email}`)) ?? 0;
+        const attempts = rawAttempts ? parseInt(rawAttempts, 10) : 0;
 
         if (attempts >= this.MAX_ATTEMPTS) {
             await this.cache.del(`otp:${email}`);
