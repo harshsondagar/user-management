@@ -2,6 +2,11 @@ import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, UpdateDateCol
 import { PlanEntitlement } from './plan-entitlement-entity';
 import { PlanStreamingPolicy } from './plan-streaming-policy-entity';
 
+export enum PlanScope {
+    INDIVIDUAL = 'individual',
+    ORGANIZATION = 'organization',
+}
+
 @Entity('plans')
 export class Plan {
     @PrimaryGeneratedColumn('uuid')
@@ -36,6 +41,9 @@ export class Plan {
 
     @Column({ type: 'int', default: 0 })
     gracePeriodDays!: number;
+
+    @Column({ type: 'enum', enum: PlanScope, default: PlanScope.INDIVIDUAL })
+    scope!: PlanScope;
 
     @CreateDateColumn({ type: 'timestamptz' })
     createdAt!: Date;
