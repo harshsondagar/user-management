@@ -11,12 +11,6 @@ import {
 import { Member } from './members-entity';
 import { Role } from './role-entity';
 
-/**
- * Explicit join entity rather than a plain @ManyToMany/@JoinTable (like
- * Role<->Permission uses) - deliberately, so WHO assigned a role and
- * WHEN is preserved for audit purposes. Role<->Permission doesn't need
- * that history; who-has-what-role in an org very much does.
- */
 @Entity('organization_member_roles')
 @Unique('uq_org_member_roles_member_id_role_id', ['memberId', 'roleId'])
 export class OrganizationMemberRole {
