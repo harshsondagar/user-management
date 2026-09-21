@@ -22,13 +22,19 @@ import { UserSubscriptionRepository } from '../billing/repositorys/user-subscrip
 import { ProfilesService } from '../profile/profile.service';
 import { ProfileRepository } from '../profile/reposetory/profile.repo';
 import { Profile } from '../profile/entity/profile-entity';
+import { OrganizationsService } from '../organization/organization.service';
+import { Member } from '../organization/entities/members-entity';
+import { Organization } from '../organization/entities/organization-entity';
+import { Permission } from '../organization/entities/permission-entity';
+import { Role } from '../organization/entities/role-entity';
+import { RolePermission } from '../organization/entities/role.permission-entity';
 
 @Module({
-  imports: [forwardRef(() => AuthModule), MailModule, OtpModule, RedisCacheModule, TypeOrmModule.forFeature([User, System, Followers, Plan, UserSubscription, Profile])
+  imports: [forwardRef(() => AuthModule), MailModule, OtpModule, RedisCacheModule, TypeOrmModule.forFeature([User, System, Followers, Plan, UserSubscription, Profile, Member, Organization, Permission, Role, RolePermission])
     , BullModule.registerQueue({
       name: "send-mail"
     })],
-  providers: [UserService, ProfilesService, ProfileRepository, SuperAdminSeed, SystemService, UserRepository, UserSubscriptionRepository, FollowerRepository, MailProducer],
+  providers: [UserService, ProfilesService, ProfileRepository, SuperAdminSeed, SystemService, UserRepository, UserSubscriptionRepository, FollowerRepository, MailProducer, OrganizationsService],
   controllers: [UserController, SuperAdminController],
   exports: [UserService, SystemService, TypeOrmModule]
 })
