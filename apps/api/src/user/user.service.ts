@@ -176,7 +176,6 @@ export class UserService {
         const cached = await this.cache.get(cacheKey)
 
         if (cached) {
-
             return cached
         }
 

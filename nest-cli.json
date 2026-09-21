@@ -37,6 +37,12 @@
       ],
       "watchAssets": true
     },
+    "@app/redis": {
+      "type": "library",
+      "root": "libs/nestjs-redis",
+      "entryFile": "index",
+      "sourceRoot": "libs/nestjs-redis/src"
+    },
     "api": {
       "type": "application",
       "root": "apps/api",

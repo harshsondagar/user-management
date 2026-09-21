@@ -11,7 +11,6 @@ import { maintenanceGuard } from './common/gaurds/maintainence-gaurd';
 import { JwtGuard } from './auth/gurads/jwt.guard';
 import { GlobalExceptionFilter } from './common/filters/global-exception.filter';
 import { RequestIdMiddleware } from './common/middleware/request-id.middleware';
-import { RedisCacheModule } from './common/cache/redis-cache.module';
 import { HealthModule } from './common/health/health.module';
 import { CustomThrottlerGuard } from './throttler/custom-throttler.guard';
 import { AppThrottleModule } from './throttler/throttler.module';
@@ -43,7 +42,7 @@ import { ProfilesModule } from './profile/profile.module';
 import { WatchHistoryModule } from './watch-history/watch.history.module';
 import { WatchlistModule } from './watch-list/watch-list.module';
 import { ContentModule } from './content/content.module';
-import { RedisModule } from '../../../libs/nestjs-redis/src/index';
+import { RedisModule } from '@app/redis'
 
 
 const isTestEnv =
@@ -78,25 +77,15 @@ const tEnv = isTestEnv ? testEnv() : null;
       inject: [ConfigService],
       useFactory: (config: ConfigService) => ({
         connections: [
-          {
-            name: 'cache',
-            host: config.get('redis.host'),
-            port: config.get('redis.port'),
-            db: 0,
-          },
-          {
-            name: 'pubsub',
-            host: config.get('redis.host'),
-            port: config.get('redis.port'),
-            db: 1,
-          },
+          { name: 'cache', host: config.get('redis.host'), port: config.get('redis.port'), db: 0 },
+          { name: 'pubsub', host: config.get('redis.host'), port: config.get('redis.port'), db: 1 },
           {
             name: 'bullmq',
             host: config.get('redis.host'),
             port: config.get('redis.port'),
             db: 2,
-            maxRetriesPerRequest: null, // BullMQ requires this
-            enableReadyCheck: false, // BullMQ requires this
+            maxRetriesPerRequest: null,
+            enableReadyCheck: false,
           },
         ],
       }),

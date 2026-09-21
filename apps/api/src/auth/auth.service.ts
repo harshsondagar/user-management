@@ -19,6 +19,7 @@ import { MailProducer } from '../mail/mail-producer';
 import { CACHE_MANAGER } from '@nestjs/cache-manager';
 import type { Cache } from 'cache-manager';
 import { RefreshToken } from './entity/jwt-entity';
+import { RedisService } from '@app/redis';
 
 interface Tokens {
     accessToken: string;
@@ -46,7 +47,7 @@ export class AuthService {
         , private readonly jwtService: JwtService
         , private readonly configService: ConfigService
         , private readonly otpService: OtpService
-        , @Inject(CACHE_MANAGER) private readonly cache: Cache
+        , private readonly cache: RedisService
         , private readonly refreshTokenRepository: RefreshTokenRepository
         , private readonly userRepository: UserRepository
         , private readonly mailProducer: MailProducer
@@ -352,14 +353,17 @@ export class AuthService {
         const cooldownKey = `pwd-reset-cooldown:${email}`;
         const dailyKey = `pwd-reset-daily:${email}:${new Date().toISOString().slice(0, 10)}`;
 
-        const [onCooldown, dailyCount] = await Promise.all([
+        const [onCooldown, rawdailyCount] = await Promise.all([
             this.cache.get(cooldownKey),
-            this.cache.get<number>(dailyKey),
+            this.cache.get(dailyKey),
         ]);
 
         if (onCooldown) {
             throw new HttpException('Please wait before requesting another reset link.', HttpStatus.TOO_MANY_REQUESTS);
         }
+
+        const dailyCount = rawdailyCount ? parseInt(rawdailyCount, 10) : 0
+
         if ((dailyCount ?? 0) >= 5) {
             throw new HttpException('Too many reset attempts today. Try again tomorrow.', HttpStatus.TOO_MANY_REQUESTS);
         }

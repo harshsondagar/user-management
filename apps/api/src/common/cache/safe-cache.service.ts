@@ -1,6 +1,5 @@
-import { Injectable, Logger } from "@nestjs/common";
-import { RedisService } from "../../../../../libs/nestjs-redis/src";
-
+import { Injectable } from "@nestjs/common";
+import { RedisService } from '@app/redis';
 
 @Injectable()
 export class SafeCacheService {
@@ -10,11 +9,11 @@ export class SafeCacheService {
         return this.redis.getJSON<T>(key);
     }
 
-    async set(key: string, value: unknown, ttl?: number): Promise<string> {
+    async set(key: string, value: unknown, ttl?: number): Promise<void> {
         return this.redis.setJSON(key, value, ttl);
     }
 
-    async del(key: string): Promise<number> {
+    async del(key: string): Promise<void> {
         return this.redis.del(key);
     }
 }
