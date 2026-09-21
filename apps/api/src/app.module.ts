@@ -79,14 +79,6 @@ const tEnv = isTestEnv ? testEnv() : null;
         connections: [
           { name: 'cache', host: config.get('redis.host'), port: config.get('redis.port'), db: 0 },
           { name: 'pubsub', host: config.get('redis.host'), port: config.get('redis.port'), db: 1 },
-          {
-            name: 'bullmq',
-            host: config.get('redis.host'),
-            port: config.get('redis.port'),
-            db: 2,
-            maxRetriesPerRequest: null,
-            enableReadyCheck: false,
-          },
         ],
       }),
     }),

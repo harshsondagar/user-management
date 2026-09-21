@@ -1,7 +1,6 @@
-import { CACHE_MANAGER } from "@nestjs/cache-manager";
-import { Inject, Injectable } from "@nestjs/common";
+
+import { Injectable } from "@nestjs/common";
 import crypto from "crypto"
-import type { Cache } from "cache-manager";
 import { RedisService } from "@app/redis";
 
 @Injectable()

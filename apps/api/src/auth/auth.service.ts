@@ -16,8 +16,6 @@ import { ChangeForgotPassword } from './dto/change-password-dto';
 import { UserRepository } from '../user/user.repository';
 import { RefreshTokenRepository } from './refreshTokenRepository';
 import { MailProducer } from '../mail/mail-producer';
-import { CACHE_MANAGER } from '@nestjs/cache-manager';
-import type { Cache } from 'cache-manager';
 import { RefreshToken } from './entity/jwt-entity';
 import { RedisService } from '@app/redis';
 
