@@ -5,7 +5,6 @@ import { JwtGuard } from '../../auth/gurads/jwt.guard';
 import { currentUser } from '../../common/decorator/currentUser-decorator';
 import { User } from '../../user/entity/user-entity';
 
-
 @UseGuards(JwtGuard)
 @Controller('invites')
 export class AcceptInviteController {
