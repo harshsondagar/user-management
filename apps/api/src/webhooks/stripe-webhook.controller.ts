@@ -14,8 +14,6 @@ export class StripeWebhookController {
         @Res() res: Response,
         @Headers('stripe-signature') signature: string,
     ) {
-
-
         if (!req.rawBody) {
             res.status(HttpStatus.INTERNAL_SERVER_ERROR).json({ error: 'Raw body unavailable' });
             return;

@@ -38,6 +38,12 @@ export class StripeEventProcessor extends WorkerHost {
     async process(job: Job): Promise<any> {
         const { eventId, eventType, data } = job.data as StripeJobData;
 
+        const current = await this.webhookEventRepo.findOne({ where: { stripeEventId: eventId } });
+        if (current?.processedAt) {
+            this.logger.log(`Event ${eventId} already processed at ${current.processedAt.toISOString()} - skipping`);
+            return;
+        }
+
         switch (eventType) {
             case 'payment_intent.succeeded': {
                 const type = data.metadata?.type;
@@ -63,9 +69,10 @@ export class StripeEventProcessor extends WorkerHost {
     }
 
     private async handleInitialPurchaseSucceeded(pi: any) {
-        const userId = pi.metadata?.userId;
+        const ownerId = pi.metadata?.ownerId;
         const planId = pi.metadata?.planId;
-        if (!userId || !planId) {
+
+        if (!ownerId || !planId) {
             this.logger.error(`payment_intent.succeeded (initial_purchase) missing metadata: pi=${pi.id}`);
             return;
         }
@@ -81,7 +88,7 @@ export class StripeEventProcessor extends WorkerHost {
                 .createQueryBuilder()
                 .update('user_subscriptions')
                 .set({ status: SubscriptionStatus.CANCELED, canceledAt: new Date() })
-                .where('userId = :userId AND status = :status', { userId, status: SubscriptionStatus.ACTIVE })
+                .where('userId = :userId AND status = :status', { userId: ownerId, status: SubscriptionStatus.ACTIVE })
                 .execute();
 
             const insertResult = await manager
@@ -89,7 +96,7 @@ export class StripeEventProcessor extends WorkerHost {
                 .insert()
                 .into('user_subscriptions')
                 .values({
-                    userId,
+                    userId: ownerId,
                     planId,
                     status: SubscriptionStatus.ACTIVE,
                     stripeSubscriptionId: null,

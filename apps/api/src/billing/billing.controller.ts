@@ -16,7 +16,12 @@ export class BillingController {
         @Body('planId') planId: string,
         @currentUser() user: User,
     ) {
-        return await this.billingService.createPaymentIntentForPlan(user, planId);
+        return this.billingService.createPaymentIntentForPlan(
+            'user',
+            user.id,
+            planId,
+            user,
+        );
     }
 
     @Public()

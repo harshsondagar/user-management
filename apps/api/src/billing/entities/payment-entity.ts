@@ -1,4 +1,4 @@
-import { Entity, PrimaryGeneratedColumn, Column, ManyToOne, JoinColumn } from 'typeorm';
+import { Entity, PrimaryGeneratedColumn, Column, ManyToOne, JoinColumn, Check } from 'typeorm';
 import { UserSubscription } from './user-subscription-entity';
 
 export enum PaymentStatus {
@@ -9,6 +9,12 @@ export enum PaymentStatus {
 }
 
 @Entity('payments')
+@Entity('payments')
+@Check(
+    'chk_payments_exactly_one_subscription',
+    '("userSubscriptionId" IS NOT NULL AND "organizationSubscriptionId" IS NULL) OR ' +
+    '("userSubscriptionId" IS NULL AND "organizationSubscriptionId" IS NOT NULL)',
+)
 export class Payment {
     @PrimaryGeneratedColumn('uuid')
     id!: string;
@@ -23,8 +29,11 @@ export class Payment {
     @Column({ type: 'varchar' })
     stripeInvoiceId!: string;
 
+    @Column('uuid', { nullable: true })
+    organizationSubscriptionId?: string | null;
+
     @Column({ type: 'int' })
-    amount!: number; // in smallest currency unit (cents), matching Stripe's convention
+    amount!: number;
 
     @Column({ type: 'varchar', length: 3 })
     currency!: string;

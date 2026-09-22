@@ -18,14 +18,18 @@ export class BillingService {
         private readonly renewalTokenRepo: RenewalTokenRepository
     ) { }
 
-    async createPaymentIntentForPlan(user: User, planId: string): Promise<{
+    async createPaymentIntentForPlan(
+        ownerType: 'user' | 'organization',
+        ownerId: string,
+        planId: string,
+        user: User
+    ): Promise<{
         clientSecret: string;
         amount: number;
         currency: string;
         planName: string;
     }> {
         const chosenPlan = await this.planRepo.findOne({ where: { id: planId, isActive: true } });
-        console.log(chosenPlan);
 
         if (!chosenPlan) {
             throw new NotFoundException(`Plan with ID ${planId} does not exist`);
@@ -61,10 +65,11 @@ export class BillingService {
                 customer: customerId,
                 payment_method_types: ['card', 'upi'],
                 metadata: {
-                    userId: user.id,
+                    ownerType,
+                    ownerId,
                     planId: chosenPlan.id,
-                    type: 'initial_purchase', // distinguishes from renewal PaymentIntents in the webhook
-                },
+                    type: 'initial_purchase',
+                }
             },
             { idempotencyKey: `checkout:${user.id}:${chosenPlan.id}:${Date.now()}` },
         );

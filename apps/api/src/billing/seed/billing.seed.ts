@@ -61,6 +61,7 @@ export class BillingSeedService implements OnApplicationBootstrap {
             { code: 'free', name: 'Free', stripePriceId: null, isActive: true, amount: 0, rank: 0 },
             { code: 'fan', name: 'Fan', stripePriceId: process.env.STRIPE_PRICE_ID_FAN ?? null, isActive: true, amount: 990, rank: 1 },
             { code: 'mega-fan', name: 'Mega_Fan', stripePriceId: process.env.STRIPE_PRICE_ID_MEGAFAN ?? null, isActive: true, amount: 2990, rank: 2 },
+            { code: 'Enterprise', name: 'enterprise', stripePriceId: null, isActive: true, amount: 3990, rank: 3 },
         ];
 
         for (const p of plans) {
