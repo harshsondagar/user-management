@@ -15,7 +15,7 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { SubscriptionStatus, UserSubscription } from '../billing/entities/user-subscription-entity';
 import { UserSubscriptionRepository } from '../billing/repositorys/user-subscription.repository';
 import { ProfilesService } from '../profile/profile.service';
-import { OrganizationsService } from '../organization/organization.service';
+import { OrganizationsService } from '../organization/service/organization.service';
 import { OrganizationType } from '../organization/entities/organization-entity';
 
 const ARGON2_OPTIONS: argon2.HashOptions = {

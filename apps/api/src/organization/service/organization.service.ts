@@ -1,15 +1,21 @@
-import { Injectable } from '@nestjs/common';
-import { DataSource, EntityManager, IsNull } from 'typeorm';
-import { randomUUID } from 'node:crypto';
-import { Organization, OrganizationType, OrgStatus } from "./entities/organization-entity"
-import { Role } from './entities/role-entity';
-import { RolePermission } from './entities/role.permission-entity';
-import { Member, MemberStatus } from "./entities/members-entity"
-import { OrganizationMemberRole } from './entities/organization.member.role-entity';
+import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
+import { DataSource, EntityManager, In, IsNull } from 'typeorm';
+import { Organization, OrganizationType, OrgStatus } from "../entities/organization-entity"
+import { Role } from '../entities/role-entity';
+import { RolePermission } from '../entities/role.permission-entity';
+import { Member, MemberStatus } from "../entities/members-entity"
+import { OrganizationMemberRole } from '../entities/organization.member.role-entity';
+import { MemberRepository } from '../repositories/member.repository';
+import { OrganizationRepository } from '../repositories/organization.repository';
 
 @Injectable()
 export class OrganizationsService {
-    constructor(private readonly dataSource: DataSource) { }
+    constructor(
+        private readonly dataSource: DataSource,
+        private readonly organizationRepo: OrganizationRepository,
+        private readonly memberRepo: MemberRepository,
+    ) { }
+
 
     async createOrganization(
         ownerUserId: string,
@@ -39,7 +45,6 @@ export class OrganizationsService {
 
         const organization = await orgRepo.save(
             orgRepo.create({
-                id: randomUUID(),
                 organizationName,
                 type,
                 ownerUserId,
@@ -62,7 +67,6 @@ export class OrganizationsService {
         for (const template of systemTemplates) {
             const clonedRole = await roleRepo.save(
                 roleRepo.create({
-                    roleId: randomUUID(),
                     organizationId: organization.id,
                     roleName: template.roleName,
                     description: template.description,
@@ -77,7 +81,6 @@ export class OrganizationsService {
             for (const link of templateLinks) {
                 await rolePermissionRepo.save(
                     rolePermissionRepo.create({
-                        id: randomUUID(),
                         roleId: clonedRole.roleId,
                         permissionId: link.permissionId,
                     }),
@@ -97,7 +100,6 @@ export class OrganizationsService {
 
         const ownerMember = await memberRepo.save(
             memberRepo.create({
-                id: randomUUID(),
                 userId: ownerUserId,
                 organizationId: organization.id,
                 status: MemberStatus.ACTIVE,
@@ -107,7 +109,6 @@ export class OrganizationsService {
 
         await memberRoleRepo.save(
             memberRoleRepo.create({
-                id: randomUUID(),
                 memberId: ownerMember.id,
                 roleId: adminRoleId,
                 assignedByUserId: null,
@@ -115,5 +116,53 @@ export class OrganizationsService {
         );
 
         return organization;
+    }
+
+    async findAllForUser(userId: string): Promise<Organization[]> {
+        const memberships = await this.memberRepo.findAll({
+            where: { userId, status: MemberStatus.ACTIVE },
+        } as any);
+        const organizationIds = memberships.map((m) => m.organizationId);
+        if (organizationIds.length === 0) return [];
+
+        return this.organizationRepo.findAll({
+            where: { id: In(organizationIds) },
+        } as any);
+    }
+
+
+    async findOneForUser(userId: string, organizationId: string): Promise<Organization> {
+        const organization = await this.organizationRepo.findOne({ where: { id: organizationId } });
+        if (!organization) throw new NotFoundException('Organization not found');
+
+        const member = await this.memberRepo.findOne({
+            where: { userId, organizationId, status: MemberStatus.ACTIVE },
+        });
+        if (!member) throw new NotFoundException('Organization not found');
+
+        return organization;
+    }
+
+
+    async update(organizationId: string, organizationName: string): Promise<Organization> {
+        const organization = await this.organizationRepo.findOne({ where: { id: organizationId } });
+        if (!organization) throw new NotFoundException('Organization not found');
+
+        await this.organizationRepo.updateBy({ id: organizationId }, { organizationName });
+        return this.organizationRepo.findOne({ where: { id: organizationId } }) as Promise<Organization>;
+    }
+
+
+    async delete(organizationId: string): Promise<void> {
+        const organization = await this.organizationRepo.findOne({ where: { id: organizationId } });
+        if (!organization) throw new NotFoundException('Organization not found');
+
+        if (organization.type === OrganizationType.PERSONAL) {
+            throw new BadRequestException(
+                'The personal organization cannot be deleted. Delete the account instead.',
+            );
+        }
+
+        await this.organizationRepo.updateBy({ id: organizationId }, { status: OrgStatus.DELETED });
     }
 }

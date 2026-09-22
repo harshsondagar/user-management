@@ -43,6 +43,7 @@ import { WatchHistoryModule } from './watch-history/watch.history.module';
 import { WatchlistModule } from './watch-list/watch-list.module';
 import { ContentModule } from './content/content.module';
 import { RedisModule } from '@app/redis'
+import { OrganizationModule } from './organization/organization.module';
 
 
 const isTestEnv =
@@ -119,6 +120,7 @@ const tEnv = isTestEnv ? testEnv() : null;
     ScrapModuleModule,
     DlqModule,
     RoomModule,
+    OrganizationModule
   ],
   controllers: [],
   providers: [
