@@ -3,7 +3,7 @@ import { InvitesService } from '../service/organization-invite.service';
 import { InviteMemberDto } from '../dto/invite-member.dto';
 import { RequirePermission } from '../guard/required.permission.decoretor';
 import { PermissionGuard } from '../guard/permission.gaurd';
-import { PERMISSIONS } from '../seed/organization.seed.service';
+import { PERMISSIONS } from '../service/constant';
 import { JwtGuard } from '../../auth/gurads/jwt.guard';
 import { currentUser } from '../../common/decorator/currentUser-decorator';
 import { User } from '../../user/entity/user-entity';

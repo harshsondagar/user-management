@@ -4,7 +4,7 @@ import { PermissionGuard } from '../guard/permission.gaurd';
 import { JwtGuard } from '../../auth/gurads/jwt.guard';
 import { currentUser } from '../../common/decorator/currentUser-decorator';
 import { User } from '../../user/entity/user-entity';
-import { PERMISSIONS } from '../seed/organization.seed.service';
+import { PERMISSIONS } from '../service/constant';
 import { MembersService } from '../service/organization-member.service';
 import { AssignRoleDto } from '../dto/assign-role.dto';
 

@@ -1,6 +1,6 @@
 import { CanActivate, ExecutionContext, ForbiddenException, Injectable } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
-import { OrganizationAccessService } from '../service/organization.access.service';
+import { OrganizationAccessService } from '../service/organization-access.service';
 import { REQUIRE_PERMISSION_KEY } from './required.permission.decoretor';
 
 

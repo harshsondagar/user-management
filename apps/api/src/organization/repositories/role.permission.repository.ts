@@ -6,14 +6,10 @@ import { BaseRepository } from '../../common/repository/base.repository';
 
 @Injectable()
 export class RolePermissionRepository extends BaseRepository<RolePermission> {
-    private readonly ormRepository: Repository<RolePermission>;
 
     constructor(@InjectRepository(RolePermission) repository: Repository<RolePermission>) {
         super(repository);
-        this.ormRepository = repository;
     }
 
-    async softDelete(id: string): Promise<void> {
-        await this.ormRepository.softDelete(id);
-    }
+
 }

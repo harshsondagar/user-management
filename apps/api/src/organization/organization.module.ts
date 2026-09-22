@@ -26,6 +26,7 @@ import { InvitesService } from './service/organization-invite.service';
 import { PermissionGuard } from './guard/permission.gaurd';
 
 @Module({
+
     imports: [
         TypeOrmModule.forFeature([
             Organization,
@@ -60,10 +61,6 @@ import { PermissionGuard } from './guard/permission.gaurd';
         InvitesService,
         PermissionGuard,
     ],
-    // OrganizationsService exported so register() can inject it (see
-    // register.snippet.ts). OrganizationSeedService isn't exported -
-    // nothing outside this module should call it directly, it only runs
-    // on bootstrap.
     exports: [OrganizationsService],
 })
 export class OrganizationModule { }

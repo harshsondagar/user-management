@@ -1,14 +1,11 @@
 import { Controller, Post, Body, UseGuards, HttpCode, HttpStatus } from '@nestjs/common';
-import { InvitesService } from '../service/invites.service';
+import { InvitesService } from '../service/organization-invite.service';
 import { AcceptInviteDto } from '../dto/accept-invite.dto';
-import { JwtGuard } from '../../auth/guard/jwt.guard'; // adjust to your real path
-import { currentUser } from '../../common/decorator/current-user.decorator'; // adjust to your real path
+import { JwtGuard } from '../../auth/gurads/jwt.guard';
+import { currentUser } from '../../common/decorator/currentUser-decorator';
 import { User } from '../../user/entity/user-entity';
 
-// Deliberately top-level (/invites/accept), not nested under
-// /organizations/:organizationId - the token IS how the org gets
-// identified, and PermissionGuard doesn't apply here at all: there's no
-// membership to check yet, accepting is what CREATES it.
+
 @UseGuards(JwtGuard)
 @Controller('invites')
 export class AcceptInviteController {
