@@ -76,6 +76,6 @@ import { PlanStreamingPolicyRepository } from './repositorys/plans-streaming-pol
         MailProducer
     ],
     controllers: [BillingController, BillingViewController],
-    exports: [TypeOrmModule, 'STRIPE_CLIENT'],
+    exports: [TypeOrmModule, 'STRIPE_CLIENT', BillingService],
 })
 export class BillingModule { }

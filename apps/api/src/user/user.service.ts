@@ -81,7 +81,6 @@ export class UserService {
                 userId: savedUser.id,
                 planId: freePlan.id,
                 status: SubscriptionStatus.ACTIVE,
-                stripeSubscriptionId: null,
                 currentPeriodEnd: new Date('9999-12-31'),
             });
             await manager.save(UserSubscription, subscription);
