@@ -1,63 +1,44 @@
-import {
-    Entity,
-    PrimaryGeneratedColumn,
-    Column,
-    CreateDateColumn,
-    UpdateDateColumn,
-    ManyToOne,
-    JoinColumn,
-    Index,
-} from 'typeorm';
-import { Organization } from './organization-entity';
+import { Entity, PrimaryGeneratedColumn, Column, ManyToOne, JoinColumn, CreateDateColumn, UpdateDateColumn, Index } from 'typeorm';
 import { Plan } from '../../billing/entities/plan-entity';
-
-export enum SubscriptionStatus {
-    ACTIVE = 'active',
-    CANCELED = 'canceled',
-    PAST_DUE = 'past_due',
-}
+import { Organization } from './organization-entity';
+import { SubscriptionStatus } from '../../billing/entities/user-subscription-entity';  // reused - same lifecycle states apply to org subscriptions
 
 @Entity('organization_subscriptions')
+@Index('idx_org_subscriptions_organization_id', ['organizationId'])
+@Index('idx_org_subscriptions_created_at', ['createdAt'])
 export class OrganizationSubscription {
     @PrimaryGeneratedColumn('uuid')
     id!: string;
 
-    @Index('idx_org_subscriptions_organization_id')
-    @Column('uuid', { name: 'organization_id' })
-    organization_id!: string;
+    @Column('uuid')
+    organizationId!: string;
 
-    @Column('uuid', { name: 'planId' })
-    plan_id!: string;
-
-    @Column({
-        type: 'enum',
-        enum: SubscriptionStatus,
-        enumName: 'subscription_status_enum',
-    })
-    status!: SubscriptionStatus;
-
-    @Column({ name: 'currentPeriodEnd', type: 'timestamptz', nullable: true })
-    current_period_end?: Date | null;
-
-    @Column({ name: 'graceStartedAt', type: 'timestamptz', nullable: true })
-    grace_started_at?: Date | null;
-
-    @Column({ name: 'canceledAt', type: 'timestamptz', nullable: true })
-    canceled_at?: Date | null;
-
-    @Index('idx_org_subscriptions_created_at')
-    @CreateDateColumn({ name: 'createdAt', type: 'timestamptz', default: () => 'CURRENT_TIMESTAMP' })
-    created_at!: Date;
-
-    @UpdateDateColumn({ name: 'updatedAt', type: 'timestamptz', default: () => 'CURRENT_TIMESTAMP' })
-    updated_at!: Date;
-
-    // Relationships
     @ManyToOne(() => Organization, { onDelete: 'CASCADE' })
-    @JoinColumn({ name: 'organization_id', referencedColumnName: 'id' })
+    @JoinColumn({ name: 'organizationId' })
     organization!: Organization;
 
+    @Column('uuid')
+    planId!: string;
+
     @ManyToOne(() => Plan, { onDelete: 'RESTRICT' })
-    @JoinColumn({ name: 'planId', referencedColumnName: 'id' })
+    @JoinColumn({ name: 'planId' })
     plan!: Plan;
+
+    @Column({ type: 'enum', enum: SubscriptionStatus })
+    status!: SubscriptionStatus;
+
+    @Column({ type: 'timestamptz', nullable: true })
+    currentPeriodEnd?: Date | null;
+
+    @Column({ type: 'timestamptz', nullable: true })
+    graceStartedAt?: Date | null;
+
+    @Column({ type: 'timestamptz', nullable: true })
+    canceledAt?: Date | null;
+
+    @CreateDateColumn({ type: 'timestamptz' })
+    createdAt!: Date;
+
+    @UpdateDateColumn({ type: 'timestamptz' })
+    updatedAt!: Date;
 }
