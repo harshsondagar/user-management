@@ -7,6 +7,9 @@ import { Member, MemberStatus } from "../entities/members-entity"
 import { OrganizationMemberRole } from '../entities/organization.member.role-entity';
 import { MemberRepository } from '../repositories/member.repository';
 import { OrganizationRepository } from '../repositories/organization.repository';
+import { OrganizationSubscription } from '../entities/organization-subsciription-entity';
+import { Plan, PlanScope } from '../../billing/entities/plan-entity';
+import { SubscriptionStatus } from '../../billing/entities/user-subscription-entity';
 
 @Injectable()
 export class OrganizationsService {
@@ -42,6 +45,9 @@ export class OrganizationsService {
         const rolePermissionRepo = manager.getRepository(RolePermission);
         const memberRepo = manager.getRepository(Member);
         const memberRoleRepo = manager.getRepository(OrganizationMemberRole);
+        const organizationSubscriptionRepo = manager.getRepository(OrganizationSubscription);
+        const planRepo = manager.getRepository(Plan);
+
 
         const organization = await orgRepo.save(
             orgRepo.create({
@@ -106,6 +112,18 @@ export class OrganizationsService {
                 joinedAt: new Date(),
             }),
         );
+
+        const orgFreePlan = await manager.findOne(Plan, { where: { code: 'org_free', scope: PlanScope.ORGANIZATION } });
+        if (!orgFreePlan) throw new Error('Organization free plan not seeded — cannot complete organization creation');
+
+        await organizationSubscriptionRepo.save(
+            organizationSubscriptionRepo.create({
+                organizationId: organization.id,
+                planId: orgFreePlan.id,
+                status: SubscriptionStatus.ACTIVE,
+                currentPeriodEnd: new Date('9999-12-31'),
+            })
+        )
 
         await memberRoleRepo.save(
             memberRoleRepo.create({

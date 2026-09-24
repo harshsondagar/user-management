@@ -89,9 +89,9 @@
 
       const params = new URLSearchParams(window.location.search);
       const planId = params.get('planId');
+      const organizationId = params.get('organizationId');
       const token = params.get('token');
       const jwt = localStorage.getItem('jwt');
-
       const stripe = Stripe(STRIPE_PUBLISHABLE_KEY);
       let elements;
 
@@ -114,7 +114,39 @@
                 json.message || 'Renewal link is invalid or expired.',
               );
             data = json.data ?? json;
-          } else if (planId) {
+          }
+          // Highlight-start: Handle Organization Checkout
+          else if (organizationId && planId) {
+            console.log('Starting organization checkout for:', organizationId);
+
+            if (!jwt)
+              throw new Error('Not logged in — set localStorage.jwt first.');
+
+            // Change this URL to match your new backend organization subscription endpoint
+            const res = await fetch(
+              `${API_BASE}/organizations/${organizationId}/checkout`,
+              {
+                method: 'POST',
+                headers: {
+                  'Content-Type': 'application/json',
+                  Authorization: `Bearer ${jwt}`,
+                },
+                body: JSON.stringify({
+                  organizationId, // Passing organizationId in the body now
+                  planId,
+                }),
+              },
+            );
+
+            const json = await res.json();
+            if (!res.ok)
+              throw new Error(
+                json.message || 'Could not start organization checkout.',
+              );
+            data = json.data ?? json;
+          }
+          // Highlight-end
+          else if (planId) {
             if (!jwt)
               throw new Error('Not logged in — set localStorage.jwt first.');
             const res = await fetch(`${API_BASE}/payments/checkout`, {

@@ -6,6 +6,11 @@ import { PlanRepository } from "./repositorys/plan.repository";
 import { UserSubscriptionRepository } from "./repositorys/user-subscription.repository";
 import { SubscriptionStatus } from "./entities/user-subscription-entity";
 import { RenewalTokenRepository } from "./repositorys/renewal-token.repository";
+import { Repository } from "typeorm";
+import { Organization } from "../organization/entities/organization-entity";
+import { InjectRepository } from "@nestjs/typeorm";
+import { OrganizationSubscription } from "../organization/entities/organization-subsciription-entity";
+import { PlanScope } from "./entities/plan-entity";
 
 
 @Injectable()
@@ -15,7 +20,9 @@ export class BillingService {
         private readonly userRepo: UserRepository,
         private readonly planRepo: PlanRepository,
         private readonly subRepo: UserSubscriptionRepository,
-        private readonly renewalTokenRepo: RenewalTokenRepository
+        private readonly renewalTokenRepo: RenewalTokenRepository,
+        @InjectRepository(Organization) private readonly organizationRepo: Repository<Organization>,
+        @InjectRepository(OrganizationSubscription) private readonly orgSubRepo: Repository<OrganizationSubscription>,
     ) { }
 
     async createPaymentIntentForPlan(
@@ -40,7 +47,11 @@ export class BillingService {
         }
 
 
-        // ...same upgrade/downgrade rank check as before, unchanged...
+        if (chosenPlan.scope !== PlanScope.INDIVIDUAL) {
+            throw new BadRequestException('This plan is only available for organizations.');
+        }
+
+
         const activeSub = await this.subRepo.findOne({
             where: { userId: user.id, status: SubscriptionStatus.ACTIVE },
             relations: ['plan'],
@@ -82,6 +93,64 @@ export class BillingService {
         };
     }
 
+    async createPaymentIntentForOrgPlan(organizationId: string, planId: string): Promise<{
+        clientSecret: string;
+        amount: number;
+        currency: string;
+        planName: string;
+    }> {
+        const chosenPlan = await this.planRepo.findOne({ where: { id: planId, isActive: true } });
+
+        if (!chosenPlan) {
+            throw new NotFoundException(`Plan with ID ${planId} does not exist`);
+        }
+
+        if (chosenPlan.scope !== PlanScope.ORGANIZATION) {
+            throw new BadRequestException('This plan is only available for individual accounts.');
+        }
+
+        const activeSub = await this.orgSubRepo.findOne({
+            where: { organizationId, status: SubscriptionStatus.ACTIVE },
+            relations: ['plan'],
+        });
+
+        if (activeSub) {
+            if (chosenPlan.rank <= activeSub.plan.rank) {
+                throw new ConflictException(
+                    chosenPlan.rank === activeSub.plan.rank
+                        ? `This organization already has an active ${chosenPlan.name} subscription.`
+                        : `Already on ${activeSub.plan.name}. Downgrades aren't available via checkout.`,
+                );
+            }
+        }
+
+        const customerId = await this.resolveOrgStripeCustomerId(organizationId);
+
+        const paymentIntent = await this.stripe.paymentIntents.create(
+            {
+                amount: chosenPlan.amount,
+                currency: chosenPlan.currency,
+                customer: customerId,
+                payment_method_types: ['card', 'upi'],
+                metadata: {
+                    organizationId,
+                    planId: chosenPlan.id,
+                    type: 'initial_purchase',
+                    scope: 'organization',
+                },
+            },
+            { idempotencyKey: `org-checkout:${organizationId}:${chosenPlan.id}:${Date.now()}` },
+        );
+
+        return {
+            clientSecret: paymentIntent.client_secret!,
+            amount: chosenPlan.amount,
+            currency: chosenPlan.currency,
+            planName: chosenPlan.name,
+        };
+
+    }
+
     private async resolveStripeCustomerId(user: User): Promise<string> {
         if (user.stripeCustomerId) {
             return user.stripeCustomerId;
@@ -94,6 +163,25 @@ export class BillingService {
         });
 
         await this.userRepo.update(user.id, { stripeCustomerId: customer.id });
+        return customer.id;
+    }
+
+    private async resolveOrgStripeCustomerId(organizationId: string): Promise<string> {
+        const organization = await this.organizationRepo.findOneBy({ id: organizationId });
+        if (!organization) {
+            throw new NotFoundException('Organization not found');
+        }
+
+        if (organization.stripeCustomerId) {
+            return organization.stripeCustomerId;
+        }
+
+        const customer = await this.stripe.customers.create({
+            name: organization.organizationName,
+            metadata: { organizationId },
+        });
+
+        await this.organizationRepo.update(organizationId, { stripeCustomerId: customer.id });
         return customer.id;
     }
 
@@ -188,5 +276,30 @@ export class BillingService {
         return { history, total, sanitizedPage, pageSize, totalPages, hasNextPage, hasPreviousPage };
 
     }
+
+    async listPurchasableOrgPlans(organizationId: string) {
+        const plans = await this.planRepo.findAll({ where: { isActive: true } });
+
+        const activeSub = await this.orgSubRepo.findOne({
+            where: { organizationId, status: SubscriptionStatus.ACTIVE },
+            relations: ['plan'],
+        });
+        const currentRank = activeSub?.plan.rank ?? 0;
+
+        return plans
+            .filter((p) => p.amount > 0 && p.scope === PlanScope.ORGANIZATION)
+            .sort((a, b) => a.rank - b.rank)
+            .map((p) => ({
+                id: p.id,
+                code: p.code,
+                name: p.name,
+                amount: p.amount,
+                currency: p.currency,
+                rank: p.rank,
+                isCurrent: p.rank === currentRank,
+                isDowngrade: p.rank < currentRank,
+            }));
+    }
+
 
 }

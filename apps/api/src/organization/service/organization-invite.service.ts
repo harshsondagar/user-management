@@ -1,13 +1,17 @@
-import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
+import { BadRequestException, Injectable, InternalServerErrorException, NotFoundException } from '@nestjs/common';
 import { randomBytes, createHash } from 'node:crypto';
-import { DataSource } from 'typeorm';
+import { DataSource, Repository } from 'typeorm';
 import { OrganizationInvite, InviteStatus } from "../entities/organization.invite-entity"
 import { MemberRepository } from '../repositories/member.repository';
 import { RoleRepository } from '../repositories/role.repository';
 import { Member, MemberStatus } from "../entities/members-entity"
 import { OrganizationMemberRole } from '../entities/organization.member.role-entity';
+import { InjectRepository } from '@nestjs/typeorm';
+import { OrganizationSubscription } from '../entities/organization-subsciription-entity';
+import { OrganizationEntitlementsService } from './organization-entitlement.service';
 
 const INVITE_EXPIRY_DAYS = 7;
+const ORG_MEMBERS_FEATURE_KEY = 'org_members';
 
 @Injectable()
 export class InvitesService {
@@ -15,6 +19,8 @@ export class InvitesService {
         private readonly dataSource: DataSource,
         private readonly memberRepo: MemberRepository,
         private readonly roleRepo: RoleRepository,
+        @InjectRepository(OrganizationSubscription) private readonly organizationSubscriptionRepo: Repository<OrganizationSubscription>,
+        private readonly entitlementsService: OrganizationEntitlementsService
     ) { }
 
 
@@ -22,16 +28,48 @@ export class InvitesService {
         return createHash('sha256').update(rawToken).digest('hex');
     }
 
+
+    async assertMemberCapacity(
+        organizationId: string,
+        context: 'invite' | 'accept',
+        additionalCount = 1,
+    ): Promise<void> {
+        const limit = await this.entitlementsService.getEntitlementLimit(organizationId, ORG_MEMBERS_FEATURE_KEY);
+        if (limit === null) {
+            throw new BadRequestException(
+                'This organization has no configured member limit - contact support',
+            );
+        }
+
+        const currentCount = await this.entitlementsService.getActiveMemberCount(organizationId);
+
+
+        if (currentCount + additionalCount > limit) {
+            if (context === 'invite') {
+                throw new BadRequestException(
+                    `This organization has reached its member limit (${limit}). Upgrade your plan to invite more members.`,
+                );
+            }
+            throw new BadRequestException(
+                'This organization is currently full and cannot accept new members right now. Please contact the person who invited you.',
+            );
+        }
+    }
+
+
     async create(
         organizationId: string,
         invitedByUserId: string,
         email: string,
         roleId: string | undefined,
     ): Promise<{ invite: OrganizationInvite; rawToken: string }> {
+
         if (roleId) {
             const role = await this.roleRepo.findOne({ where: { roleId, organizationId } });
             if (!role) throw new BadRequestException('Role not found in this organization');
         }
+
+        await this.assertMemberCapacity(organizationId, 'invite');
 
         const repo = this.dataSource.getRepository(OrganizationInvite);
         const rawToken = randomBytes(32).toString('hex');
@@ -81,6 +119,7 @@ export class InvitesService {
             await repo.update(invite.id, { status: InviteStatus.EXPIRED });
             throw new BadRequestException('Invite has expired');
         }
+
         if (invite.email.toLowerCase() !== userEmail.toLowerCase()) {
             throw new BadRequestException('This invite was sent to a different email address');
         }
@@ -88,6 +127,11 @@ export class InvitesService {
         let member = await this.memberRepo.findOne({
             where: { userId, organizationId: invite.organizationId },
         });
+
+        const willIncreaseActiveCount = !member || member.status !== MemberStatus.ACTIVE;
+        if (willIncreaseActiveCount) {
+            await this.assertMemberCapacity(invite.organizationId, 'accept');
+        }
 
         if (member) {
             await this.memberRepo.updateBy(
@@ -125,3 +169,5 @@ export class InvitesService {
         return member;
     }
 }
+
+

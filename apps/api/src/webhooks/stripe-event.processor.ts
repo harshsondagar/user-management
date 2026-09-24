@@ -3,13 +3,14 @@ import { Injectable, Logger } from "@nestjs/common";
 import { Job } from "bullmq";
 import { DataSource } from "typeorm";
 import { StripeWebhookRepository } from "../billing/repositorys/stripe-webhook.repository";
-import { SubscriptionStatus } from "../billing/entities/user-subscription-entity";
-import { PaymentStatus } from "../billing/entities/payment-entity";
+import { SubscriptionStatus, UserSubscription } from "../billing/entities/user-subscription-entity";
+import { Payment, PaymentStatus } from "../billing/entities/payment-entity";
 import * as Sentry from '@sentry/node';
 import { UserSubscriptionRepository } from "../billing/repositorys/user-subscription.repository";
 import { PaymentRepository } from "../billing/repositorys/payment.repository";
 import { UserRepository } from "../user/user.repository";
 import { MailProducer } from "../mail/mail-producer";
+import { OrganizationSubscription } from "../organization/entities/organization-subsciription-entity";
 
 export interface StripeJobData {
     eventId: string;
@@ -46,11 +47,18 @@ export class StripeEventProcessor extends WorkerHost {
 
         switch (eventType) {
             case 'payment_intent.succeeded': {
-                const type = data.metadata?.type;
-                if (type === 'initial_purchase') {
-                    await this.handleInitialPurchaseSucceeded(data);
+
+                const scope = data.metadata?.scope ?? 'individual';
+                const purchaseType = data.metadata?.type;
+
+                if (purchaseType === 'initial_purchase') {
+                    if (scope === 'organization') {
+                        await this.handleOrgInitialPurchaseSucceeded(data);
+                    } else {
+                        await this.handleUserInitialPurchaseSucceeded(data);
+                    }
                 }
-                if (data.metadata?.type === 'renewal') {
+                if (purchaseType === 'renewal') {
                     await this.handleRenewalSucceeded(data);
                 }
                 break;
@@ -64,16 +72,15 @@ export class StripeEventProcessor extends WorkerHost {
                 break;
         }
 
-        // Only reached if the handler above completed without throwing.
         await this.webhookEventRepo.updateBy({ stripeEventId: eventId }, { processedAt: new Date() });
     }
 
-    private async handleInitialPurchaseSucceeded(pi: any) {
-        const ownerId = pi.metadata?.ownerId;
+    private async handleOrgInitialPurchaseSucceeded(pi: any) {
+        const organizationId = pi.metadata?.organizationId;
         const planId = pi.metadata?.planId;
 
-        if (!ownerId || !planId) {
-            this.logger.error(`payment_intent.succeeded (initial_purchase) missing metadata: pi=${pi.id}`);
+        if (!organizationId || !planId) {
+            this.logger.error(`payment_intent.succeeded (initial_purchase, organization) missing metadata: pi=${pi.id}`);
             return;
         }
 
@@ -81,67 +88,107 @@ export class StripeEventProcessor extends WorkerHost {
         periodEnd.setDate(periodEnd.getDate() + DAYS_PER_CYCLE);
 
         await this.dataSource.transaction(async (manager) => {
-            // Deactivate any existing active subscription, insert the new one —
-            // same logic as transitionToNewPlan, run against THIS transaction's manager
-            // so it's atomic together with the payment insert below.
-            await manager
-                .createQueryBuilder()
-                .update('user_subscriptions')
-                .set({ status: SubscriptionStatus.CANCELED, canceledAt: new Date() })
-                .where('userId = :userId AND status = :status', { userId: ownerId, status: SubscriptionStatus.ACTIVE })
-                .execute();
+            const orgSubRepo = manager.getRepository(OrganizationSubscription);
+            const paymentRepo = manager.getRepository(Payment);
 
-            const insertResult = await manager
-                .createQueryBuilder()
-                .insert()
-                .into('user_subscriptions')
-                .values({
-                    userId: ownerId,
+            await orgSubRepo.update(
+                { organizationId, status: SubscriptionStatus.ACTIVE },
+                { status: SubscriptionStatus.CANCELED, canceledAt: new Date() },
+            );
+
+            const newSubscription = await orgSubRepo.save(
+                orgSubRepo.create({
+                    organizationId,
                     planId,
                     status: SubscriptionStatus.ACTIVE,
-                    stripeSubscriptionId: null,
                     currentPeriodEnd: periodEnd,
-                })
-                .returning('id')
-                .execute();
+                }),
+            );
 
-            const newSubscriptionId = insertResult.identifiers[0].id;
-
-            await manager
-                .createQueryBuilder()
-                .insert()
-                .into('payments')
-                .values({
-                    userSubscriptionId: newSubscriptionId,
+            await paymentRepo.save(
+                paymentRepo.create({
+                    organizationSubscriptionId: newSubscription.id,
                     stripeInvoiceId: pi.id,
                     amount: pi.amount,
                     currency: pi.currency,
                     status: PaymentStatus.SUCCEEDED,
                     paidAt: new Date(),
-                })
-                .execute();
+                }),
+            );
         });
+
+
+    }
+
+    private async handleUserInitialPurchaseSucceeded(pi: any) {
+        const userId = pi.metadata?.userId;
+        const planId = pi.metadata?.planId;
+
+        if (!userId || !planId) {
+            this.logger.error(`payment_intent.succeeded (initial_purchase, individual) missing metadata: pi=${pi.id}`);
+            return;
+        }
+
+        const periodEnd = new Date();
+        periodEnd.setDate(periodEnd.getDate() + DAYS_PER_CYCLE);
+
+
+        await this.dataSource.transaction(async (manager) => {
+            const subRepo = manager.getRepository(UserSubscription);
+            const paymentRepo = manager.getRepository(Payment);
+
+            await subRepo.update(
+                { userId, status: SubscriptionStatus.ACTIVE },
+                { status: SubscriptionStatus.CANCELED, canceledAt: new Date() },
+            );
+
+            const newSubscription = await subRepo.save(
+                subRepo.create({
+                    userId,
+                    planId,
+                    status: SubscriptionStatus.ACTIVE,
+                    currentPeriodEnd: periodEnd,
+                }),
+            );
+
+            await paymentRepo.save(
+                paymentRepo.create({
+                    userSubscriptionId: newSubscription.id,
+                    stripeInvoiceId: pi.id,
+                    amount: pi.amount,
+                    currency: pi.currency,
+                    status: PaymentStatus.SUCCEEDED,
+                    paidAt: new Date(),
+                }),
+            );
+        });
+
     }
 
     private async handleRenewalSucceeded(pi: any) {
-        const { userId, planId, userSubscriptionId } = pi.metadata;
+        const { userSubscriptionId } = pi.metadata;
         const periodEnd = new Date();
         periodEnd.setDate(periodEnd.getDate() + DAYS_PER_CYCLE);
 
         await this.dataSource.transaction(async (manager) => {
-            await manager.getRepository('user_subscriptions').update(userSubscriptionId, {
+            const subRepo = manager.getRepository(UserSubscription);
+            const paymentRepo = manager.getRepository(Payment);
+
+            await subRepo.update(userSubscriptionId, {
                 currentPeriodEnd: periodEnd,
-                status: SubscriptionStatus.ACTIVE, // clears any 'past_due'/grace flag from the downgrade job below
+                status: SubscriptionStatus.ACTIVE,
             });
 
-            await manager.createQueryBuilder().insert().into('payments').values({
-                userSubscriptionId,
-                stripeInvoiceId: pi.id,
-                amount: pi.amount,
-                currency: pi.currency,
-                status: PaymentStatus.SUCCEEDED,
-                paidAt: new Date(),
-            }).execute();
+            await paymentRepo.save(
+                paymentRepo.create({
+                    userSubscriptionId,
+                    stripeInvoiceId: pi.id,
+                    amount: pi.amount,
+                    currency: pi.currency,
+                    status: PaymentStatus.SUCCEEDED,
+                    paidAt: new Date(),
+                }),
+            );
         });
     }
 

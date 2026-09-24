@@ -27,6 +27,9 @@ import { BullModule } from '@nestjs/bullmq';
 import { BillingViewController } from './billing-view.controller';
 import { PlanStreamingPolicy } from './entities/plan-streaming-policy-entity';
 import { PlanStreamingPolicyRepository } from './repositorys/plans-streaming-policy.repository';
+import { OrganizationRepository } from '../organization/repositories/organization.repository';
+import { Organization } from '../organization/entities/organization-entity';
+import { OrganizationSubscription } from '../organization/entities/organization-subsciription-entity';
 
 @Global()
 @Module({
@@ -41,7 +44,9 @@ import { PlanStreamingPolicyRepository } from './repositorys/plans-streaming-pol
             Payment,
             User,
             RenewalToken,
-            PlanStreamingPolicy
+            PlanStreamingPolicy,
+            Organization,
+            OrganizationSubscription
         ]),
         BullModule.registerQueue({
             name: 'send-mail'
@@ -73,7 +78,7 @@ import { PlanStreamingPolicyRepository } from './repositorys/plans-streaming-pol
         SubscriptionExpiryJob,
         RenewalTokenRepository,
         PlanStreamingPolicyRepository,
-        MailProducer
+        MailProducer,
     ],
     controllers: [BillingController, BillingViewController],
     exports: [TypeOrmModule, 'STRIPE_CLIENT', BillingService],

@@ -20,11 +20,16 @@ import { JwtGuard } from '../../auth/gurads/jwt.guard';
 import { currentUser } from '../../common/decorator/currentUser-decorator';
 import { User } from '../../user/entity/user-entity';
 import { PERMISSIONS } from '../service/constant';
+import { BillingService } from '../../billing/billing.service';
 
 @UseGuards(JwtGuard)
 @Controller('organizations')
 export class OrganizationsController {
-    constructor(private readonly organizationsService: OrganizationsService) { }
+    constructor(
+        private readonly organizationsService: OrganizationsService,
+        private readonly billingService: BillingService,
+
+    ) { }
 
     @Get()
     findAll(@currentUser() user: User) {

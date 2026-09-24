@@ -24,6 +24,8 @@ import { MembersService } from './service/organization-member.service';
 import { RolesService } from './service/organization-role.service';
 import { InvitesService } from './service/organization-invite.service';
 import { PermissionGuard } from './guard/permission.gaurd';
+import { OrganizationBillingController } from './controller/organization-billing.contoller';
+import { OrganizationEntitlementsService } from './service/organization-entitlement.service';
 
 @Module({
 
@@ -44,6 +46,7 @@ import { PermissionGuard } from './guard/permission.gaurd';
         RolesController,
         InvitesController,
         AcceptInviteController,
+        OrganizationBillingController,
     ],
     providers: [
         OrganizationRepository,
@@ -60,6 +63,7 @@ import { PermissionGuard } from './guard/permission.gaurd';
         RolesService,
         InvitesService,
         PermissionGuard,
+        OrganizationEntitlementsService
     ],
     exports: [OrganizationsService],
 })
