@@ -1,10 +1,12 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
 import { DataSource } from 'typeorm';
+import { OrganizationSubscriptionRepository } from '../repositories/organization.org-entitlement.repository';
 
 
 @Injectable()
 export class OrganizationEntitlementsService {
     constructor(
+        private readonly orgSubRepo: OrganizationSubscriptionRepository,
         private readonly dataSource: DataSource
     ) { }
 
@@ -20,19 +22,23 @@ export class OrganizationEntitlementsService {
             .andWhere('feature.key = :featureKey', { featureKey })
             .getRawOne();
 
-
-
         return row ? Number(row.valueLimit) : null;
     }
 
-    async getActiveMemberCount(organizationId: string): Promise<number> {
-        return this.dataSource
+    async getActiveMemberCount(organizationId: string, excludeUserId?: string): Promise<number> {
+        const qb = this.dataSource
             .createQueryBuilder()
             .select('COUNT(*)', 'count')
             .from('members', 'member')
             .where('member.organization_id = :organizationId', { organizationId })
-            .andWhere('member.status = :status', { status: 'active' })
-            .getRawOne()
-            .then((r) => Number(r.count));
+            .andWhere('member.status = :status', { status: 'active' });
+
+        if (excludeUserId) {
+            qb.andWhere('member.user_id != :excludeUserId', { excludeUserId });
+        }
+
+        return qb.getRawOne().then((r) => Number(r.count));
     }
+
+
 }

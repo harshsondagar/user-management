@@ -1,11 +1,11 @@
 import { Controller, Get, Param, Query, UseGuards } from '@nestjs/common';
-import { ContentService } from './content.service';
-import { BrowseContentDto } from './dto/browse-content.dto';
-import { ContentAccessGuard } from './gaurd/content.access-gaurd';
-import { JwtGuard } from '../auth/gurads/jwt.guard';
-import { currentUser } from '../common/decorator/currentUser-decorator';
-import { User } from '../user/entity/user-entity';
-import { ActiveProfileGuard } from '../profile/guard/active.profile-gaurd';
+import { ContentService } from '../service/content.service';
+import { BrowseContentDto } from '../dto/browse-content.dto';
+import { ContentAccessGuard } from '../gaurd/content.access-gaurd';
+import { JwtGuard } from '../../auth/gurads/jwt.guard';
+import { currentUser } from '../../common/decorator/currentUser-decorator';
+import { User } from '../../user/entity/user-entity';
+import { ActiveProfileGuard } from '../../profile/guard/active.profile-gaurd';
 
 @UseGuards(JwtGuard, ActiveProfileGuard)
 @Controller('profiles/:profileId/content')

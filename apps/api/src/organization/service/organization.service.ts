@@ -10,6 +10,8 @@ import { OrganizationRepository } from '../repositories/organization.repository'
 import { OrganizationSubscription } from '../entities/organization-subsciription-entity';
 import { Plan, PlanScope } from '../../billing/entities/plan-entity';
 import { SubscriptionStatus } from '../../billing/entities/user-subscription-entity';
+import { RoleRepository } from '../repositories/role.repository';
+
 
 @Injectable()
 export class OrganizationsService {
@@ -17,7 +19,9 @@ export class OrganizationsService {
         private readonly dataSource: DataSource,
         private readonly organizationRepo: OrganizationRepository,
         private readonly memberRepo: MemberRepository,
+        private readonly roleRepo: RoleRepository
     ) { }
+
 
 
     async createOrganization(
@@ -46,7 +50,6 @@ export class OrganizationsService {
         const memberRepo = manager.getRepository(Member);
         const memberRoleRepo = manager.getRepository(OrganizationMemberRole);
         const organizationSubscriptionRepo = manager.getRepository(OrganizationSubscription);
-        const planRepo = manager.getRepository(Plan);
 
 
         const organization = await orgRepo.save(
@@ -77,6 +80,7 @@ export class OrganizationsService {
                     roleName: template.roleName,
                     description: template.description,
                     isSystem: false,
+                    isDefaultClone: true
                 }),
             );
 
@@ -135,6 +139,8 @@ export class OrganizationsService {
 
         return organization;
     }
+
+
 
     async findAllForUser(userId: string): Promise<Organization[]> {
         const memberships = await this.memberRepo.findAll({

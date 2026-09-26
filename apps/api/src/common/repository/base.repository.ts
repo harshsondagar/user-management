@@ -47,7 +47,11 @@ export abstract class BaseRepository<T extends ObjectLiteral> implements BaseInt
         return this.repository.createQueryBuilder(alias);
     }
     async create(data: DeepPartial<T>): Promise<T> {
+        console.log("came here in baserepository");
+
         const entity = this.repository.create(data);
+        console.log("content : ", entity);
+
         return this.repository.save(entity);
     }
 

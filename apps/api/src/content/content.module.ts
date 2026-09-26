@@ -4,8 +4,8 @@ import { Content } from './entity/conetnt-entity';
 import { Season } from './entity/season-entity';
 import { Episode } from './entity/episode-entity';
 import { ContentRepository } from './repository/content-repository';
-import { ContentService } from './content.service';
-import { ContentController } from './content.controller';
+import { ContentService } from './service/content.service';
+import { ContentController } from './controller/content.controller';
 import { ContentAccessGuard } from './gaurd/content.access-gaurd';
 import { ProfilesModule } from '../profile/profile.module';
 import { EpisodeRepository } from './repository/episode.repository';
@@ -14,21 +14,41 @@ import { UserSubscription } from '../billing/entities/user-subscription-entity';
 import { UserSubscriptionRepository } from '../billing/repositorys/user-subscription.repository';
 import { PlanRepository } from '../billing/repositorys/plan.repository';
 import { Plan } from '../billing/entities/plan-entity';
+import { ContentAdminController } from './controller/content-admin.controller';
+import { ContentAdminService } from './service/content-admin.service';
+import { OrganizationAccessService } from '../organization/service/organization-access.service';
+import { Organization } from '../organization/entities/organization-entity';
+import { OrganizationRepository } from '../organization/repositories/organization.repository';
+import { MemberRepository } from '../organization/repositories/member.repository';
+import { Member } from '../organization/entities/members-entity';
 
 @Module({
     imports: [
-        TypeOrmModule.forFeature([Content, Season, Episode, UserSubscription, Plan]),
-        ProfilesModule, // for ProfilesService.findOneForUser() ownership checks
-        // Wherever SubscriptionsService actually lives - your existing
-        // BillingModule, most likely. It needs to export SubscriptionsService
-        // for ContentAccessGuard's constructor injection below to resolve.
-        // BillingModule,
+        TypeOrmModule.forFeature([
+            Content,
+            Season,
+            Episode,
+            UserSubscription,
+            Plan,
+            Organization,
+            Member,
+        ]),
+        ProfilesModule,
     ],
-    controllers: [ContentController],
-    providers: [ContentRepository, ContentService, ContentAccessGuard, EpisodeRepository, SubscriptionsService, UserSubscriptionRepository, PlanRepository],
-    // ContentAccessGuard exported so WatchHistoryModule (and anywhere else
-    // that gates actual playback) can reuse the same published-status +
-    // premium-access check instead of duplicating it.
+    controllers: [ContentController, ContentAdminController],
+    providers: [
+        ContentRepository,
+        OrganizationRepository,
+        MemberRepository,
+        ContentService,
+        ContentAdminService,
+        OrganizationAccessService,
+        ContentAccessGuard,
+        EpisodeRepository,
+        SubscriptionsService,
+        UserSubscriptionRepository,
+        PlanRepository,
+    ],
     exports: [ContentService, ContentAccessGuard],
 })
 export class ContentModule { }

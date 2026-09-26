@@ -4,6 +4,10 @@ import { RoleRepository } from '../repositories/role.repository';
 import { RolePermissionRepository } from '../repositories/role.permission.repository';
 import { PermissionRepository } from '../repositories/permission.repository';
 import { Role } from '../entities/role-entity';
+import { OrganizationEntitlementsService } from './organization-entitlement.service';
+
+export const ORG_CUSTOM_ROLES_FEATURE_KEY = 'org_custom_roles';
+
 
 function isUniqueViolation(err: unknown, constraint: string): boolean {
     return (
@@ -19,6 +23,8 @@ export class RolesService {
         private readonly roleRepo: RoleRepository,
         private readonly rolePermissionRepo: RolePermissionRepository,
         private readonly permissionRepo: PermissionRepository,
+        private readonly entitlementsService: OrganizationEntitlementsService,
+
     ) { }
 
 
@@ -34,6 +40,9 @@ export class RolesService {
     ): Promise<Role> {
         const permissions = await this.resolvePermissions(permissionKeys);
 
+        await this.assertRoleCapacity(organizationId);
+
+
         let role: Role;
         try {
             role = await this.roleRepo.create({
@@ -41,6 +50,7 @@ export class RolesService {
                 roleName: roleName.trim(),
                 description: description ?? null,
                 isSystem: false,
+                isDefaultClone: false
             });
         } catch (err) {
             if (isUniqueViolation(err, 'uq_roles_org_role_name')) {
@@ -57,6 +67,31 @@ export class RolesService {
         }
 
         return role;
+    }
+
+    async assertRoleCapacity(organizationId: string, additionalCount = 1): Promise<void> {
+        const limit = await this.entitlementsService.getEntitlementLimit(organizationId, ORG_CUSTOM_ROLES_FEATURE_KEY);
+        if (limit === null) {
+            throw new BadRequestException(
+                'This organization has no configured custom role limit - contact support',
+            );
+        }
+
+        const currentCount = await this.roleRepo
+            .createQueryBuilder('role')
+            .where('role.organizationId = :organizationId', { organizationId })
+            .andWhere('role.isSystem = :isSystem', { isSystem: false })
+            .andWhere('role.isDefaultClone = :isDefaultClone', { isDefaultClone: false })
+            .getCount();
+
+        console.log(currentCount);
+
+
+        if (currentCount + additionalCount > limit) {
+            throw new BadRequestException(
+                `This organization has reached its custom role limit (${limit}). Upgrade your plan to create more roles.`,
+            );
+        }
     }
 
     async update(

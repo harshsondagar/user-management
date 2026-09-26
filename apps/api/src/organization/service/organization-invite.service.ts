@@ -9,6 +9,7 @@ import { OrganizationMemberRole } from '../entities/organization.member.role-ent
 import { InjectRepository } from '@nestjs/typeorm';
 import { OrganizationSubscription } from '../entities/organization-subsciription-entity';
 import { OrganizationEntitlementsService } from './organization-entitlement.service';
+import { OrganizationRepository } from '../repositories/organization.repository';
 
 const INVITE_EXPIRY_DAYS = 7;
 const ORG_MEMBERS_FEATURE_KEY = 'org_members';
@@ -20,7 +21,8 @@ export class InvitesService {
         private readonly memberRepo: MemberRepository,
         private readonly roleRepo: RoleRepository,
         @InjectRepository(OrganizationSubscription) private readonly organizationSubscriptionRepo: Repository<OrganizationSubscription>,
-        private readonly entitlementsService: OrganizationEntitlementsService
+        private readonly entitlementsService: OrganizationEntitlementsService,
+        private readonly organizationRepo: OrganizationRepository
     ) { }
 
 
@@ -41,8 +43,11 @@ export class InvitesService {
             );
         }
 
-        const currentCount = await this.entitlementsService.getActiveMemberCount(organizationId);
-
+        const org = await this.organizationRepo.findOneById(organizationId);
+        const currentCount = await this.entitlementsService.getActiveMemberCount(
+            organizationId,
+            org.ownerUserId,
+        );
 
         if (currentCount + additionalCount > limit) {
             if (context === 'invite') {
@@ -68,6 +73,7 @@ export class InvitesService {
             const role = await this.roleRepo.findOne({ where: { roleId, organizationId } });
             if (!role) throw new BadRequestException('Role not found in this organization');
         }
+
 
         await this.assertMemberCapacity(organizationId, 'invite');
 

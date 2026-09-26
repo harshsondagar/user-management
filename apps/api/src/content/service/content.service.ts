@@ -1,8 +1,8 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
-import { ContentRepository } from './repository/content-repository';
-import { ProfilesService } from '../profile/profile.service';
-import { Content } from './entity/conetnt-entity';
-import { EpisodeRepository } from './repository/episode.repository';
+import { ContentRepository } from '../repository/content-repository';
+import { ProfilesService } from '../../profile/profile.service';
+import { Content } from '../entity/conetnt-entity';
+import { EpisodeRepository } from '../repository/episode.repository';
 
 export interface PlaybackInfo {
     videoUrl: string;

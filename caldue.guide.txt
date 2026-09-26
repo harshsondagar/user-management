@@ -1,0 +1,7 @@
+[Node.js/Express] Fix this TypeError. Return ONLY the fixed function. No explanation.
+
+Error:
+[Paste the 3-line VS Code terminal stack trace here]
+
+Code:
+[Paste your isolated function here]

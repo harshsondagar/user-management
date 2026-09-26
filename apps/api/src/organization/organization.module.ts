@@ -26,6 +26,8 @@ import { InvitesService } from './service/organization-invite.service';
 import { PermissionGuard } from './guard/permission.gaurd';
 import { OrganizationBillingController } from './controller/organization-billing.contoller';
 import { OrganizationEntitlementsService } from './service/organization-entitlement.service';
+import { OrganizationSubscription } from './entities/organization-subsciription-entity';
+import { OrganizationSubscriptionRepository } from './repositories/organization.org-entitlement.repository';
 
 @Module({
 
@@ -38,6 +40,7 @@ import { OrganizationEntitlementsService } from './service/organization-entitlem
             Member,
             OrganizationMemberRole,
             OrganizationInvite,
+            OrganizationSubscription
         ]),
     ],
     controllers: [
@@ -55,6 +58,7 @@ import { OrganizationEntitlementsService } from './service/organization-entitlem
         RolePermissionRepository,
         MemberRepository,
         OrganizationMemberRoleRepository,
+        OrganizationSubscriptionRepository,
         // TODO : OrganizationSeedService on every boot up seed value in db if not exist
         // OrganizationSeedService,
         OrganizationsService,
@@ -63,7 +67,7 @@ import { OrganizationEntitlementsService } from './service/organization-entitlem
         RolesService,
         InvitesService,
         PermissionGuard,
-        OrganizationEntitlementsService
+        OrganizationEntitlementsService,
     ],
     exports: [OrganizationsService],
 })
