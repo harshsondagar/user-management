@@ -37,6 +37,8 @@ export class InvitesService {
         additionalCount = 1,
     ): Promise<void> {
         const limit = await this.entitlementsService.getEntitlementLimit(organizationId, ORG_MEMBERS_FEATURE_KEY);
+        console.log(limit);
+
         if (limit === null) {
             throw new BadRequestException(
                 'This organization has no configured member limit - contact support',
@@ -48,6 +50,7 @@ export class InvitesService {
             organizationId,
             org.ownerUserId,
         );
+        console.log(currentCount);
 
         if (currentCount + additionalCount > limit) {
             if (context === 'invite') {

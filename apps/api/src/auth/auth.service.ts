@@ -18,6 +18,7 @@ import { RefreshTokenRepository } from './refreshTokenRepository';
 import { MailProducer } from '../mail/mail-producer';
 import { RefreshToken } from './entity/jwt-entity';
 import { RedisService } from '@app/redis';
+import { ProfilesService } from '../profile/profile.service';
 
 interface Tokens {
     accessToken: string;
@@ -49,6 +50,7 @@ export class AuthService {
         , private readonly refreshTokenRepository: RefreshTokenRepository
         , private readonly userRepository: UserRepository
         , private readonly mailProducer: MailProducer
+        , private readonly profilesService: ProfilesService
     ) { }
 
     async create(data: registerBody) {
@@ -128,7 +130,8 @@ export class AuthService {
 
     async login(user: User, userAgent?: string, ipAddress?: string) {
         const familyId = randomUUID()
-        return this.issueTokenPair(user, familyId, userAgent, ipAddress)
+        const primaryProfile = await this.profilesService.findPrimaryForUser(user.id);
+        return this.issueTokenPair(user, familyId, primaryProfile?.id, userAgent, ipAddress)
     }
 
     async issueTokenPair(user: User, familyId: string, active_profile_id?: string, userAgent?: string, ipAddress?: string, existingAbsoluteExpiry?: Date): Promise<Tokens> {
@@ -145,7 +148,9 @@ export class AuthService {
             expiresIn: this.configService.get<number>('jwt.accessExpiresIn')
         })
 
+
         const jti = randomUUID()
+
         const refreshExpiresIn = this.configService.get<string>("jwt.refreshExpiresIn")
 
         const absoluteExpiry = existingAbsoluteExpiry ?? new Date(Date.now() + SEVEN_DAYS_IN_MS);
@@ -173,6 +178,7 @@ export class AuthService {
             active_profile_id
         })
 
+
         return { accessToken, refreshToken, refreshTokenExpiresAt: expireAt };
 
     }
@@ -183,7 +189,6 @@ export class AuthService {
         const patch: Partial<RefreshToken> = {};
 
         if (profileId) patch.active_profile_id = profileId
-        const res = await this.refreshTokenRepository.updateBy({ userId: user.id }, patch)
 
         const accessToken = await this.jwtService.signAsync(
             {

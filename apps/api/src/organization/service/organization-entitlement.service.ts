@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, NotFoundException } from '@nestjs/common';
 import { DataSource } from 'typeorm';
 import { OrganizationSubscriptionRepository } from '../repositories/organization.org-entitlement.repository';
 
@@ -21,6 +21,9 @@ export class OrganizationEntitlementsService {
             .andWhere('sub.status = :status', { status: 'active' })
             .andWhere('feature.key = :featureKey', { featureKey })
             .getRawOne();
+
+        console.log(row);
+
 
         return row ? Number(row.valueLimit) : null;
     }

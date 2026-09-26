@@ -5,3 +5,11 @@ Error:
 
 Code:
 [Paste your isolated function here]
+
+
+
+11 - 52ce6368a21050ba925f4ed755cc7c544e7981af56157800a516ee1014659bd6  
+
+12 - fc5a69aaf1959666a0d733a4196e2fa8682d58c396ae57b3cd1c0e485f29c493
+
+13 - b667f4a3e5562036e7a945fff45448d1284ceda8cf1eceea8eeb2a7603e0d65a

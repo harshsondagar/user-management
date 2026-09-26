@@ -48,8 +48,6 @@ export abstract class BaseRepository<T extends ObjectLiteral> implements BaseInt
     }
     async create(data: DeepPartial<T>): Promise<T> {
         const entity = this.repository.create(data);
-        console.log("content : ", entity);
-
         return this.repository.save(entity);
     }
 
