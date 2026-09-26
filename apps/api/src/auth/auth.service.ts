@@ -220,8 +220,8 @@ export class AuthService {
         }
 
         if (stored.revoked) {
-            await this.refreshTokenRepository.update(
-                stored.familyId,
+            await this.refreshTokenRepository.updateBy(
+                { familyId: stored.familyId },
                 { revoked: true }
             )
 
