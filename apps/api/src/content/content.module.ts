@@ -21,6 +21,9 @@ import { Organization } from '../organization/entities/organization-entity';
 import { OrganizationRepository } from '../organization/repositories/organization.repository';
 import { MemberRepository } from '../organization/repositories/member.repository';
 import { Member } from '../organization/entities/members-entity';
+import { OrganizationSubscriptionRepository } from '../organization/repositories/organization.org-entitlement.repository';
+import { OrganizationSubscription } from '../organization/entities/organization-subsciription-entity';
+import { OrganizationModule } from '../organization/organization.module';
 
 @Module({
     imports: [
@@ -32,8 +35,10 @@ import { Member } from '../organization/entities/members-entity';
             Plan,
             Organization,
             Member,
+            OrganizationSubscription
         ]),
         ProfilesModule,
+        OrganizationModule
     ],
     controllers: [ContentController, ContentAdminController],
     providers: [
@@ -48,6 +53,7 @@ import { Member } from '../organization/entities/members-entity';
         SubscriptionsService,
         UserSubscriptionRepository,
         PlanRepository,
+        OrganizationSubscriptionRepository
     ],
     exports: [ContentService, ContentAccessGuard],
 })

@@ -5,6 +5,8 @@ import { RequirePermission } from "../../organization/guard/required.permission.
 import { CreateContentDto, UpdateContentDto } from "../dto/create-content.dto";
 import { ContentStatus } from "../entity/conetnt-entity";
 import { ContentAdminService } from "../service/content-admin.service";
+import { OrgEntitlementGuard } from "../../organization/guard/org-entitlement.guard";
+import { RequireOrgMinRank } from "../../organization/decorators/require-org-plan.decorator";
 
 @Controller('organizations/:organizationId/content')
 @UseGuards(JwtGuard)
@@ -19,6 +21,7 @@ export class ContentAdminController {
         @Body() dto: CreateContentDto,
     ) {
         return this.contentAdminService.create(organizationId, dto);
+
     }
 
     @Patch(':contentId')
@@ -33,8 +36,9 @@ export class ContentAdminController {
     }
 
     @Post(':contentId/publish')
-    @UseGuards(PermissionGuard)
+    @UseGuards(PermissionGuard, OrgEntitlementGuard)
     @RequirePermission('content:publish')
+    @RequireOrgMinRank(2)
     publish(
         @Param('organizationId') organizationId: string,
         @Param('contentId') contentId: string,

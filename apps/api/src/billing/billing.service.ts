@@ -191,43 +191,59 @@ export class BillingService {
             throw new BadRequestException('This renewal link is invalid, expired, or already used.');
         }
 
-        const subscription = await this.subRepo.findOneById(renewalToken.userSubscriptionId);
-        const plan = await this.planRepo.findOneById(subscription.planId);
-        const user = await this.userRepo.findOneById(renewalToken.userId);
+        try {
+            const subscription = await this.subRepo.findOneById(renewalToken.userSubscriptionId);
+            const plan = await this.planRepo.findOneById(subscription.planId);
+            const user = await this.userRepo.findOneById(renewalToken.userId);
 
-        if (!user.stripeCustomerId) {
-            throw new BadRequestException('No payment method on file for this account.');
-        }
+            if (!user.stripeCustomerId) {
+                throw new BadRequestException('No payment method on file for this account.');
+            }
 
-        const paymentMethods = await this.stripe.paymentMethods.list({
-            customer: user.stripeCustomerId,
-            type: 'card',
-        });
-        const savedMethod = paymentMethods.data[0];
-        if (!savedMethod) {
-            throw new BadRequestException('No saved card found — please complete a fresh checkout instead.');
-        }
-
-
-        const paymentIntent = await this.stripe.paymentIntents.create(
-            {
-                amount: plan.amount!,
-                currency: plan.currency,
+            const paymentMethods = await this.stripe.paymentMethods.list({
                 customer: user.stripeCustomerId,
-                payment_method: savedMethod.id,
-                payment_method_types: ['card'],
-                confirm: true,
-                return_url: `${process.env.APP_URL}/checkout.html`,
-                metadata: {
-                    userId: user.id,
-                    planId: plan.id,
-                    userSubscriptionId: subscription.id,
-                    type: 'renewal',
+                type: 'card',
+            });
+            const savedMethod = paymentMethods.data[0];
+            if (!savedMethod) {
+                throw new BadRequestException('No saved card found — please complete a fresh checkout instead.');
+            }
+
+            const paymentIntent = await this.stripe.paymentIntents.create(
+                {
+                    amount: plan.amount!,
+                    currency: plan.currency,
+                    customer: user.stripeCustomerId,
+                    payment_method: savedMethod.id,
+                    payment_method_types: ['card'],
+                    confirm: true,
+                    return_url: `${process.env.APP_URL}/checkout.html`,
+                    metadata: {
+                        userId: user.id,
+                        planId: plan.id,
+                        userSubscriptionId: subscription.id,
+                        type: 'renewal',
+                    },
                 },
-            },
-            { idempotencyKey: `renewal:${renewalToken.id}` },
-        );
-        return { clientSecret: paymentIntent.client_secret, status: paymentIntent.status };
+                { idempotencyKey: `renewal:${renewalToken.id}` },
+            );
+
+            // requires_action (3DS) and succeeded/processing are all legitimate in-progress
+            // states — the client still needs the clientSecret to finish the flow, so keep
+            // the token consumed. Only a hard failure state should release it.
+            if (paymentIntent.status === 'requires_payment_method' || paymentIntent.status === 'canceled') {
+                await this.renewalTokenRepo.release(renewalToken.id);
+            }
+
+            return { clientSecret: paymentIntent.client_secret, status: paymentIntent.status };
+        } catch (err) {
+            // Any thrown error (Stripe API error, network failure, no card on file, etc.)
+            // means no successful charge attempt was made — release the token so the
+            // same link can be retried.
+            await this.renewalTokenRepo.release(renewalToken.id);
+            throw err;
+        }
+
     }
 
     async listPurchasablePlans(user: User) {

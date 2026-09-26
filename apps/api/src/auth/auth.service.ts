@@ -170,6 +170,7 @@ export class AuthService {
             expireAt: expireAt,
             userAgent,
             ipAddress,
+            active_profile_id
         })
 
         return { accessToken, refreshToken, refreshTokenExpiresAt: expireAt };

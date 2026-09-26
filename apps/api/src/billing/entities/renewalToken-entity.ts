@@ -15,6 +15,12 @@ export class RenewalToken {
     @Column({ type: 'varchar', length: 64 })
     token!: string;
 
+    @Column({ type: 'uuid', nullable: true })
+    organizationId!: string | null;
+
+    @Column({ type: 'uuid', nullable: true })
+    organizationSubscriptionId!: string | null;
+
     @Column({ type: 'timestamptz' })
     expiresAt!: Date;
 

@@ -20,6 +20,15 @@ export class RenewalTokenRepository extends BaseRepository<RenewalToken> {
         return token;
     }
 
+    async generateForOrg(organizationId: string, organizationSubscriptionId: string, ttlDays = 7): Promise<string> {
+        const token = randomBytes(32).toString('hex');
+        const expiresAt = new Date();
+        expiresAt.setDate(expiresAt.getDate() + ttlDays);
+
+        await this.repository.insert({ organizationId, organizationSubscriptionId, token, expiresAt, usedAt: null });
+        return token;
+    }
+
     /** Atomically consumes the token if valid — returns null if invalid/expired/already used. */
     async consume(token: string): Promise<RenewalToken | null> {
         const result = await this.repository
@@ -33,5 +42,14 @@ export class RenewalTokenRepository extends BaseRepository<RenewalToken> {
             .execute();
 
         return (result.raw[0] as RenewalToken) ?? null;
+    }
+
+    async release(id: string): Promise<void> {
+        await this.repository
+            .createQueryBuilder()
+            .update(RenewalToken)
+            .set({ usedAt: null })
+            .where('id = :id', { id })
+            .execute();
     }
 }

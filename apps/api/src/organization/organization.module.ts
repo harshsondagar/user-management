@@ -69,6 +69,6 @@ import { OrganizationSubscriptionRepository } from './repositories/organization.
         PermissionGuard,
         OrganizationEntitlementsService,
     ],
-    exports: [OrganizationsService],
+    exports: [OrganizationsService, OrganizationEntitlementsService],
 })
 export class OrganizationModule { }
