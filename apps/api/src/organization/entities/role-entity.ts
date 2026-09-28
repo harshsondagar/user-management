@@ -32,7 +32,7 @@ export class Role {
     isSystem!: boolean;
 
     @Column({ default: false })
-    isDefaultClone: boolean;
+    isDefaultClone!: boolean;
 
     @CreateDateColumn({ name: 'created_at', type: 'timestamptz' })
     createdAt!: Date;
