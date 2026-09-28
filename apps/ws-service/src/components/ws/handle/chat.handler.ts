@@ -28,8 +28,6 @@ export class ChatHandler {
             message: dto.message,
             ts: Date.now(),
         });
-        console.log("came here");
-
 
         this.chatQueue.enqueue(id, info.roomId, info.userId, dto.message, sentAt);
     }

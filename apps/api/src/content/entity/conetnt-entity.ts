@@ -7,8 +7,11 @@ import {
     UpdateDateColumn,
     DeleteDateColumn,
     Index,
+    ManyToOne,
+    JoinColumn,
 } from 'typeorm';
 import { Season } from './season-entity';
+import { Organization } from '../../organization/entities/organization-entity';
 
 export enum ContentType {
     MOVIE = 'MOVIE',
@@ -78,6 +81,13 @@ export class Content {
         default: ContentStatus.DRAFT, // Safer to default to draft until an admin publishes it
     })
     status!: ContentStatus
+
+    @Column({ type: 'uuid' })
+    organizationId!: string;
+
+    @ManyToOne(() => Organization, { onDelete: 'CASCADE' })
+    @JoinColumn({ name: 'organizationId' })
+    organization!: Organization;
 
     @CreateDateColumn({ name: 'created_at', type: 'timestamptz' })
     createdAt!: Date;

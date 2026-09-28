@@ -39,6 +39,9 @@ export class Organization {
     @OneToMany(() => Member, (member) => member.organization)
     declare members: Member[];
 
+    @Column({ name: 'stripe_customer_id', type: 'varchar', nullable: true })
+    declare stripeCustomerId: string | null;
+
     @CreateDateColumn({ name: 'created_at', type: 'timestamptz' })
     declare createdAt: Date;
 

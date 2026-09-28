@@ -116,6 +116,8 @@ export class ProfilesService {
         }
     }
 
+
+
     async update(
         userId: string,
         profileId: string,
@@ -259,6 +261,8 @@ export class ProfilesService {
         throw new ForbiddenException('Incorrect PIN');
     }
 
+
+
     async createPrimaryProfile(
         userId: string,
         profileName: string,
@@ -290,6 +294,10 @@ export class ProfilesService {
 
         const profile = await this.profileRepository.create(values);
         return this.profileRepository.save(profile);
+    }
+
+    async findPrimaryForUser(userId: string): Promise<Profile | null> {
+        return this.profileRepository.findOne({ where: { userId, isPrimary: true } });
     }
 
     assertKidsProfileMaturityIsSafe(

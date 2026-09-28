@@ -17,12 +17,15 @@ import { UserRepository } from '../user/user.repository';
 import { BullModule } from '@nestjs/bullmq';
 import { MailProducer } from '../mail/mail-producer';
 import { RefreshToken } from './entity/jwt-entity';
+import { ProfilesService } from '../profile/profile.service';
+import { Profile } from '../profile/entity/profile-entity';
+import { ProfileRepository } from '../profile/reposetory/profile.repo';
 
 @Module({
-  imports: [forwardRef(() => UserModule), PassportModule, MailModule, OtpModule, JwtModule.register({}), TypeOrmModule.forFeature([RefreshToken]), BullModule.registerQueue({
+  imports: [forwardRef(() => UserModule), Profile, PassportModule, MailModule, OtpModule, JwtModule.register({}), TypeOrmModule.forFeature([RefreshToken]), BullModule.registerQueue({
     name: "send-mail"
   })],
-  providers: [AuthService, LocalStrategy, JwtStrategy, JwtRefreshStrategy, RefreshTokenRepository, UserRepository, MailProducer,
+  providers: [AuthService, ProfileRepository, ProfilesService, LocalStrategy, JwtStrategy, JwtRefreshStrategy, RefreshTokenRepository, UserRepository, MailProducer,
     {
       provide: APP_GUARD, useClass: JwtGuard
     },

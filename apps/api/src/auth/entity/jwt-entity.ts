@@ -1,4 +1,4 @@
-import { Column, CreateDateColumn, Entity, Index, JoinColumn, JoinTable, ManyToMany, PrimaryGeneratedColumn, UpdateDateColumn } from "typeorm";
+import { Column, CreateDateColumn, Entity, Index, JoinColumn, JoinTable, ManyToMany, ManyToOne, PrimaryGeneratedColumn, UpdateDateColumn } from "typeorm";
 import { User } from "../../user/entity/user-entity";
 
 @Entity("RefreshToken")
@@ -12,7 +12,7 @@ export class RefreshToken {
     @Column({ type: 'varchar' })
     declare tokenHash: string
 
-    @ManyToMany(() => User, { onDelete: 'CASCADE' })
+    @ManyToOne(() => User, { onDelete: 'CASCADE' })
     @JoinColumn({ name: 'userId' })
     declare user: User
 
@@ -29,7 +29,7 @@ export class RefreshToken {
     @Column({ type: 'timestamptz' })
     declare expireAt: Date
 
-    @Column({ type: Date })
+    @Column({ type: 'timestamptz' })
     declare absoluteExpiry: Date
 
     @Column({ type: "varchar", nullable: true })

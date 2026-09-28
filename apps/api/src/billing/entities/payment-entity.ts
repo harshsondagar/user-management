@@ -1,5 +1,6 @@
-import { Entity, PrimaryGeneratedColumn, Column, ManyToOne, JoinColumn } from 'typeorm';
+import { Entity, PrimaryGeneratedColumn, Column, ManyToOne, JoinColumn, Check } from 'typeorm';
 import { UserSubscription } from './user-subscription-entity';
+import { OrganizationSubscription } from '../../organization/entities/organization-subsciription-entity';
 
 export enum PaymentStatus {
     SUCCEEDED = 'succeeded',
@@ -9,16 +10,28 @@ export enum PaymentStatus {
 }
 
 @Entity('payments')
+@Check(
+    'chk_payments_exactly_one_subscription',
+    '("userSubscriptionId" IS NOT NULL AND "organizationSubscriptionId" IS NULL) OR ' +
+    '("userSubscriptionId" IS NULL AND "organizationSubscriptionId" IS NOT NULL)',
+)
 export class Payment {
     @PrimaryGeneratedColumn('uuid')
     id!: string;
 
-    @Column('uuid')
-    userSubscriptionId!: string;
+    @Column('uuid', { nullable: true })
+    userSubscriptionId?: string | null;
 
-    @ManyToOne(() => UserSubscription, { onDelete: 'CASCADE' })
+    @ManyToOne(() => UserSubscription, { onDelete: 'CASCADE', nullable: true })
     @JoinColumn({ name: 'userSubscriptionId' })
-    userSubscription!: UserSubscription;
+    userSubscription?: UserSubscription | null;
+
+    @Column('uuid', { nullable: true })
+    organizationSubscriptionId?: string | null;
+
+    @ManyToOne(() => OrganizationSubscription, { onDelete: 'CASCADE', nullable: true })
+    @JoinColumn({ name: 'organizationSubscriptionId' })
+    organizationSubscription?: OrganizationSubscription | null;
 
     @Column({ type: 'varchar' })
     stripeInvoiceId!: string;

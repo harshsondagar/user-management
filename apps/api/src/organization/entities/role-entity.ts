@@ -31,6 +31,9 @@ export class Role {
     @Column({ name: 'is_system', type: 'boolean', default: false })
     isSystem!: boolean;
 
+    @Column({ default: false })
+    isDefaultClone: boolean;
+
     @CreateDateColumn({ name: 'created_at', type: 'timestamptz' })
     createdAt!: Date;
 }

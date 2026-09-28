@@ -86,10 +86,67 @@
     <h1>Choose a plan</h1>
     <div class="grid" id="grid"></div>
     <div id="message"></div>
+    <select id="org-selector" style="margin-bottom: 16px">
+      <option value="">Personal Account</option>
+    </select>
 
     <script>
       const API_BASE = 'http://localhost:3000';
       const jwt = localStorage.getItem('jwt');
+      let currentOrganizationId = null; // null = personal account
+
+      async function loadOrgSelector() {
+        if (!jwt) return; // not logged in - nothing to fetch yet
+
+        try {
+          const res = await fetch(`${API_BASE}/organizations`, {
+            headers: { Authorization: `Bearer ${jwt}` },
+          });
+
+          if (!res.ok) throw new Error(`HTTP error! status: ${res.status}`);
+
+          const orgs = await res.json();
+
+          // Highlight-start: Access the array inside the "data" key
+          const orgList = orgs.data || [];
+          // Highlight-end
+
+          const select = document.getElementById('org-selector');
+
+          // Clear old options but keep a default placeholder if desired
+          select.innerHTML =
+            '<option value="">Select an organization...</option>';
+
+          for (const org of orgList) {
+            const opt = document.createElement('option');
+            opt.value = org.id;
+            opt.textContent = org.organizationName;
+            select.appendChild(opt);
+          }
+
+          select.addEventListener('change', () => {
+            currentOrganizationId = select.value || null;
+            loadAndRenderPlans();
+          });
+        } catch (err) {
+          console.error('Failed to load organizations:', err);
+        }
+      }
+
+      // Rename this to match whatever your existing plan-fetching function
+      // is actually called - this is a REPLACEMENT for it, not an addition,
+      // since the endpoint now depends on currentOrganizationId.
+      async function loadAndRenderPlans() {
+        const url = `${API_BASE}/payments/plans`;
+
+        const res = await fetch(url, {
+          headers: { Authorization: `Bearer ${jwt}` },
+        });
+        const plans = await res.json();
+
+        renderPlans(plans); // your existing render function - the one containing the
+        // `card.querySelector('button')` click handler from before
+      }
 
       async function loadPlans() {
         if (!jwt) {
@@ -132,7 +189,10 @@
 
           if (!plan.isCurrent && !plan.isDowngrade) {
             card.querySelector('button').addEventListener('click', () => {
-              window.location.href = `checkout.html?planId=${plan.id}`;
+              const checkoutUrl = currentOrganizationId
+                ? `checkout.html?organizationId=${currentOrganizationId}&planId=${plan.id}`
+                : `checkout.html?planId=${plan.id}`;
+              window.location.href = checkoutUrl;
             });
           }
 
@@ -140,6 +200,7 @@
         });
       }
 
+      loadOrgSelector();
       loadPlans();
     </script>
   </body>
