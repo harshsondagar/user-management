@@ -23,8 +23,8 @@ export class WebhookReconciliationJob {
         const cutoff = new Date(Date.now() - 10 * 60 * 1000)
 
         const stuck = await this.webhookEventRepo.findAll({
-            where: { processedAt: IsNull(), createdAt: LessThan(cutoff) },
-            order: { createdAt: 'ASC' },
+            where: { processedAt: IsNull(), receivedAt: LessThan(cutoff) },
+            order: { receivedAt: 'ASC' },
             take: 100
         });
         if (stuck.length === 0) return;

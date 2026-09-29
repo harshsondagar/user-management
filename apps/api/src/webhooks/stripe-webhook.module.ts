@@ -18,6 +18,7 @@ import Stripe from 'stripe';
 import { WebhookReconciliationJob } from './stripe-Webhook-ReconciliationJob.processor';
 import { UserRepository } from '../user/user.repository';
 import { MailProducer } from '../mail/mail-producer';
+import { LedgerService } from '../organization/service/ledger.service';
 
 
 @Module({
@@ -48,7 +49,8 @@ import { MailProducer } from '../mail/mail-producer';
         PlanRepository,
         PaymentRepository,
         UserRepository,
-        MailProducer
+        MailProducer,
+        LedgerService
     ],
     exports: ['STRIPE_CLIENT']
 })

@@ -28,6 +28,10 @@ import { OrganizationBillingController } from './controller/organization-billing
 import { OrganizationEntitlementsService } from './service/organization-entitlement.service';
 import { OrganizationSubscription } from './entities/organization-subsciription-entity';
 import { OrganizationSubscriptionRepository } from './repositories/organization.org-entitlement.repository';
+import { SettlementService } from './service/settlement.service';
+import { SettlementRun } from './entities/settlemennt.run-entity';
+import { SettlementLine } from './entities/settlement.line-entity';
+import { LedgerService } from './service/ledger.service';
 
 @Module({
 
@@ -40,7 +44,9 @@ import { OrganizationSubscriptionRepository } from './repositories/organization.
             Member,
             OrganizationMemberRole,
             OrganizationInvite,
-            OrganizationSubscription
+            OrganizationSubscription,
+            SettlementRun,
+            SettlementLine
         ]),
     ],
     controllers: [
@@ -67,8 +73,8 @@ import { OrganizationSubscriptionRepository } from './repositories/organization.
         RolesService,
         InvitesService,
         PermissionGuard,
-        OrganizationEntitlementsService,
+        OrganizationEntitlementsService, SettlementService, LedgerService
     ],
-    exports: [OrganizationsService, OrganizationEntitlementsService],
+    exports: [OrganizationsService, OrganizationEntitlementsService, SettlementService, LedgerService],
 })
 export class OrganizationModule { }

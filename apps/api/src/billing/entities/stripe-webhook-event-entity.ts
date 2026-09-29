@@ -11,9 +11,13 @@ export class StripeWebhookEvent {
     @Column({ type: 'timestamptz', nullable: true })
     processedAt!: Date | null;
 
+    @Column({ type: 'varchar', nullable: true }) error?: string | null;
+
     @Column({ type: 'jsonb' })
     payload!: Record<string, any>;
 
     @CreateDateColumn({ type: 'timestamptz' })
-    createdAt!: Date
+    receivedAt!: Date
 }
+
+

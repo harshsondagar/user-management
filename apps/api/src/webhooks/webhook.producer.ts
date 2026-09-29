@@ -10,7 +10,7 @@ export class WebhookProducer {
         return this.queue.add(
             'process-stripe-event',
             { eventId, eventType, data },
-            { attempts: 3, backoff: { type: 'exponential', delay: 5000 } },
+            { jobId: eventId, attempts: 3, backoff: { type: 'exponential', delay: 5000 } },
         );
     }
 }

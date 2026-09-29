@@ -40,7 +40,8 @@
     "test:e2e": "pnpm run test:e2e:infra:up && pnpm run test:e2e:api && pnpm run test:e2e:queue && pnpm run test:e2e:infra:down",
     "logs:watch": "logdy follow logs/api-combined-*.log logs/api-error-*.log logs/queue-service-combined-*.log logs/queue-service-error-*.log",
     "unit:test": "npx jest room-service.spec.ts",
-    "seed": "ts-node -r tsconfig-paths/register apps/api/src/organization/seed/organization.seed.service.ts"
+    "seed": "ts-node -r tsconfig-paths/register apps/api/src/organization/seed/organization.seed.service.ts",
+    "seed:settlement": "ts-node --transpile-only -r tsconfig-paths/register apps/api/src/organization/seed/test.settlement.seed.ts"
   },
   "dependencies": {
     "@app/shared": "workspace:*",

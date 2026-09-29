@@ -7,3 +7,11 @@ export const PERMISSIONS = {
     ORG_UPDATE_SETTINGS: 'org:update_settings',
 
 } as const;
+
+const PLATFORM_SHARE_BPS = 2000;
+
+function split(amountCents: number) {
+    const platform = Math.round(amountCents * PLATFORM_SHARE_BPS / 10000);
+    const pool = amountCents - platform;
+    return { platform, pool };
+}
