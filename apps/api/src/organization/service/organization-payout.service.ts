@@ -1,11 +1,13 @@
+import * as dotenv from "dotenv"
+import { join, resolve } from "path";
+dotenv.config({ path: resolve(join(process.cwd(), "../../../.env")) })
 import { BadRequestException, Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { DataSource } from 'typeorm';
 import { LedgerService } from './ledger.service';
 import { Payout, PayoutStatus } from "../entities/payout-entity"
 
-const MIN_PAYOUT_CENTS = 2000;
-const PAYOUT_HOLD_DAYS = 7;
-
+const MIN_PAYOUT_CENTS = 2000; // $20
+const PAYOUT_HOLD_DAYS = Number(process.env.PAYOUT_HOLD_DAYS ?? 7);
 @Injectable()
 export class PayoutService {
     private readonly logger = new Logger(PayoutService.name);
@@ -15,9 +17,14 @@ export class PayoutService {
         private readonly ledgerService: LedgerService,
     ) { }
 
-
+    /**
+     * Org requests a withdrawal. Reserves the money in the ledger IMMEDIATELY (moves it
+     * earnings -> payouts_pending) so it can never be double-requested, even by two
+     * concurrent requests — pgledger's non-negative-balance constraint is the real
+     * safety net here, not the pre-check below (which exists only to fail fast with a
+     * clear message rather than a raw ledger error).
+     */
     async requestPayout(organizationId: string, requestedByUserId: string, amountCents: number): Promise<Payout> {
-
         if (amountCents < MIN_PAYOUT_CENTS) {
             throw new BadRequestException(`Minimum payout is ${MIN_PAYOUT_CENTS} cents`);
         }
@@ -29,6 +36,10 @@ export class PayoutService {
             const holdCutoff = new Date(Date.now() - PAYOUT_HOLD_DAYS * 24 * 60 * 60 * 1000);
             const balanceAtCutoff = await this.ledgerService.getBalanceAtTime(earningsAccountId, holdCutoff, manager);
 
+            // Withdrawable = the smaller of "what's there right now" and "what had already
+            // accumulated by the hold cutoff". This is a simplification (true FIFO aging of
+            // each individual settlement credit would be more precise) but is safe: it never
+            // lets an org withdraw money credited within the last PAYOUT_HOLD_DAYS.
             const withdrawable = Math.min(currentBalance, balanceAtCutoff);
 
             if (amountCents > withdrawable) {
@@ -57,7 +68,7 @@ export class PayoutService {
         });
     }
 
-
+    /** Admin approves — does NOT move ledger money yet, just marks intent before the actual bank transfer happens. */
     async approvePayout(payoutId: string, approvedByUserId: string): Promise<Payout> {
         const payoutRepo = this.dataSource.getRepository(Payout);
         const payout = await payoutRepo.findOneBy({ id: payoutId });
@@ -112,7 +123,7 @@ export class PayoutService {
                 throw new BadRequestException(`Payout ${payoutId} is already PAID, cannot reject`);
             }
             if (payout.status === PayoutStatus.REJECTED) {
-                return payout;
+                return payout; // already rejected, no-op
             }
 
             const releaseTransferId = await this.ledgerService.releasePayoutReservation(

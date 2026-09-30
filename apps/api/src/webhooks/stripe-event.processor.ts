@@ -161,10 +161,11 @@ export class StripeEventProcessor extends WorkerHost {
     }
 
     private async handleUserInitialPurchaseSucceeded(pi: any) {
-        const userId = pi.metadata?.userId;
+        const ownerId = pi.metadata?.ownerId;
         const planId = pi.metadata?.planId;
+        console.log(ownerId, planId);
 
-        if (!userId || !planId) {
+        if (!ownerId || !planId) {
             this.logger.error(
                 `payment_intent.succeeded (initial_purchase, individual) missing metadata: pi=${pi.id}`,
             );
@@ -184,13 +185,13 @@ export class StripeEventProcessor extends WorkerHost {
             const paymentRepo = manager.getRepository(Payment);
 
             await subRepo.update(
-                { userId, status: SubscriptionStatus.ACTIVE },
+                { userId: ownerId, status: SubscriptionStatus.ACTIVE },
                 { status: SubscriptionStatus.CANCELED, canceledAt: new Date() },
             );
 
             const newSubscription = await subRepo.save(
                 subRepo.create({
-                    userId,
+                    userId: ownerId,
                     planId,
                     status: SubscriptionStatus.ACTIVE,
                     currentPeriodEnd: periodEnd,
@@ -200,7 +201,7 @@ export class StripeEventProcessor extends WorkerHost {
             await paymentRepo.save(
                 paymentRepo.create({
                     kind: PaymentKind.USER_SUBSCRIPTION,
-                    userId,
+                    userId: ownerId,
                     userSubscriptionId: newSubscription.id,
                     stripePaymentIntentId: pi.id,
                     amountCents: pi.amount,

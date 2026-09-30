@@ -3,9 +3,12 @@ import { AuthGuard } from '@nestjs/passport'; // or your existing auth guard
 import { WatchTrackingService } from '../service/organization-watchtracking.service';
 import { JwtGuard } from '../../auth/gurads/jwt.guard';
 import type { Request } from 'express';
+import { IsNumber, IsString } from 'class-validator';
 
 class RecordProgressDto {
+    @IsString()
     contentId!: string;
+    @IsNumber()
     deltaSeconds!: number;
 }
 

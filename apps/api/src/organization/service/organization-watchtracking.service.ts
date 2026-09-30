@@ -1,6 +1,6 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { DataSource } from 'typeorm';
-import { Content, ContentType } from '../../content/entity/conetnt-entity';  // adjust path
+import { Content, ContentAccessType, ContentType } from '../../content/entity/conetnt-entity';  // adjust path
 import { UserSubscription, SubscriptionStatus } from '../../billing/entities/user-subscription-entity';
 import { Episode } from '../../content/entity/episode-entity';
 @Injectable()
@@ -21,6 +21,8 @@ export class WatchTrackingService {
         const { earningContentId, organizationId, accessType } = resolved;
 
         const countsForEarnings = await this.isEligibleForEarnings(userId, accessType);
+        console.log(countsForEarnings);
+
         const day = new Date().toISOString().slice(0, 10); // UTC date, e.g. '2026-09-29'
 
         await this.dataSource.transaction(async (manager) => {
@@ -87,7 +89,7 @@ export class WatchTrackingService {
      * Adjust the accessType/plan-status checks to match your actual enum values.
      */
     private async isEligibleForEarnings(userId: string, contentAccessType: string): Promise<boolean> {
-        if (contentAccessType !== 'subscription') return false; // free-access content never earns
+        if (contentAccessType !== ContentAccessType.PREMIUM) return false; // free-access content never earns
 
         const subRepo = this.dataSource.getRepository(UserSubscription);
         const sub = await subRepo.findOne({

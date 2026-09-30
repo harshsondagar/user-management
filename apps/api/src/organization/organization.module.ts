@@ -39,6 +39,8 @@ import { ScheduleModule } from '@nestjs/schedule';
 import { WatchStat } from './entities/watch-stat-entity';
 import { PayoutService } from './service/organization-payout.service';
 import { PayoutController } from './controller/organization-payout.controller';
+import { OrgEarningsController } from './controller/organization-earning.contoller';
+import { AdminSettlementController } from './controller/organization-admin.settlement.controller';
 
 @Module({
     imports: [
@@ -65,7 +67,9 @@ import { PayoutController } from './controller/organization-payout.controller';
         AcceptInviteController,
         OrganizationBillingController,
         WatchTrackingController,
-        PayoutController
+        PayoutController,
+        AdminSettlementController,
+        OrgEarningsController
     ],
     providers: [
         OrganizationRepository,
@@ -88,7 +92,8 @@ import { PayoutController } from './controller/organization-payout.controller';
         LedgerService,
         WatchTrackingService,
         SettlementCron,
-        PayoutService
+        PayoutService,
+        OrgEarningsController,
     ],
     exports: [
         OrganizationsService,

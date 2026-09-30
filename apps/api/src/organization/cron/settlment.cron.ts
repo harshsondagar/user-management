@@ -10,7 +10,7 @@ export class SettlementCron {
 
     constructor(private readonly settlementService: SettlementService) { }
 
-    @Cron(CronExpression.EVERY_10_SECONDS, { name: 'monthly-settlement', timeZone: 'UTC' })
+    @Cron(CronExpression.EVERY_12_HOURS, { name: 'monthly-settlement', timeZone: 'UTC' })
     async runMonthlySettlement(): Promise<void> {
         const monthStart = this.getPreviousMonthStart();
         this.logger.log(`Starting monthly settlement for ${monthStart.toISOString().slice(0, 7)}`);

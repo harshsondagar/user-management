@@ -59,6 +59,9 @@ export class SettlementService {
         return this.dataSource.transaction(async (manager) => {
             let run = await this.getOrCreateRun(manager, monthStart, monthEnd);
 
+            console.log(run);
+
+
             if (run.status === SettlementStatus.POSTED) {
                 this.logger.log(`Month ${monthStart.toISOString()} already settled (run ${run.id}), skipping`);
                 return run;
@@ -155,6 +158,13 @@ export class SettlementService {
                 }),
             );
         }
+
+        console.log({
+            runId: run.id,
+            poolCentsNum,
+            allocationMapSize: allocation.size,
+            allocationEntries: [...allocation.entries()]
+        });
 
         // Sanity check before moving on: lines must sum EXACTLY to the pool.
         const lineSum = [...allocation.values()].reduce((a, b) => a + b, 0);
