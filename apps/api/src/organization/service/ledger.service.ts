@@ -98,10 +98,7 @@ export class LedgerService {
 
     async getBalance(accountId: string, manager?: EntityManager): Promise<number> {
         const m = this.runner(manager);
-        const rows = await m.query(
-            `SELECT balance FROM pgledger_accounts_view WHERE id = $1 ORDER BY version DESC LIMIT 1`,
-            [accountId],
-        );
+        const rows = await m.query(`SELECT balance FROM pgledger_accounts WHERE id = $1`, [accountId]);
         return Number(rows[0]?.balance ?? 0);
     }
 
@@ -237,13 +234,7 @@ export class LedgerService {
 
     async assertBalancedToZero(manager?: EntityManager): Promise<void> {
         const m = this.runner(manager);
-        const [{ total }] = await m.query(`
-      SELECT SUM(balance) AS total FROM (
-        SELECT DISTINCT ON (id) balance
-        FROM pgledger_accounts_view
-        ORDER BY id, version DESC
-      ) latest
-    `);
+        const [{ total }] = await m.query(`SELECT SUM(balance) AS total FROM pgledger_accounts`);
         if (Number(total) !== 0) {
             throw new Error(`LEDGER OUT OF BALANCE: sum of all accounts = ${total}, expected 0`);
         }
