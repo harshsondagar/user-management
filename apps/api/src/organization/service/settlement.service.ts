@@ -178,6 +178,16 @@ export class SettlementService {
     private async post(manager: EntityManager, run: SettlementRun): Promise<SettlementRun> {
         const lines = await manager.getRepository(SettlementLine).find({ where: { settlementRunId: run.id } });
 
+        if (run.platformShareCents === 0 && run.creatorPoolCents === 0) {
+            this.logger.log(`Settlement run ${run.id} (${run.periodStart}) has zero revenue — nothing to post`);
+            await manager.getRepository(SettlementRun).update(run.id, {
+                status: SettlementStatus.POSTED,
+                postedAt: new Date(),
+                ledgerTransferIds: [],
+            });
+            return manager.getRepository(SettlementRun).findOneByOrFail({ id: run.id });
+        }
+
         const { platformTransferId, poolFundingTransferId, lineTransferIds } = await this.ledgerService.postSettlementRun(manager, {
             platformShareCents: run.platformShareCents,
             creatorPoolCents: run.creatorPoolCents, // NEW: funds the pool before allocating it to orgs
@@ -208,10 +218,15 @@ export class SettlementService {
         await manager.getRepository(SettlementRun).update(run.id, {
             status: SettlementStatus.POSTED,
             postedAt: new Date(),
-            ledgerTransferIds: [platformTransferId, ...(poolFundingTransferId ? [poolFundingTransferId] : []), ...Object.values(lineTransferIds)],
+            ledgerTransferIds: [
+                ...(platformTransferId ? [platformTransferId] : []),
+                ...(poolFundingTransferId ? [poolFundingTransferId] : []),
+                ...Object.values(lineTransferIds),
+            ],
         });
 
         return manager.getRepository(SettlementRun).findOneByOrFail({ id: run.id });
     }
 }
+
 

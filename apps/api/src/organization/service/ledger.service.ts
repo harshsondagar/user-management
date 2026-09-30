@@ -9,12 +9,10 @@ export interface LedgerAccount {
     id: string;
     name: string;
     currency: string;
-    balance: string; // pgledger returns numeric as string; caller should Number() or keep as string for display
+    balance: string;
 }
 
-// Platform account IDs — populate from config/env once you've run the bootstrap script.
-// Lazy (a getter-backed object, not eagerly-read constants) so it doesn't matter whether
-// this module gets imported before or after your app's dotenv/.env loading runs.
+
 function requireEnv(key: string): string {
     const value = process.env[key];
     if (!value) {
@@ -98,10 +96,6 @@ export class LedgerService {
         return rows[0].earningsAccountId;
     }
 
-    /**
-     * pgledger_accounts_view returns ONE ROW PER VERSION (full history), not just the current
-     * state — confirmed from hands-on testing. Always take the latest version.
-     */
     async getBalance(accountId: string, manager?: EntityManager): Promise<number> {
         const m = this.runner(manager);
         const rows = await m.query(
@@ -111,9 +105,22 @@ export class LedgerService {
         return Number(rows[0]?.balance ?? 0);
     }
 
-    // ---------- transfers ----------
 
-    /** Raw transfer. Prefer the named methods below in application code; this is the primitive they use. */
+    async getBalanceAtTime(accountId: string, asOf: Date, manager?: EntityManager): Promise<number> {
+        const m = this.runner(manager);
+        const rows = await m.query(
+            `
+                SELECT account_current_balance
+                FROM pgledger_entries
+                WHERE account_id = $1::text AND created_at <= $2::timestamptz
+                ORDER BY created_at DESC
+                LIMIT 1
+            `,
+            [accountId, asOf],
+        );
+        return rows.length > 0 ? Number(rows[0].account_current_balance) : 0;
+    }
+
     private async transfer(
         fromAccountId: string,
         toAccountId: string,
@@ -141,13 +148,16 @@ export class LedgerService {
             creatorPoolCents: number; // NEW: total pool for the month, must be funded before allocating out
             lines: { organizationId: string; amountCents: number }[];
         },
-    ): Promise<{ platformTransferId: string; poolFundingTransferId: string | null; lineTransferIds: Record<string, string> }> {
-        const platformTransferId = await this.transfer(
-            PLATFORM_ACCOUNTS.stripeClearing,
-            PLATFORM_ACCOUNTS.revenue,
-            input.platformShareCents,
-            manager,
-        );
+    ): Promise<{ platformTransferId: string | null; poolFundingTransferId: string | null; lineTransferIds: Record<string, string> }> {
+        let platformTransferId: string | null = null;
+        if (input.platformShareCents > 0) {
+            platformTransferId = await this.transfer(
+                PLATFORM_ACCOUNTS.stripeClearing,
+                PLATFORM_ACCOUNTS.revenue,
+                input.platformShareCents,
+                manager,
+            );
+        }
 
         // BUG FIX: the pool must actually receive the money before any org can be paid from it.
         // Without this, every payout from creator_pool is an overdraft, since the account
@@ -220,18 +230,11 @@ export class LedgerService {
         return this.transfer(payoutsPendingAccountId, earningsAccountId, amountCents, manager);
     }
 
-    /** Late refund after settlement: platform absorbs it (default from Flow E). */
+
     async recordLateRefund(manager: EntityManager, amountCents: number): Promise<string> {
         return this.transfer(PLATFORM_ACCOUNTS.revenue, PLATFORM_ACCOUNTS.stripeClearing, amountCents, manager);
     }
 
-    // ---------- reconciliation ----------
-
-    /**
-     * Sanity check: every account's CURRENT balance should sum to exactly zero.
-     * Must take only the latest version per account id, since the view holds full history.
-     * Run this after any batch of writes (e.g. end of a settlement run, nightly cron).
-     */
     async assertBalancedToZero(manager?: EntityManager): Promise<void> {
         const m = this.runner(manager);
         const [{ total }] = await m.query(`

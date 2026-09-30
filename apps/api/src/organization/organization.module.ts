@@ -32,10 +32,17 @@ import { SettlementService } from './service/settlement.service';
 import { SettlementRun } from './entities/settlemennt.run-entity';
 import { SettlementLine } from './entities/settlement.line-entity';
 import { LedgerService } from './service/ledger.service';
+import { WatchTrackingService } from './service/organization-watchtracking.service';
+import { WatchTrackingController } from './controller/organization-watch.tracking.controller';
+import { SettlementCron } from './cron/settlment.cron';
+import { ScheduleModule } from '@nestjs/schedule';
+import { WatchStat } from './entities/watch-stat-entity';
+import { PayoutService } from './service/organization-payout.service';
+import { PayoutController } from './controller/organization-payout.controller';
 
 @Module({
-
     imports: [
+        ScheduleModule.forRoot(),
         TypeOrmModule.forFeature([
             Organization,
             Permission,
@@ -46,7 +53,8 @@ import { LedgerService } from './service/ledger.service';
             OrganizationInvite,
             OrganizationSubscription,
             SettlementRun,
-            SettlementLine
+            SettlementLine,
+            WatchStat
         ]),
     ],
     controllers: [
@@ -56,6 +64,8 @@ import { LedgerService } from './service/ledger.service';
         InvitesController,
         AcceptInviteController,
         OrganizationBillingController,
+        WatchTrackingController,
+        PayoutController
     ],
     providers: [
         OrganizationRepository,
@@ -73,8 +83,19 @@ import { LedgerService } from './service/ledger.service';
         RolesService,
         InvitesService,
         PermissionGuard,
-        OrganizationEntitlementsService, SettlementService, LedgerService
+        OrganizationEntitlementsService,
+        SettlementService,
+        LedgerService,
+        WatchTrackingService,
+        SettlementCron,
+        PayoutService
     ],
-    exports: [OrganizationsService, OrganizationEntitlementsService, SettlementService, LedgerService],
+    exports: [
+        OrganizationsService,
+        OrganizationEntitlementsService,
+        SettlementService,
+        LedgerService,
+        WatchTrackingService,
+    ],
 })
 export class OrganizationModule { }
