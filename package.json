@@ -40,11 +40,12 @@
     "test:e2e": "pnpm run test:e2e:infra:up && pnpm run test:e2e:api && pnpm run test:e2e:queue && pnpm run test:e2e:infra:down",
     "logs:watch": "logdy follow logs/api-combined-*.log logs/api-error-*.log logs/queue-service-combined-*.log logs/queue-service-error-*.log",
     "unit:test": "npx jest room-service.spec.ts",
-    "seed": "ts-node -r tsconfig-paths/register apps/api/src/organization/seed/organization.seed.service.ts"
+    "seed": "ts-node -r tsconfig-paths/register apps/api/src/organization/seed/organization.seed.service.ts",
+    "seed:settlement": "ts-node --transpile-only -r tsconfig-paths/register apps/api/src/organization/seed/test.settlement.seed.ts"
   },
   "dependencies": {
-    "@app/shared": "workspace:*",
     "@app/redis": "workspace:*",
+    "@app/shared": "workspace:*",
     "@bull-board/api": "8.5.0",
     "@bull-board/express": "8.5.0",
     "@bull-board/nestjs": "8.5.0",
@@ -94,6 +95,7 @@
     "passport-jwt": "^4.0.1",
     "passport-local": "^1.0.0",
     "playwright": "^1.62.0",
+    "puppeteer": "^25.12.0",
     "reflect-metadata": "^0.2.2",
     "rxjs": "^7.8.1",
     "sharp": "^0.35.4",

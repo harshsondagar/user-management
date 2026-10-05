@@ -46,7 +46,6 @@ export class BillingService {
             throw new BadRequestException('Free plans cannot be purchased via checkout.');
         }
 
-
         if (chosenPlan.scope !== PlanScope.INDIVIDUAL) {
             throw new BadRequestException('This plan is only available for organizations.');
         }

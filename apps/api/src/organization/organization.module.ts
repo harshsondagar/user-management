@@ -28,10 +28,23 @@ import { OrganizationBillingController } from './controller/organization-billing
 import { OrganizationEntitlementsService } from './service/organization-entitlement.service';
 import { OrganizationSubscription } from './entities/organization-subsciription-entity';
 import { OrganizationSubscriptionRepository } from './repositories/organization.org-entitlement.repository';
+import { SettlementService } from './service/settlement.service';
+import { SettlementRun } from './entities/settlemennt.run-entity';
+import { SettlementLine } from './entities/settlement.line-entity';
+import { LedgerService } from './service/ledger.service';
+import { WatchTrackingService } from './service/organization-watchtracking.service';
+import { WatchTrackingController } from './controller/organization-watch.tracking.controller';
+import { SettlementCron } from './cron/settlment.cron';
+import { ScheduleModule } from '@nestjs/schedule';
+import { WatchStat } from './entities/watch-stat-entity';
+import { PayoutService } from './service/organization-payout.service';
+import { PayoutController } from './controller/organization-payout.controller';
+import { OrgEarningsController } from './controller/organization-earning.contoller';
+import { AdminSettlementController } from './controller/organization-admin.settlement.controller';
 
 @Module({
-
     imports: [
+        ScheduleModule.forRoot(),
         TypeOrmModule.forFeature([
             Organization,
             Permission,
@@ -40,7 +53,10 @@ import { OrganizationSubscriptionRepository } from './repositories/organization.
             Member,
             OrganizationMemberRole,
             OrganizationInvite,
-            OrganizationSubscription
+            OrganizationSubscription,
+            SettlementRun,
+            SettlementLine,
+            WatchStat
         ]),
     ],
     controllers: [
@@ -50,6 +66,10 @@ import { OrganizationSubscriptionRepository } from './repositories/organization.
         InvitesController,
         AcceptInviteController,
         OrganizationBillingController,
+        WatchTrackingController,
+        PayoutController,
+        AdminSettlementController,
+        OrgEarningsController
     ],
     providers: [
         OrganizationRepository,
@@ -68,7 +88,19 @@ import { OrganizationSubscriptionRepository } from './repositories/organization.
         InvitesService,
         PermissionGuard,
         OrganizationEntitlementsService,
+        SettlementService,
+        LedgerService,
+        WatchTrackingService,
+        SettlementCron,
+        PayoutService,
+        OrgEarningsController,
     ],
-    exports: [OrganizationsService, OrganizationEntitlementsService],
+    exports: [
+        OrganizationsService,
+        OrganizationEntitlementsService,
+        SettlementService,
+        LedgerService,
+        WatchTrackingService,
+    ],
 })
 export class OrganizationModule { }

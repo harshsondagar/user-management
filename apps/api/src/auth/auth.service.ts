@@ -131,7 +131,7 @@ export class AuthService {
     async login(user: User, userAgent?: string, ipAddress?: string) {
         const familyId = randomUUID()
         const primaryProfile = await this.profilesService.findPrimaryForUser(user.id);
-        return this.issueTokenPair(user, familyId, primaryProfile?.id, userAgent, ipAddress)
+        return this.issueTokenPair(user, familyId, primaryProfile?.id!, userAgent, ipAddress)
     }
 
     async issueTokenPair(user: User, familyId: string, active_profile_id?: string, userAgent?: string, ipAddress?: string, existingAbsoluteExpiry?: Date): Promise<Tokens> {

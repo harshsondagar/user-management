@@ -84,9 +84,6 @@ export class RolesService {
             .andWhere('role.isDefaultClone = :isDefaultClone', { isDefaultClone: false })
             .getCount();
 
-        console.log(currentCount);
-
-
         if (currentCount + additionalCount > limit) {
             throw new BadRequestException(
                 `This organization has reached its custom role limit (${limit}). Upgrade your plan to create more roles.`,

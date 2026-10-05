@@ -21,7 +21,6 @@ export class ContentAdminController {
         @Body() dto: CreateContentDto,
     ) {
         return this.contentAdminService.create(organizationId, dto);
-
     }
 
     @Patch(':contentId')
