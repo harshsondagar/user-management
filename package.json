@@ -44,8 +44,8 @@
     "seed:settlement": "ts-node --transpile-only -r tsconfig-paths/register apps/api/src/organization/seed/test.settlement.seed.ts"
   },
   "dependencies": {
-    "@app/shared": "workspace:*",
     "@app/redis": "workspace:*",
+    "@app/shared": "workspace:*",
     "@bull-board/api": "8.5.0",
     "@bull-board/express": "8.5.0",
     "@bull-board/nestjs": "8.5.0",
@@ -95,6 +95,7 @@
     "passport-jwt": "^4.0.1",
     "passport-local": "^1.0.0",
     "playwright": "^1.62.0",
+    "puppeteer": "^25.12.0",
     "reflect-metadata": "^0.2.2",
     "rxjs": "^7.8.1",
     "sharp": "^0.35.4",
