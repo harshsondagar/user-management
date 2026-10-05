@@ -44,5 +44,19 @@ export default () => ({
     },
     internal: {
         secrete: process.env.INTERNAL_SERVICE_SECRET!
-    }
+    },
+    stripe: {
+        key: process.env.STRIPE_SECRET_KEY!,
+        webhookSecret: process.env.STRIPE_WEBHOOK_SECRET!
+    },
+    minio: {
+        endPoint: process.env.MINIO_ENDPOINT || 'localhost',
+        port: parseInt(process.env.MINIO_PORT || '9000', 10),
+        useSSL: process.env.MINIO_USE_SSL === 'true', // Converts env string to boolean
+        accessKey: process.env.MINIO_ACCESS_KEY,
+        secretKey: process.env.MINIO_SECRET_KEY,
+        bucket: process.env.MINIO_BUCKET || 'my-bucket',
+        presignExpirySeconds: process.env.MINIO_PRESIGN_EXPIRY!
+    },
+
 });

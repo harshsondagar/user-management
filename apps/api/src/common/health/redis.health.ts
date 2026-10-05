@@ -1,12 +1,11 @@
-import { CACHE_MANAGER } from '@nestjs/cache-manager';
-import { Inject, Injectable } from '@nestjs/common';
-import type { Cache } from 'cache-manager';
+import { Injectable } from '@nestjs/common';
 import { HealthIndicatorService } from '@nestjs/terminus';
+import { RedisService } from '@app/redis';
 
 @Injectable()
 export class RedisHealthIndicator {
     constructor(
-        @Inject(CACHE_MANAGER) private readonly cache: Cache,
+        private readonly cache: RedisService,
         private readonly healthIndicatorService: HealthIndicatorService,
     ) { }
 

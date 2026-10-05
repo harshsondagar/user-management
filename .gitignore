@@ -46,6 +46,8 @@ lerna-debug.log*
 .env.test.local
 .env.production.local
 .env.local
+.env.cp.api
+.env.instance2
 
 # App-Level Secret Configurations
 apps/api/.env

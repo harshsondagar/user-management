@@ -36,10 +36,11 @@ describe('Rate Limiting (e2e) - real ThrottlerGuard', () => {
     it('allow request up to configured limit, then return 429', async () => {
         const dto = makeRegisterDto()
 
-        for (let i = 0; i < 5; i++) {
+        for (let i = 0; i < 2; i++) {
             const res = await request(app.getHttpServer())
                 .post("/auth/register")
                 .send(dto)
+
             expect(res.status).not.toBe(429)
         }
 

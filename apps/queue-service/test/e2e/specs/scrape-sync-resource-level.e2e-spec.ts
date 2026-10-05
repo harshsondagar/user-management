@@ -23,6 +23,8 @@ describe('Scrape sync — resource-level processing (e2e)', () => {
         dataSource = app.get(DataSource);
         await truncateAllTables(dataSource);
         await clearDatasets(app);
+
+        jest.spyOn(console, 'log').mockImplementation(() => { });
         jest.spyOn(console, 'error').mockImplementation(() => { });
     });
 

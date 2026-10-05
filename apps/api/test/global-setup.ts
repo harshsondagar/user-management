@@ -3,8 +3,13 @@ import path, { join, resolve } from "path";
 import { Client } from "pg"
 import { DataSource } from "typeorm";
 
+
 dotenv.config({ path: resolve(join(process.cwd(), "apps/api/test/.env.test")) });
+console.log(join(process.cwd(), "apps/api/test/.env.test"));
+
 const WORKER_COUNT = 4
+
+console.log(path.join(__dirname, '../src/**/*-entity.{ts,js}'));
 
 
 export default async function globalSetup() {
@@ -31,20 +36,31 @@ export default async function globalSetup() {
         // await adminClient.query(`DROP DATABASE IF EXISTS ${dbName}`);
         await adminClient.query(`CREATE DATABASE ${dbName}`);
 
-        const ds = new DataSource({
-            type: 'postgres',
-            host: TEST_DB_HOST,
-            port: TEST_DB_PORT,
-            username: TEST_DB_USER,
-            password: TEST_DB_PASSWORD,
-            database: dbName,
-            entities: [path.join(__dirname, '../src/**/*-entity.{ts,js}')],
-            migrations: [path.join(__dirname, '../src/migration/*.{ts,js}')],
-        });
+        try {
+            const ds = new DataSource({
+                type: 'postgres',
+                host: TEST_DB_HOST,
+                port: TEST_DB_PORT,
+                username: TEST_DB_USER,
+                password: TEST_DB_PASSWORD,
+                database: dbName,
+                entities: [path.join(__dirname, '../src/**/*-entity.{ts,js}')],
+                migrations: [path.join(__dirname, '../src/migration/*.{ts,js}')],
+            });
+            await ds.initialize();
+            await ds.runMigrations();
 
-        await ds.initialize();
-        await ds.runMigrations();
-        await ds.destroy();
+            await ds.query(`
+            INSERT INTO plans (id, code, name, amount, currency, rank, "isActive", "gracePeriodDays")
+            VALUES (gen_random_uuid(), 'free', 'Free', 0, 'inr', 0, true, 0)
+            ON CONFLICT (code) DO NOTHING
+        `);
+
+            await ds.destroy();
+        } catch (error) {
+            console.log(error);
+
+        }
 
     }
 

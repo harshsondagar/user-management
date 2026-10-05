@@ -16,15 +16,43 @@ import { UserRepository } from './user.repository';
 import { FollowerRepository } from './follower.repository';
 import { BullModule } from '@nestjs/bullmq';
 import { MailProducer } from '../mail/mail-producer';
+import { Plan } from '../billing/entities/plan-entity';
+import { UserSubscription } from '../billing/entities/user-subscription-entity';
+import { UserSubscriptionRepository } from '../billing/repositorys/user-subscription.repository';
+import { ProfilesService } from '../profile/profile.service';
+import { ProfileRepository } from '../profile/reposetory/profile.repo';
+import { Profile } from '../profile/entity/profile-entity';
+import { OrganizationModule } from '../organization/organization.module'; // <-- import the module
 
 @Module({
-  imports: [forwardRef(() => AuthModule), MailModule, OtpModule, RedisCacheModule, TypeOrmModule.forFeature([User, System, Followers])
-    , BullModule.registerQueue({
-      name: "send-mail"
-    })],
-  providers: [UserService, SuperAdminSeed, SystemService, UserRepository, FollowerRepository, MailProducer],
+  imports: [
+    forwardRef(() => AuthModule),
+    MailModule,
+    OtpModule,
+    RedisCacheModule,
+    TypeOrmModule.forFeature([
+      User,
+      System,
+      Followers,
+      Plan,
+      UserSubscription,
+      Profile,
+    ]), // Member/Organization/Permission/Role/RolePermission removed — OrganizationModule owns those now
+    BullModule.registerQueue({ name: 'send-mail' }),
+    forwardRef(() => OrganizationModule), // forwardRef in case of the circular dependency your registration flow implies
+  ],
+  providers: [
+    UserService,
+    ProfilesService,
+    ProfileRepository,
+    SuperAdminSeed,
+    SystemService,
+    UserRepository,
+    UserSubscriptionRepository,
+    FollowerRepository,
+    MailProducer,
+  ],
   controllers: [UserController, SuperAdminController],
-  exports: [UserService, SystemService, TypeOrmModule]
+  exports: [UserService, SystemService, TypeOrmModule],
 })
-
 export class UserModule { }

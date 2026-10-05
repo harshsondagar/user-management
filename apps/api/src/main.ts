@@ -9,10 +9,11 @@ import { join } from 'path';
 import * as ejs from 'ejs';
 import { WinstonModule } from 'nest-winston';
 import { getWinstonConfig } from '@app/shared';
-
+import express from 'express';
 async function bootstrap() {
 
   const app = await NestFactory.create<NestExpressApplication>(AppModule, {
+    rawBody: true,
     logger: WinstonModule.createLogger(getWinstonConfig('api')),
   });
 
@@ -23,7 +24,7 @@ async function bootstrap() {
 
   app.useStaticAssets(join(__dirname, '..', 'public'));
   app.engine('ejs', ejs.renderFile);
-  app.setBaseViewsDir(join(__dirname, '../../..', 'views'));
+  app.setBaseViewsDir(join(__dirname, 'view'));
   app.setViewEngine('ejs');
 
   app.useGlobalPipes(new ValidationPipe({
@@ -53,6 +54,7 @@ async function bootstrap() {
     Logger.error('Uncaught Exception', error.stack);
     process.exit(1);
   });
+
 
   await app.listen(process.env.PORT ?? 3000);
 

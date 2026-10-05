@@ -1,8 +1,11 @@
 allowBuilds:
+  '@parcel/watcher': false
   '@scarf/scarf': false
   argon2: false
+  bcrypt: false
   esbuild: false
   msgpackr-extract: false
+  puppeteer: set this to true or false
   unrs-resolver: false
 packages:
   - 'apps/*'

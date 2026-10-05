@@ -33,8 +33,8 @@ export class DlqController {
     @Get('entries/:id')
     @Roles(UserRole.ADMIN, UserRole.SUPER_ADMIN)
     async getEntryDetail(@Param('id') id: string) {
-        throw new InternalServerErrorException("dadad")
-        // return this.dlqService.findById(id);
+        // throw new InternalServerErrorException("dadad")
+        return this.dlqService.findById(id);
     }
 
     @Post('entries/:id/resolve')

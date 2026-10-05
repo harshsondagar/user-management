@@ -16,8 +16,9 @@ import { ChangeForgotPassword } from './dto/change-password-dto';
 import { UserRepository } from '../user/user.repository';
 import { RefreshTokenRepository } from './refreshTokenRepository';
 import { MailProducer } from '../mail/mail-producer';
-import { CACHE_MANAGER } from '@nestjs/cache-manager';
-import type { Cache } from 'cache-manager';
+import { RefreshToken } from './entity/jwt-entity';
+import { RedisService } from '@app/redis';
+import { ProfilesService } from '../profile/profile.service';
 
 interface Tokens {
     accessToken: string;
@@ -45,10 +46,11 @@ export class AuthService {
         , private readonly jwtService: JwtService
         , private readonly configService: ConfigService
         , private readonly otpService: OtpService
-        , @Inject(CACHE_MANAGER) private readonly cache: Cache
+        , private readonly cache: RedisService
         , private readonly refreshTokenRepository: RefreshTokenRepository
         , private readonly userRepository: UserRepository
         , private readonly mailProducer: MailProducer
+        , private readonly profilesService: ProfilesService
     ) { }
 
     async create(data: registerBody) {
@@ -128,21 +130,27 @@ export class AuthService {
 
     async login(user: User, userAgent?: string, ipAddress?: string) {
         const familyId = randomUUID()
-        return this.issueTokenPair(user, familyId, userAgent, ipAddress)
+        const primaryProfile = await this.profilesService.findPrimaryForUser(user.id);
+        return this.issueTokenPair(user, familyId, primaryProfile?.id!, userAgent, ipAddress)
     }
 
-    async issueTokenPair(user: User, familyId: string, userAgent?: string, ipAddress?: string, existingAbsoluteExpiry?: Date): Promise<Tokens> {
+    async issueTokenPair(user: User, familyId: string, active_profile_id?: string, userAgent?: string, ipAddress?: string, existingAbsoluteExpiry?: Date): Promise<Tokens> {
+
         const accessToken = await this.jwtService.signAsync({
             sub: user.id,
             email: user.email,
             role: user.role,
-            tokenVersion: user.tokenVersion
+            tokenVersion: user.tokenVersion,
+            activeProfileId: active_profile_id,
+
         }, {
             secret: this.configService.get<string>('jwt.accessSecret'),
             expiresIn: this.configService.get<number>('jwt.accessExpiresIn')
         })
 
+
         const jti = randomUUID()
+
         const refreshExpiresIn = this.configService.get<string>("jwt.refreshExpiresIn")
 
         const absoluteExpiry = existingAbsoluteExpiry ?? new Date(Date.now() + SEVEN_DAYS_IN_MS);
@@ -167,11 +175,37 @@ export class AuthService {
             expireAt: expireAt,
             userAgent,
             ipAddress,
+            active_profile_id
         })
+
 
         return { accessToken, refreshToken, refreshTokenExpiresAt: expireAt };
 
     }
+    async issueAccessTokenWithActiveProfile(
+        user: User,
+        profileId: string,
+    ): Promise<{ accessToken: string }> {
+        const patch: Partial<RefreshToken> = {};
+
+        if (profileId) patch.active_profile_id = profileId
+
+        const accessToken = await this.jwtService.signAsync(
+            {
+                sub: user.id,
+                email: user.email,
+                role: user.role,
+                tokenVersion: user.tokenVersion,
+                activeProfileId: profileId,
+            },
+            {
+                secret: this.configService.get<string>('jwt.accessSecret'),
+                expiresIn: this.configService.get<number>('jwt.accessExpiresIn'),
+            },
+        );
+        return { accessToken };
+    }
+
 
     async removeAllSession(id: string) {
         const res = await this.refreshTokenRepository.update(id, { revoked: true })
@@ -192,14 +226,13 @@ export class AuthService {
         }
 
         if (stored.revoked) {
-            await this.refreshTokenRepository.update(
-                stored.familyId,
+            await this.refreshTokenRepository.updateBy(
+                { familyId: stored.familyId },
                 { revoked: true }
             )
 
             throw new ForbiddenException("refresh token reuse detected - all sessions revoked! log in again ")
         }
-
 
 
         if (stored.expireAt < new Date()) {
@@ -217,7 +250,7 @@ export class AuthService {
         }
 
         await this.refreshTokenRepository.update(stored.id, { revoked: true })
-        return this.issueTokenPair(user, stored.familyId, userAgent, ipAddress, stored.absoluteExpiry)
+        return this.issueTokenPair(user, stored.familyId, stored.active_profile_id, userAgent, ipAddress, stored.absoluteExpiry)
 
     }
 
@@ -324,14 +357,17 @@ export class AuthService {
         const cooldownKey = `pwd-reset-cooldown:${email}`;
         const dailyKey = `pwd-reset-daily:${email}:${new Date().toISOString().slice(0, 10)}`;
 
-        const [onCooldown, dailyCount] = await Promise.all([
+        const [onCooldown, rawdailyCount] = await Promise.all([
             this.cache.get(cooldownKey),
-            this.cache.get<number>(dailyKey),
+            this.cache.get(dailyKey),
         ]);
 
         if (onCooldown) {
             throw new HttpException('Please wait before requesting another reset link.', HttpStatus.TOO_MANY_REQUESTS);
         }
+
+        const dailyCount = rawdailyCount ? parseInt(rawdailyCount, 10) : 0
+
         if ((dailyCount ?? 0) >= 5) {
             throw new HttpException('Too many reset attempts today. Try again tomorrow.', HttpStatus.TOO_MANY_REQUESTS);
         }

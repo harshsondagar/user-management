@@ -74,5 +74,44 @@ export class MailService {
         }
     }
 
+    async sendRenewalFinalNoticeMail(to: string, firstName: string, renewalUrl: string, graceEndFormatted: string) {
+        try {
+            await this.mailer.sendMail({
+                to,
+                subject: 'Action required: your subscription is ending soon',
+                template: 'send-renewal-final-notice-mail',
+                context: {
+                    message: 'Your subscription payment failed. Renew now to keep your access.',
+                    firstName,
+                    renewalUrl,
+                    graceEndFormatted,
+                },
+            })
+
+        } catch (error) {
+            this.logger.warn(`Failed to send RenewalFinalNotice email to ${to}: ${(error as Error).message}`)
+            throw error;
+        }
+    }
+
+    async sendDowngradedToFreeMail(to: string, firstName: string, appUrl: string) {
+        try {
+            await this.mailer.sendMail({
+                to,
+                subject: 'Your plan has been downgraded to Free',
+                template: 'send-downgraded-to-free-mail',
+                context: {
+                    message: 'We were unable to renew your subscription, so your account has been moved to the Free plan.',
+                    firstName,
+                    appUrl,
+                },
+            })
+
+        } catch (error) {
+            this.logger.warn(`Failed to send DowngradedToFree email to ${to}: ${(error as Error).message}`)
+            throw error;
+        }
+    }
+
 
 }

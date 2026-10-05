@@ -1,61 +1,9 @@
-import { CacheModule } from "@nestjs/cache-manager";
-import { Global, Logger, Module } from "@nestjs/common"
-import { ConfigModule, ConfigService } from "@nestjs/config";
+import { Global, Module } from "@nestjs/common";
 import { SafeCacheService } from "./safe-cache.service";
-import { createKeyv } from "@keyv/redis";
-import { testEnv } from "@app/shared";
 
-const isTestEnv = process.env.NODE_ENV === 'test' || !!process.env.JEST_WORKER_ID;
-const tEnv = isTestEnv ? testEnv() : null;
 @Global()
 @Module({
-    imports: [
-        // CacheModule.registerAsync({
-        //     isGlobal: true,
-        //     imports: [ConfigModule],
-        //     inject: [ConfigService],
-        //     useFactory: async (config: ConfigService) => {
-
-        //         const host = config.get<string>('redis.host', 'localhost');
-        //         const port = config.get<number>('redis.port', 6379);
-        //         const db = config.get<number>('REDIS_DB', 0);
-
-        //         const redisUrl = `redis://${host}:${port}/${db}`;
-
-        //         const keyv = createKeyv(redisUrl);
-
-        //         keyv.on('error', (err) => {
-        //             Logger.error(`Redis (Keyv) connection error: ${err.message}`, err.stack, 'RedisCache');
-        //         });
-
-        //         return { stores: [keyv], ttl: 60 * 1000 }
-        //     }
-        // })
-        CacheModule.registerAsync({
-            isGlobal: true,
-            imports: [ConfigModule],
-            inject: [ConfigService],
-            useFactory: async (config: ConfigService) => {
-                const host = tEnv?.redisHost ?? config.get<string>('redis.host', 'localhost');
-                const port = tEnv ? tEnv.redisPort : config.get<number>('redis.port', 6379);
-                const db = tEnv ? tEnv.redisDb : config.get<number>('REDIS_DB', 0);
-
-                const redisUrl = `redis://${host}:${port}/${db}`;
-                const keyv = createKeyv(redisUrl);
-
-                keyv.on('error', (err) => {
-                    Logger.error(`Redis (Keyv) connection error: ${err.message}`, err.stack, 'RedisCache');
-                });
-
-                return { stores: [keyv], ttl: 60 * 1000 };
-            }
-        }),
-    ],
-    exports: [CacheModule, SafeCacheService],
-    providers: [SafeCacheService]
+    providers: [SafeCacheService],
+    exports: [SafeCacheService],
 })
-
-
-export class RedisCacheModule {
-
-}
+export class RedisCacheModule { }
