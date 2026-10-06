@@ -1,4 +1,4 @@
-import { Global, Module } from '@nestjs/common';
+import { forwardRef, Global, Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { Plan } from './entities/plan-entity';
 import { Feature } from './entities/feature-entity';
@@ -27,13 +27,26 @@ import { BullModule } from '@nestjs/bullmq';
 import { BillingViewController } from './billing-view.controller';
 import { PlanStreamingPolicy } from './entities/plan-streaming-policy-entity';
 import { PlanStreamingPolicyRepository } from './repositorys/plans-streaming-policy.repository';
-import { OrganizationRepository } from '../organization/repositories/organization.repository';
 import { Organization } from '../organization/entities/organization-entity';
 import { OrganizationSubscription } from '../organization/entities/organization-subsciription-entity';
+import { PDF_QUEUE, ReceiptStorageService } from '@app/shared';
+import { ReceiptDispatcher } from './receipt.dispatcher';
+import { ReceiptController } from './receipt.controller';
+import { BullBoardModule } from '@bull-board/nestjs';
+import { BullMQAdapter } from '@bull-board/api/bullMQAdapter';
 
+
+console.log({
+    ReceiptStorageService,
+    ReceiptDispatcher,
+    ReceiptController,
+    PDF_QUEUE,
+    BillingService,
+});
 @Global()
 @Module({
     imports: [
+        BullBoardModule.forFeature({ name: PDF_QUEUE, adapter: BullMQAdapter }),
         TypeOrmModule.forFeature([
             Plan,
             Feature,
@@ -46,22 +59,25 @@ import { OrganizationSubscription } from '../organization/entities/organization-
             RenewalToken,
             PlanStreamingPolicy,
             Organization,
-            OrganizationSubscription
+            OrganizationSubscription,
         ]),
-        BullModule.registerQueue({
-            name: 'send-mail'
-        })
+        BullModule.registerQueue(
+            { name: 'send-mail' },
+            { name: PDF_QUEUE, },
+        ),
     ],
 
     providers: [
         {
-            provide: 'STRIPE_CLIENT', useFactory(configService: ConfigService) {
-
+            provide: 'STRIPE_CLIENT',
+            useFactory(configService: ConfigService) {
                 const secretKey = configService.get<string>('stripe.key');
                 if (!secretKey) {
                     console.log(secretKey);
 
-                    throw new Error('STRIPE_SECRET_KEY is missing in environment variables');
+                    throw new Error(
+                        'STRIPE_SECRET_KEY is missing in environment variables',
+                    );
                 }
                 return new Stripe(secretKey);
             },
@@ -79,8 +95,10 @@ import { OrganizationSubscription } from '../organization/entities/organization-
         RenewalTokenRepository,
         PlanStreamingPolicyRepository,
         MailProducer,
+        ReceiptDispatcher,
+        ReceiptStorageService
     ],
-    controllers: [BillingController, BillingViewController],
+    controllers: [BillingController, BillingViewController, ReceiptController],
     exports: [TypeOrmModule, 'STRIPE_CLIENT', BillingService],
 })
 export class BillingModule { }

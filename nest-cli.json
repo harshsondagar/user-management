@@ -24,6 +24,12 @@
   "monorepo": true,
   "root": "apps/api",
   "projects": {
+    "@app/redis": {
+      "type": "library",
+      "root": "libs/nestjs-redis",
+      "entryFile": "index",
+      "sourceRoot": "libs/nestjs-redis/src"
+    },
     "@app/shared": {
       "type": "library",
       "root": "libs/shared",
@@ -37,12 +43,6 @@
       ],
       "watchAssets": true
     },
-    "@app/redis": {
-      "type": "library",
-      "root": "libs/nestjs-redis",
-      "entryFile": "index",
-      "sourceRoot": "libs/nestjs-redis/src"
-    },
     "api": {
       "type": "application",
       "root": "apps/api",
@@ -50,6 +50,15 @@
       "sourceRoot": "apps/api/src",
       "compilerOptions": {
         "tsConfigPath": "apps/api/tsconfig.app.json"
+      }
+    },
+    "pdf": {
+      "type": "application",
+      "root": "apps/pdf",
+      "entryFile": "main",
+      "sourceRoot": "apps/pdf/src",
+      "compilerOptions": {
+        "tsConfigPath": "apps/pdf/tsconfig.app.json"
       }
     },
     "queue-service": {

@@ -1,4 +1,4 @@
-import { BadRequestException, ConflictException, Inject, Injectable, NotFoundException } from "@nestjs/common";
+import { BadRequestException, ConflictException, Inject, Injectable, Logger, NotFoundException } from "@nestjs/common";
 import Stripe from "stripe";
 import { User } from "../user/entity/user-entity";
 import { UserRepository } from "../user/user.repository";
@@ -11,16 +11,25 @@ import { Organization } from "../organization/entities/organization-entity";
 import { InjectRepository } from "@nestjs/typeorm";
 import { OrganizationSubscription } from "../organization/entities/organization-subsciription-entity";
 import { PlanScope } from "./entities/plan-entity";
+import { PaymentRepository } from "./repositorys/payment.repository";
+import { PaymentKind, PaymentStatus } from "./entities/payment-entity";
+import { ReceiptDispatcher } from "./receipt.dispatcher";
 
 
 @Injectable()
 export class BillingService {
+
+    private readonly logger = new Logger(BillingService.name)
+
     constructor(
         @Inject('STRIPE_CLIENT') private readonly stripe: Stripe,
         private readonly userRepo: UserRepository,
         private readonly planRepo: PlanRepository,
         private readonly subRepo: UserSubscriptionRepository,
         private readonly renewalTokenRepo: RenewalTokenRepository,
+
+        private readonly paymentRepo: PaymentRepository,
+        private readonly receiptDispatcher: ReceiptDispatcher,
         @InjectRepository(Organization) private readonly organizationRepo: Repository<Organization>,
         @InjectRepository(OrganizationSubscription) private readonly orgSubRepo: Repository<OrganizationSubscription>,
     ) { }
@@ -316,5 +325,69 @@ export class BillingService {
             }));
     }
 
+    async assertReceiptOwnedBy(paymentId: string, userId: string): Promise<void> {
+        const payment = await this.paymentRepo.findForReceipt(paymentId);
 
+        if (!payment || payment.status !== PaymentStatus.SUCCEEDED) {
+            throw new NotFoundException('Receipt not found');
+        }
+
+        let allowed = false;
+
+        if (payment.kind === PaymentKind.USER_SUBSCRIPTION) {
+            allowed = payment.userId === userId;
+        }
+
+        if (!allowed) throw new NotFoundException('Receipt not found');
+    }
+
+    async enqueueReceiptByIntent(paymentIntentId: string) {
+        const payment = await this.paymentRepo.findIdByIntentId(paymentIntentId);
+        if (!payment) {
+            this.logger.warn(`No payment row for intent ${paymentIntentId}, skipping receipt`);
+            return;
+        }
+        await this.enqueueReceipt(payment.id);
+    }
+
+    async enqueueReceipt(paymentId: string): Promise<void> {
+        const payment = await this.paymentRepo.findForReceipt(paymentId);
+        if (!payment) {
+            throw new NotFoundException(`Payment ${paymentId} not found`);
+        }
+
+        if (payment.status !== PaymentStatus.SUCCEEDED || !payment.paidAt) return;
+
+        // Org receipts are skipped until the org lookup is written,
+        // so nobody gets a receipt with "..." as the customer name.
+        if (payment.kind !== PaymentKind.USER_SUBSCRIPTION || !payment.userId) {
+            this.logger.warn(`Receipt skipped for payment ${payment.id}: org receipts not implemented`);
+            return;
+        }
+        const user = await this.userRepo.findById(payment.userId);
+
+        if (!user?.email) {
+            this.logger.error(`Receipt skipped for payment ${payment.id}: user ${payment.userId} has no email`);
+            return;
+        }
+
+        console.log("came here", payment.id,);
+
+
+        await this.receiptDispatcher.enqueue({
+            paymentId: payment.id,
+            date: payment.paidAt.toISOString(),
+            customerName: user.firstName ?? user.email,
+            customerEmail: user.email,
+            planName: payment.userSubscription?.plan?.name ?? 'Subscription',
+            periodStart: payment.periodStart?.toISOString() ?? '',
+            periodEnd: payment.periodEnd?.toISOString() ?? '',
+            currency: payment.currency,
+            amount: payment.amountCents / 100,
+            tax: 0,
+            total: payment.amountCents / 100,
+            paymentMethod: 'Card',
+            transactionId: payment.stripePaymentIntentId,
+        });
+    }
 }
