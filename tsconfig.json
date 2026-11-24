@@ -29,13 +29,16 @@
       "./node_modules/@types"
     ],
     "paths": {
+      "@app/redis": [
+        "./libs/nestjs-redis/src/index.ts"
+      ],
       "@app/shared": [
         "./libs/shared/src/index.ts"
       ],
       "@app/shared/*": [
         "./libs/shared/src/*"
-      ],
-        "@app/redis": ["./libs/nestjs-redis/src/index.ts"]
+      ]
     },
+    // "baseUrl": "./"
   }
 }

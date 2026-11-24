@@ -19,6 +19,7 @@ import { UserRepository } from '../user/user.repository';
 import { MailProducer } from '../mail/mail-producer';
 import { OrganizationSubscription } from '../organization/entities/organization-subsciription-entity';
 import { LedgerService } from '../organization/service/ledger.service';
+import { BillingService } from '../billing/billing.service';
 
 export interface StripeJobData {
     eventId: string;
@@ -51,6 +52,7 @@ export class StripeEventProcessor extends WorkerHost {
         private readonly paymentRepo: PaymentRepository,
         private readonly mailProducer: MailProducer,
         private readonly ledgerService: LedgerService,
+        private readonly billing: BillingService
     ) {
         super();
     }
@@ -87,6 +89,17 @@ export class StripeEventProcessor extends WorkerHost {
                 }
                 if (purchaseType === 'renewal') {
                     await this.handleRenewalSucceeded(data);
+                }
+
+                if (purchaseType === 'initial_purchase' || purchaseType === 'renewal') {
+                    try {
+                        await this.billing.enqueueReceiptByIntent(data.id);
+                    } catch (err) {
+                        this.logger.error(
+                            `Receipt enqueue failed for intent ${data.id}: ${(err as Error).message}`,
+                            (err as Error).stack,
+                        );
+                    }
                 }
                 break;
             }

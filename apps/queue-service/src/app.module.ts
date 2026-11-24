@@ -20,10 +20,8 @@ import { ChatFlushService } from "./chats/chat-flush.service";
 import roomdbConfig from "./config/roomdb.config";
 import { IMAGE_PROCESSING_QUEUE } from "../../../libs/shared/src/queue.constants";
 import { ImageProcessingModule } from "./image/image-processing.module";
-const workerId = process.env.JEST_WORKER_ID!
 
-const isTestEnv = process.env.NODE_ENV === 'test' || workerId;
-const tEnv = isTestEnv ? testEnv() : null;
+
 
 
 
