@@ -1,0 +1,54 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="UTF-8" />
+    <title>HLS Test Player</title>
+  </head>
+  <body>
+    <h2>Upload and play</h2>
+
+    <input type="file" id="file" accept="video/*" />
+    <button id="btn">Upload</button>
+    <p id="status"></p>
+
+    <video id="video" controls width="720"></video>
+
+    <script src="https://cdn.jsdelivr.net/npm/hls.js@1.5.17"></script>
+    <script>
+      const video = document.getElementById('video');
+      const status = document.getElementById('status');
+
+      function play(src) {
+        if (Hls.isSupported()) {
+          const hls = new Hls();
+          hls.loadSource(src);
+          hls.attachMedia(video);
+        } else if (video.canPlayType('application/vnd.apple.mpegurl')) {
+          video.src = src;
+        }
+      }
+
+      document.getElementById('btn').onclick = async () => {
+        const f = document.getElementById('file').files[0];
+        if (!f) return alert('Choose a video first');
+
+        const fd = new FormData();
+        fd.append('video', f);
+        status.textContent = 'Uploading and converting...';
+
+        const res = await fetch('http://localhost:3000/api/hls/upload', {
+          method: 'POST',
+          body: fd,
+        });
+        if (!res.ok) {
+          status.textContent = 'Failed';
+          return;
+        }
+
+        const data = await res.json();
+        status.textContent = 'Done: ' + data.playlistUrl;
+        play(data.playlistUrl);
+      };
+    </script>
+  </body>
+</html>

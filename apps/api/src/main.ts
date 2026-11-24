@@ -21,7 +21,10 @@ async function bootstrap() {
     origin: true,
     credentials: true,
   });
-
+  app.setGlobalPrefix("api")
+  app.useStaticAssets(join(process.cwd(), 'storage', 'hls'), {
+    prefix: '/stream',
+  });
   app.useStaticAssets(join(__dirname, '..', 'public'));
   app.engine('ejs', ejs.renderFile);
   app.setBaseViewsDir(join(__dirname, 'view'));

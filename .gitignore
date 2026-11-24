@@ -16,6 +16,7 @@ lerna-debug.log*
 
 # OS
 .DS_Store
+storage/
 
 # Tests
 /coverage

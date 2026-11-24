@@ -44,6 +44,7 @@ import { WatchlistModule } from './watch-list/watch-list.module';
 import { ContentModule } from './content/content.module';
 import { RedisModule } from '@app/redis'
 import { OrganizationModule } from './organization/organization.module';
+import { HlsModule } from './hls/hls.module';
 
 
 const isTestEnv =
@@ -120,7 +121,8 @@ const tEnv = isTestEnv ? testEnv() : null;
     ScrapModuleModule,
     DlqModule,
     RoomModule,
-    OrganizationModule
+    OrganizationModule,
+    HlsModule
   ],
   controllers: [],
   providers: [
