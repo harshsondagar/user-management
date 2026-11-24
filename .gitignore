@@ -48,7 +48,7 @@ lerna-debug.log*
 .env.local
 .env.cp.api
 .env.instance2
-
+.env.cp.api
 # App-Level Secret Configurations
 apps/api/.env
 apps/queue-service/.env

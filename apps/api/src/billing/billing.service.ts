@@ -371,9 +371,6 @@ export class BillingService {
             return;
         }
 
-        console.log("came here", payment.id,);
-
-
         await this.receiptDispatcher.enqueue({
             paymentId: payment.id,
             date: payment.paidAt.toISOString(),
