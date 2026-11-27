@@ -19,10 +19,15 @@ import { extname, join } from 'path';
 import { HlsService } from './hls.service';
 import { HLS_QUEUE, HlsJobData } from './hls.constants';
 import { Public } from '../common/decorator/public-decoretor';
+import { JwtService } from '@nestjs/jwt';
+
 
 @Controller('hls')
 export class HlsController {
-    constructor(@InjectQueue(HLS_QUEUE) private readonly queue: Queue<HlsJobData>) { }
+    constructor(
+        @InjectQueue(HLS_QUEUE) private readonly queue: Queue<HlsJobData>,
+        private readonly jwt: JwtService,
+    ) { }
 
     @Post('upload')
     @Public()
@@ -90,5 +95,17 @@ export class HlsController {
             playlistUrl: state === 'completed' ? job.returnvalue?.playlistUrl : undefined,
             error: state === 'failed' ? 'Conversion failed' : undefined,
         };
+    }
+
+    @Get('play-token/:videoId')
+    @Public()
+    async playToken(@Param('videoId') videoId: string) {
+        if (!/^[0-9a-f-]{36}$/i.test(videoId)) throw new NotFoundException();
+        if (!existsSync(join(HlsService.HLS_DIR, videoId, 'master.m3u8'))) {
+            throw new NotFoundException();
+        }
+
+        const token = await this.jwt.signAsync({ vid: videoId }, { expiresIn: '2h' });
+        return { token, expiresIn: 7200 };
     }
 }

@@ -2,6 +2,12 @@ import { Injectable, Logger } from '@nestjs/common';
 import { spawn } from 'child_process';
 import { mkdir, writeFile } from 'fs/promises';
 import { join } from 'path';
+import { randomBytes } from 'crypto';
+
+// Must include your global prefix, this URL is written inside the m3u8
+const KEY_URI_BASE = process.env.HLS_KEY_URI_BASE ?? '/api/keys';
+
+
 
 interface Rendition {
     name: string;
@@ -24,8 +30,9 @@ export class HlsService {
 
     static readonly UPLOAD_DIR = join(process.cwd(), 'storage', 'uploads');
     static readonly HLS_DIR = join(process.cwd(), 'storage', 'hls');
+    static readonly KEY_DIR = join(process.cwd(), 'storage', 'keys');
 
-    private async encodeRendition(inputPath: string, baseDir: string, r: Rendition) {
+    private async encodeRendition(inputPath: string, baseDir: string, r: Rendition, keyInfoPath: string,) {
         const outDir = join(baseDir, r.name);
         await mkdir(outDir, { recursive: true });
 
@@ -50,6 +57,12 @@ export class HlsService {
             '-hls_playlist_type', 'vod',
             '-hls_segment_filename', join(outDir, 'seg_%03d.ts'),
             join(outDir, 'index.m3u8'),
+            '-hls_time', '4',
+            '-hls_playlist_type', 'vod',
+            '-hls_key_info_file', keyInfoPath,   // NEW
+            '-hls_segment_filename', join(outDir, 'seg_%03d.ts'),
+            join(outDir, 'index.m3u8'),
+
         ];
 
         await new Promise<void>((resolve, reject) => {
@@ -74,20 +87,32 @@ export class HlsService {
         }
         await writeFile(join(baseDir, 'master.m3u8'), lines.join('\n') + '\n');
     }
-    async convertToHls(
-        inputPath: string,
-        videoId: string,
-        onProgress?: (percent: number) => void,
-    ): Promise<string> {
+    async convertToHls(inputPath: string, videoId: string, onProgress?: (p: number) => void) {
         const baseDir = join(HlsService.HLS_DIR, videoId);
         await mkdir(baseDir, { recursive: true });
 
+        const keyInfoPath = await this.createKey(videoId); // NEW
+
         for (let i = 0; i < RENDITIONS.length; i++) {
-            await this.encodeRendition(inputPath, baseDir, RENDITIONS[i]);
+            await this.encodeRendition(inputPath, baseDir, RENDITIONS[i], keyInfoPath); // NEW arg
             onProgress?.(Math.round(((i + 1) / RENDITIONS.length) * 100));
         }
 
         await this.writeMasterPlaylist(baseDir);
         return `/stream/${videoId}/master.m3u8`;
+    }
+
+    // NEW
+    private async createKey(videoId: string): Promise<string> {
+        const dir = join(HlsService.KEY_DIR, videoId);
+        await mkdir(dir, { recursive: true });
+
+        const keyPath = join(dir, 'enc.key');
+        await writeFile(keyPath, randomBytes(16)); // AES-128 = 16 bytes
+
+        // keyinfo file: line 1 = URI written in the m3u8, line 2 = key file on disk
+        const keyInfoPath = join(dir, 'enc.keyinfo');
+        await writeFile(keyInfoPath, `${KEY_URI_BASE}/${videoId}\n${keyPath}\n`);
+        return keyInfoPath;
     }
 }

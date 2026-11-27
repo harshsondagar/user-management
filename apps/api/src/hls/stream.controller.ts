@@ -1,12 +1,14 @@
-import { Controller, Get, NotFoundException, Param, Res } from '@nestjs/common';
+import { Controller, Get, NotFoundException, Param, Res, UseGuards } from '@nestjs/common';
 import type { Response } from 'express';
 import { existsSync } from 'fs';
 import { join } from 'path';
 import { HlsService } from './hls.service';
 import { Public } from '../common/decorator/public-decoretor';
+import { HlsTokenGuard } from './hls-token.guard';
 
 const QUALITIES = ['360p', '720p', '1080p'];
 
+@UseGuards(HlsTokenGuard)
 @Controller('stream')
 export class StreamController {
 
@@ -41,7 +43,7 @@ export class StreamController {
             res.setHeader('Cache-Control', 'no-cache');
         } else {
             res.setHeader('Content-Type', 'video/mp2t');
-            res.setHeader('Cache-Control', 'public, max-age=31536000, immutable');
+            res.setHeader('Cache-Control', 'private, max-age=31536000, immutable');
         }
         res.sendFile(filePath);
     }

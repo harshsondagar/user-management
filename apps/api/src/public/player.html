@@ -23,7 +23,7 @@
     <script src="https://cdn.jsdelivr.net/npm/hls.js@1.5.17"></script>
 
     <script>
-      const API = '/api'; // your global prefix
+      const API = 'http://localhost:3000/api';
       const video = document.getElementById('video');
       const status = document.getElementById('status');
       const btn = document.getElementById('btn');
@@ -41,38 +41,48 @@
         return body.data;
       }
 
-      function play(src) {
+      function play(src, token) {
         if (hls) {
-          hls.destroy(); // clean up a previous video
+          hls.destroy();
           hls = null;
         }
 
-        if (Hls.isSupported()) {
-          hls = new Hls();
-          hls.loadSource(src);
-          hls.attachMedia(video);
-
-          hls.on(Hls.Events.MANIFEST_PARSED, () => {
-            const sel = document.getElementById('quality');
-            sel.length = 1; // keep "Auto"
-            hls.levels.forEach((lvl, i) => {
-              sel.add(new Option(lvl.height + 'p', i));
-            });
-            sel.onchange = () => (hls.currentLevel = parseInt(sel.value)); // -1 = auto
-          });
-
-          hls.on(Hls.Events.LEVEL_SWITCHED, (e, data) => {
-            const lvl = hls.levels[data.level];
-            document.getElementById('current').textContent =
-              `Now playing: ${lvl.height}p (${Math.round(lvl.bitrate / 1000)} kbps)`;
-          });
-
-          hls.on(Hls.Events.ERROR, (e, data) =>
-            console.error('HLS error:', data),
-          );
-        } else if (video.canPlayType('application/vnd.apple.mpegurl')) {
-          video.src = src; // Safari / iOS
+        if (!Hls.isSupported()) {
+          status.textContent =
+            'This browser is not supported (hls.js required for token auth)';
+          return;
         }
+
+        hls = new Hls({
+          // send the token on EVERY stream request: playlists, segments, key
+          xhrSetup: (xhr) => {
+            xhr.setRequestHeader('Authorization', `Bearer ${token}`);
+          },
+        });
+        hls.loadSource(src);
+        hls.attachMedia(video);
+
+        hls.on(Hls.Events.MANIFEST_PARSED, () => {
+          const sel = document.getElementById('quality');
+          sel.length = 1; // keep "Auto"
+          hls.levels.forEach((lvl, i) => {
+            sel.add(new Option(lvl.height + 'p', i));
+          });
+          sel.onchange = () => (hls.currentLevel = parseInt(sel.value)); // -1 = auto
+          video.play().catch(() => {}); // start playback (may need a click if the browser blocks autoplay)
+        });
+
+        hls.on(Hls.Events.LEVEL_SWITCHED, (e, data) => {
+          const lvl = hls.levels[data.level];
+          document.getElementById('current').textContent =
+            `Now playing: ${lvl.height}p (${Math.round(lvl.bitrate / 1000)} kbps)`;
+        });
+
+        hls.on(Hls.Events.ERROR, (e, data) => {
+          console.error('HLS error:', data);
+          if (data.fatal)
+            status.textContent = `Playback error: ${data.details}`;
+        });
       }
 
       function stopPolling() {
@@ -104,7 +114,7 @@
           return;
         }
 
-        const statusUrl = `${API}${upload.statusUrl}`; // /api/hls/status/<id>
+        const statusUrl = `${API}${upload.statusUrl}`;
         status.textContent = 'Queued...';
 
         timer = setInterval(async () => {
@@ -114,8 +124,15 @@
 
             if (s.status === 'completed') {
               stopPolling();
-              status.textContent = 'Done!';
-              play(`${API}${s.playlistUrl}`); // /api/stream/<id>/master.m3u8
+              status.textContent = 'Getting play token...';
+
+              // data = { token, expiresIn }
+              const { token } = await unwrap(
+                await fetch(`${API}/hls/play-token/${upload.videoId}`),
+              );
+
+              status.textContent = 'Starting stream...';
+              play(`${API}${s.playlistUrl}`, token);
             } else if (s.status === 'failed') {
               stopPolling();
               status.textContent = s.error || 'Conversion failed';
